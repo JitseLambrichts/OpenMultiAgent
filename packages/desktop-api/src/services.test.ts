@@ -1,0 +1,195 @@
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import type { Database } from "bun:sqlite";
+import { mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  createAgentRun,
+  createSession,
+  exec,
+  openDb,
+  resolveSession,
+} from "@oma/core";
+import {
+  createDesktopServices,
+  DesktopError,
+  type SessionOperations,
+} from "./services.ts";
+
+let db: Database;
+const tempDirs: string[] = [];
+
+beforeEach(() => {
+  db = openDb({ path: ":memory:" });
+});
+
+afterEach(() => {
+  db.close();
+  while (tempDirs.length) {
+    rmSync(tempDirs.pop()!, { recursive: true, force: true });
+  }
+});
+
+async function makeRepo(): Promise<string> {
+  const directory = mkdtempSync(join(tmpdir(), "oma-desktop-repo-"));
+  tempDirs.push(directory);
+  await exec(["git", "init", "-b", "main"], { cwd: directory });
+  return realpathSync(directory);
+}
+
+function sessionOperations(): SessionOperations {
+  return {
+    list: async () => [],
+    status: async (id) => {
+      const stored = resolveSession(db, id);
+      return {
+        session: stored,
+        runs: [],
+        tmuxAlive: true,
+        changedFiles: [{ path: "README.md", status: "M" }],
+        diffStat: " README.md | 1 +",
+        pane: "agent output",
+      };
+    },
+    create: async () => {
+      throw new Error("not used");
+    },
+    resume: async () => {
+      throw new Error("not used");
+    },
+    switchAgent: async () => {
+      throw new Error("not used");
+    },
+    end: async () => undefined,
+    remove: async () => undefined,
+  };
+}
+
+describe("desktop services", () => {
+  test("registers only Git repositories and keeps explicit display names", async () => {
+    const repo = await makeRepo();
+    const service = createDesktopServices({ db, manager: sessionOperations() });
+
+    const added = await service.projectAdd({
+      repo_path: repo,
+      display_name: "OMA Desktop",
+    });
+
+    expect(added).toMatchObject({
+      repo_path: repo,
+      display_name: "OMA Desktop",
+    });
+    expect(await service.projectList()).toEqual([added]);
+  });
+
+  test("rejects a directory that is not a Git repository", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "oma-desktop-plain-"));
+    tempDirs.push(directory);
+    const service = createDesktopServices({ db, manager: sessionOperations() });
+
+    try {
+      await service.projectAdd({ repo_path: directory });
+      throw new Error("projectAdd unexpectedly succeeded");
+    } catch (error) {
+      expect(error).toBeInstanceOf(DesktopError);
+      expect(error).toMatchObject({ code: -32001, message: "Not a Git repository" });
+    }
+  });
+
+  test("removes only project registration and retains sessions", async () => {
+    const repo = await makeRepo();
+    const storedSession = createSession(db, {
+      repo_path: repo,
+      worktree_path: repo,
+    });
+    const service = createDesktopServices({ db, manager: sessionOperations() });
+    const [project] = await service.projectList();
+
+    expect(await service.projectRemove({ project_id: project!.id })).toEqual({
+      removed_project_id: project!.id,
+    });
+    expect(resolveSession(db, storedSession.id).id).toBe(storedSession.id);
+  });
+
+  test("maps core status fields to the desktop wire contract", async () => {
+    const repo = await makeRepo();
+    const storedSession = createSession(db, {
+      repo_path: repo,
+      worktree_path: repo,
+    });
+    createAgentRun(db, {
+      session_id: storedSession.id,
+      agent: "claude",
+    });
+    const service = createDesktopServices({ db, manager: sessionOperations() });
+
+    expect(await service.sessionStatus({ session_id: storedSession.id })).toEqual({
+      session: storedSession,
+      runs: [],
+      tmux_alive: true,
+      changed_files: [{ path: "README.md", status: "M" }],
+      diff_stat: " README.md | 1 +",
+      pane: "agent output",
+    });
+  });
+});
+
+describe("desktop lifecycle error mapping", () => {
+  test("maps a dirty worktree removal to a conflict with a keep-worktree recovery", async () => {
+    const repo = await makeRepo();
+    const storedSession = createSession(db, {
+      repo_path: repo,
+      worktree_path: join(repo, ".worktrees", "m4"),
+    });
+    const operations = sessionOperations();
+    operations.remove = async () => {
+      throw new Error(
+        "fatal: '/repo/.worktrees/m4' contains modified or untracked files, use --force to delete it",
+      );
+    };
+    const service = createDesktopServices({ db, manager: operations });
+
+    try {
+      await service.sessionRemove({ session_id: storedSession.id });
+      throw new Error("expected a DesktopError");
+    } catch (error) {
+      expect(error).toBeInstanceOf(DesktopError);
+      expect(error).toMatchObject({
+        code: -32003,
+        data: { recovery: "keep_worktree_or_force", session_id: storedSession.id },
+      });
+    }
+  });
+
+  test("maps a missing agent binary to an unavailable error", async () => {
+    const operations = sessionOperations();
+    operations.create = async () => {
+      throw new Error("'codex' is not on PATH");
+    };
+    const service = createDesktopServices({ db, manager: operations });
+
+    try {
+      await service.sessionCreate({ repo_path: "/repo", agent: "codex" });
+      throw new Error("expected a DesktopError");
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: -32002,
+        data: { recovery: "install_binary", agent: "codex" },
+      });
+    }
+  });
+});
+
+describe("desktop health", () => {
+  test("reports a missing tmux instead of failing the request", async () => {
+    const service = createDesktopServices({
+      db,
+      manager: sessionOperations(),
+      checkTmux: async () => {
+        throw new Error('Executable not found in $PATH: "tmux"');
+      },
+    });
+
+    expect(await service.health()).toEqual({ ok: false, tmux_available: false });
+  });
+});

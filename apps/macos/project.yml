@@ -1,0 +1,81 @@
+name: OpenMultiAgent
+options:
+  bundleIdPrefix: dev.openmultiagent
+  deploymentTarget:
+    macOS: "15.0"
+  xcodeVersion: "26.0"
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+packages:
+  SwiftTerm:
+    url: https://github.com/migueldeicaza/SwiftTerm.git
+    exactVersion: 1.18.0
+targets:
+  OpenMultiAgent:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+    dependencies:
+      - package: SwiftTerm
+    info:
+      path: OpenMultiAgent/Info.plist
+      properties:
+        CFBundleDisplayName: OpenMultiAgent
+        LSMinimumSystemVersion: "15.0"
+        NSHighResolutionCapable: true
+  OpenMultiAgentTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests
+      # Fixtures ship inside the bundle: test hosts launched by testmanagerd
+      # cannot read user folders such as Desktop without a TCC prompt.
+      - path: ../../packages/desktop-api/testdata/contracts
+        buildPhase: resources
+        type: folder
+      - path: UITests/FixtureSidecar/fixture-sidecar.ts
+        buildPhase: resources
+    dependencies:
+      - target: OpenMultiAgent
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+  OpenMultiAgentUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: UITests
+        excludes:
+          - "FixtureSidecar/**"
+      # Bundled as a resource: the runner may not read user folders (TCC).
+      - path: UITests/FixtureSidecar/fixture-sidecar.ts
+        buildPhase: resources
+    dependencies:
+      - target: OpenMultiAgent
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: OpenMultiAgent
+schemes:
+  OpenMultiAgent:
+    build:
+      targets:
+        OpenMultiAgent: all
+        OpenMultiAgentTests: [test]
+        OpenMultiAgentUITests: [test]
+    test:
+      targets:
+        - OpenMultiAgentTests
+  OpenMultiAgentUITests:
+    build:
+      targets:
+        OpenMultiAgent: all
+        OpenMultiAgentUITests: [test]
+    test:
+      targets:
+        - OpenMultiAgentUITests

@@ -1,0 +1,438 @@
+import { join } from "node:path";
+import { lstatSync, statSync } from "node:fs";
+import type {
+  AgentRun,
+  AgentName,
+  ChangedFile,
+  CreateSessionOptions,
+  Database,
+  EventPage,
+  Memory,
+  MemoryKind,
+  Project,
+  SearchHit,
+  Session,
+  SessionStatusView,
+  SessionStatus,
+  SessionView,
+} from "@oma/core";
+import {
+  createProject,
+  exec,
+  isGitRepo,
+  listAgentRuns,
+  listEventsPage,
+  listMemory,
+  listProjects,
+  removeProject,
+  repoRoot,
+  resolveProject,
+  resolveSession,
+  search,
+  repoDocsDir,
+  tmuxSessionName,
+  SessionManager,
+  tmux,
+} from "@oma/core";
+import { adapterFor, availableAgents } from "@oma/adapters";
+import { extractSession, listCandidates, previewPromotion, promoteSession } from "@oma/docs";
+import { ingestRun } from "@oma/ingest";
+
+export class DesktopError extends Error {
+  constructor(
+    readonly code: number,
+    message: string,
+    readonly data?: unknown,
+  ) {
+    super(message);
+    this.name = "DesktopError";
+  }
+}
+
+const DIRTY_WORKTREE = /modified or untracked files|use --force/i;
+const MISSING_BINARY = /is not on PATH/i;
+
+/**
+ * Core throws plain Errors with operator-facing text. The desktop contract
+ * promises stable codes plus a recovery hint, so the mapping happens here and
+ * Swift never has to parse message text.
+ */
+export function toDesktopError(error: unknown, context: Record<string, unknown> = {}): DesktopError {
+  if (error instanceof DesktopError) return error;
+  const message = error instanceof Error ? error.message : String(error);
+  if (DIRTY_WORKTREE.test(message)) {
+    return new DesktopError(-32003, "The worktree has uncommitted changes", {
+      ...context,
+      recovery: "keep_worktree_or_force",
+      detail: message,
+    });
+  }
+  if (MISSING_BINARY.test(message)) {
+    return new DesktopError(-32002, "A required command is not installed", {
+      ...context,
+      recovery: "install_binary",
+      detail: message,
+    });
+  }
+  return new DesktopError(-32005, "Operation failed", {
+    ...context,
+    detail: message,
+  });
+}
+
+async function guarded<T>(context: Record<string, unknown>, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    throw toDesktopError(error, context);
+  }
+}
+
+export interface ProjectDetail {
+  project: Project;
+  sessions: DesktopSessionView[];
+}
+
+export interface DesktopSessionView {
+  session: Session;
+  runs: AgentRun[];
+  tmux_alive: boolean;
+}
+
+export interface DesktopSessionStatusView extends DesktopSessionView {
+  changed_files: ChangedFile[];
+  diff_stat: string;
+  pane: string;
+}
+
+export interface LivingDocSummary {
+  kind: MemoryKind;
+  path: string;
+  title: string;
+  modified_at: string;
+}
+
+export interface TerminalAttachment {
+  executable: string;
+  arguments: string[];
+  cwd: string;
+}
+
+export interface DesktopServices {
+  hello(): Promise<{
+    protocol_version: number;
+    app_version: string;
+    agents: AgentName[];
+  }>;
+  health(): Promise<{ ok: boolean; tmux_available: boolean }>;
+  shutdown(): Promise<{ shutting_down: boolean }>;
+  projectList(): Promise<Project[]>;
+  projectAdd(input: {
+    repo_path: string;
+    display_name?: string;
+  }): Promise<Project>;
+  projectDetail(input: { project_id: string }): Promise<ProjectDetail>;
+  projectRemove(input: {
+    project_id: string;
+  }): Promise<{ removed_project_id: string }>;
+  sessionList(input: {
+    repo_path?: string;
+    status?: SessionStatus;
+  }): Promise<DesktopSessionView[]>;
+  sessionStatus(input: {
+    session_id: string;
+  }): Promise<DesktopSessionStatusView>;
+  sessionCreate(input: {
+    repo_path: string;
+    agent: AgentName;
+    worktree?: boolean;
+    branch?: string;
+    title?: string;
+    prompt?: string;
+  }): Promise<DesktopSessionView>;
+  sessionResume(input: { session_id: string }): Promise<DesktopSessionView>;
+  sessionSwitch(input: {
+    session_id: string;
+    agent: AgentName;
+    prompt?: string;
+  }): Promise<DesktopSessionView>;
+  sessionEnd(input: {
+    session_id: string;
+  }): Promise<{ ended_session_id: string }>;
+  sessionRemove(input: {
+    session_id: string;
+    force?: boolean;
+    keep_worktree?: boolean;
+  }): Promise<{ removed_session_id: string }>;
+  transcriptList(input: {
+    session_id: string;
+    before?: string;
+    limit?: number;
+  }): Promise<EventPage>;
+  memoryList(input: { repo_path?: string; limit?: number }): Promise<Memory[]>;
+  memorySearch(input: {
+    query: string;
+    repo_path?: string;
+    limit?: number;
+  }): Promise<SearchHit[]>;
+  docsList(input: { repo_path: string }): Promise<LivingDocSummary[]>;
+  promotionExtract(input: {
+    session_id: string;
+  }): Promise<{ candidate_count: number }>;
+  promotionPreview(input: {
+    session_id: string;
+  }): Promise<{ diff: string; candidate_count: number }>;
+  promotionApply(input: {
+    session_id: string;
+  }): Promise<{ promoted: number; files: string[] }>;
+  terminalAttachment(input: {
+    session_id: string;
+  }): Promise<TerminalAttachment>;
+}
+
+export interface SessionOperations {
+  list(): Promise<SessionView[]>;
+  status(sessionId: string): Promise<SessionStatusView>;
+  create(input: CreateSessionOptions): Promise<SessionView>;
+  resume(sessionId: string): Promise<SessionView>;
+  switchAgent(
+    sessionId: string,
+    agent: AgentName,
+    opts?: { prompt?: string },
+  ): Promise<SessionView>;
+  end(sessionId: string): Promise<void>;
+  remove(
+    sessionId: string,
+    opts?: { force?: boolean; keepWorktree?: boolean },
+  ): Promise<void>;
+}
+
+export interface DesktopServiceDependencies {
+  db: Database;
+  manager: SessionOperations;
+  checkGitRepo?: typeof isGitRepo;
+  findRepoRoot?: typeof repoRoot;
+  checkTmux?: typeof tmux.tmuxAvailable;
+  findTmuxExecutable?: () => Promise<string>;
+  extractKnowledge?: (sessionId: string) => Promise<number>;
+  onShutdown?: () => void | Promise<void>;
+}
+
+function sessionView(view: SessionView): DesktopSessionView {
+  return {
+    session: view.session,
+    runs: view.runs,
+    tmux_alive: view.tmuxAlive,
+  };
+}
+
+function statusView(view: SessionStatusView): DesktopSessionStatusView {
+  return {
+    ...sessionView(view),
+    changed_files: view.changedFiles,
+    diff_stat: view.diffStat,
+    pane: view.pane,
+  };
+}
+
+export function createDesktopServices(
+  dependencies: DesktopServiceDependencies,
+): DesktopServices {
+  const {
+    db,
+    manager,
+    checkGitRepo = isGitRepo,
+    findRepoRoot = repoRoot,
+    checkTmux = tmux.tmuxAvailable,
+    findTmuxExecutable = async () => {
+      const result = await exec(["/usr/bin/which", "tmux"]);
+      if (result.code !== 0 || !result.stdout.trim()) {
+        throw new DesktopError(-32002, "tmux is unavailable", {
+          recovery: "install_tmux",
+        });
+      }
+      return result.stdout.trim();
+    },
+    onShutdown = () => undefined,
+  } = dependencies;
+  const extractKnowledge =
+    dependencies.extractKnowledge ??
+    (async (sessionId: string) => {
+      const session = resolveSession(db, sessionId);
+      const runs = listAgentRuns(db, session.id);
+      for (const run of runs) ingestRun(db, run);
+      const agent = runs.at(-1)?.agent;
+      if (!agent) {
+        throw new DesktopError(-32004, "Session has no agent runs", {
+          session_id: session.id,
+        });
+      }
+      return (await extractSession(db, session.id, adapterFor(agent))).length;
+    });
+
+  return {
+    hello: async () => ({
+      protocol_version: 1,
+      app_version: "0.1.0",
+      agents: [...availableAgents()],
+    }),
+    health: async () => {
+      // A missing tmux binary is a reportable state, not a failed request.
+      const tmuxAvailable = await checkTmux().catch(() => false);
+      return { ok: tmuxAvailable, tmux_available: tmuxAvailable };
+    },
+    shutdown: async () => {
+      await onShutdown();
+      return { shutting_down: true };
+    },
+    projectList: async () => listProjects(db),
+    projectAdd: async (input) => {
+      if (!(await checkGitRepo(input.repo_path))) {
+        throw new DesktopError(-32001, "Not a Git repository", {
+          repo_path: input.repo_path,
+        });
+      }
+      const root = await findRepoRoot(input.repo_path);
+      return createProject(db, {
+        repo_path: root,
+        display_name: input.display_name,
+      });
+    },
+    projectDetail: async ({ project_id }) => {
+      const project = resolveProject(db, project_id);
+      const sessions = (await manager.list())
+        .filter((view) => view.session.repo_path === project.repo_path)
+        .map(sessionView);
+      return { project, sessions };
+    },
+    projectRemove: async ({ project_id }) => {
+      const project = resolveProject(db, project_id);
+      removeProject(db, project.id);
+      return { removed_project_id: project.id };
+    },
+    sessionList: async ({ repo_path, status }) => {
+      const views = await manager.list();
+      return views
+        .filter((view) => !repo_path || view.session.repo_path === repo_path)
+        .filter((view) => !status || view.session.status === status)
+        .map(sessionView);
+    },
+    sessionStatus: async ({ session_id }) =>
+      statusView(await manager.status(session_id)),
+    sessionCreate: async (input) =>
+      guarded({ repo_path: input.repo_path, agent: input.agent }, async () =>
+        sessionView(
+          await manager.create({
+            repoPath: input.repo_path,
+            agent: input.agent,
+            worktree: input.worktree,
+            branch: input.branch,
+            title: input.title,
+            prompt: input.prompt,
+          }),
+        ),
+      ),
+    sessionResume: async ({ session_id }) =>
+      guarded({ session_id }, async () =>
+        sessionView(await manager.resume(session_id)),
+      ),
+    sessionSwitch: async ({ session_id, agent, prompt }) =>
+      guarded({ session_id, agent }, async () =>
+        sessionView(await manager.switchAgent(session_id, agent, { prompt })),
+      ),
+    sessionEnd: async ({ session_id }) => {
+      const session = resolveSession(db, session_id);
+      await guarded({ session_id: session.id }, () => manager.end(session.id));
+      return { ended_session_id: session.id };
+    },
+    sessionRemove: async ({ session_id, force, keep_worktree }) => {
+      const session = resolveSession(db, session_id);
+      await guarded({ session_id: session.id }, () =>
+        manager.remove(session.id, {
+          force,
+          keepWorktree: keep_worktree,
+        }),
+      );
+      return { removed_session_id: session.id };
+    },
+    transcriptList: async ({ session_id, before, limit }) =>
+      listEventsPage(db, { session_id, before, limit }),
+    memoryList: async ({ repo_path, limit }) =>
+      listMemory(db, { repo_path, limit }),
+    memorySearch: async ({ query, repo_path, limit }) =>
+      search(db, query, { repo_path, limit }),
+    docsList: async ({ repo_path }) => {
+      const directory = repoDocsDir(repo_path);
+      const files: Array<[MemoryKind, string, string]> = [
+        ["decision", "decisions.md", "Decisions"],
+        ["invariant", "invariants.md", "Invariants"],
+        ["risk", "risks.md", "Risks"],
+        ["ownership", "ownership.md", "Ownership"],
+        ["howto", "howtos.md", "How-tos"],
+      ];
+      return files.flatMap(([kind, filename, title]) => {
+        const absolutePath = join(directory, filename);
+        try {
+          if (!lstatSync(absolutePath).isFile()) return [];
+          return [
+            {
+              kind,
+              path: `.oma/docs/${filename}`,
+              title,
+              modified_at: statSync(absolutePath).mtime.toISOString(),
+            },
+          ];
+        } catch {
+          return [];
+        }
+      });
+    },
+    promotionExtract: async ({ session_id }) => ({
+      candidate_count: await extractKnowledge(resolveSession(db, session_id).id),
+    }),
+    promotionPreview: async ({ session_id }) => {
+      const session = resolveSession(db, session_id);
+      return {
+        diff: previewPromotion(db, session.id),
+        candidate_count: listCandidates(db, session.id, "pending").length,
+      };
+    },
+    promotionApply: async ({ session_id }) => {
+      const session = resolveSession(db, session_id);
+      return promoteSession(db, session.id);
+    },
+    terminalAttachment: async ({ session_id }) => {
+      const session = resolveSession(db, session_id);
+      return {
+        executable: await findTmuxExecutable(),
+        arguments: ["attach", "-t", tmuxSessionName(session.id)],
+        cwd: session.worktree_path,
+      };
+    },
+  };
+}
+
+const MCP_ENTRY = join(import.meta.dir, "..", "..", "mcp", "src", "stdio.ts");
+
+export function createProductionServices(
+  db: Database,
+  onShutdown: () => void | Promise<void>,
+): DesktopServices {
+  const manager = new SessionManager(db, {
+    adapterFor,
+    mcpServers: (scope) => [
+      {
+        name: "oma",
+        command: process.execPath,
+        args: ["run", MCP_ENTRY],
+        env: {
+          OMA_REPO_PATH: scope.repoPath,
+          OMA_SESSION_ID: scope.sessionId,
+        },
+      },
+    ],
+  });
+  return createDesktopServices({ db, manager, onShutdown });
+}
+
+export type { Project, Session };

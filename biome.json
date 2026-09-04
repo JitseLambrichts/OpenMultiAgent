@@ -1,0 +1,20 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.8/schema.json",
+  "files": {
+    "includes": [
+      "**",
+      "!node_modules",
+      "!.worktrees",
+      "!.oma",
+      "!apps/macos/Build",
+      "!apps/macos/OpenMultiAgent.xcodeproj"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space"
+  },
+  "linter": {
+    "enabled": true
+  }
+}

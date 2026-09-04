@@ -1,0 +1,780 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		00C5B98C7A9B60B9A4369278 /* ProjectsModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFD5EB74F9E42FA3F3CD0938 /* ProjectsModelTests.swift */; };
+		05CFA57ED235D5453F4A7E4B /* ProjectCockpitModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 976A48F6881481A8F2BA4F1C /* ProjectCockpitModel.swift */; };
+		0CCA8791A3C6BEE54B361A4C /* CriticalFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF12D3CD70A0557EE36FD5F7 /* CriticalFlowUITests.swift */; };
+		19886F801125340CFED855AD /* SessionWorkspaceModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1740A2E42EE5F8598288E11B /* SessionWorkspaceModel.swift */; };
+		1C109972A77D51961FBB7D9A /* MemorySearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C76281BC0710F5A09C42643 /* MemorySearchView.swift */; };
+		20E9B06EB19D83E89E581C1A /* RecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6478EC656FF56986F3E084E9 /* RecoveryView.swift */; };
+		348A6CB46378351C113D8237 /* SidecarClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE13ACC287E8AFFA1616AB67 /* SidecarClientTests.swift */; };
+		3C0307A5466816ADC156684B /* TerminalWorkspaceModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091D7E5D375B75B8FD432FCC /* TerminalWorkspaceModel.swift */; };
+		3DFFB318AA546842D95EA828 /* SmokeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF6500FD4D971176C7D39B02 /* SmokeUITests.swift */; };
+		3E470FC2CC743B53FCD33F5E /* ChangesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08699397F46B0EE752D58547 /* ChangesView.swift */; };
+		475BB09E7713BF06CF18DB97 /* TerminalGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2BA5F4DB24190B76CA51315 /* TerminalGridView.swift */; };
+		4C2D622B6F82ECA29106843B /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = EB0718B61BD3BD3D5CE06FBA /* SwiftTerm */; };
+		4ECE8C04A78693AD28E8975C /* AppCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = E59BF6A11E88AE323CDD434E /* AppCommands.swift */; };
+		5978EACFCC573681289153D8 /* DTOContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F2FAE50C0A20F89B707F172 /* DTOContractTests.swift */; };
+		5F52189E4E41DB84015601A3 /* ProjectCockpitModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C4A3463BA17E0B7DFD4E092 /* ProjectCockpitModelTests.swift */; };
+		5FE941D891B2B75F048291E2 /* SidecarClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AF7F33343F628EDFF4CF3A0 /* SidecarClient.swift */; };
+		6861A8F342751D66CE3F2120 /* SessionInspector.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD17A89C588441F519B5A07C /* SessionInspector.swift */; };
+		6ADEEC7FE3F3D478F94C90E3 /* fixture-sidecar.ts in Resources */ = {isa = PBXBuildFile; fileRef = 37D38EF0B8B13D0ADD1BD87B /* fixture-sidecar.ts */; };
+		6B1ABCA2A8CD9B6C40C4DFBB /* fixture-sidecar.ts in Resources */ = {isa = PBXBuildFile; fileRef = 37D38EF0B8B13D0ADD1BD87B /* fixture-sidecar.ts */; };
+		6DAF26BEC649D28ACB858789 /* SwitchAgentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5631F7B41744A2EEB62573 /* SwitchAgentSheet.swift */; };
+		6FD1B65B4090AA3327658D09 /* WindowStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFDDB92B0E86E61CDA9434BE /* WindowStateTests.swift */; };
+		7978EFBD30C6BFEA42CC8629 /* MemorySearchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6161E7514792D6305D88B81 /* MemorySearchModel.swift */; };
+		893BB79A29C958A92B9C0787 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 544B85D36118910DB8966FCA /* RootView.swift */; };
+		89FE30A206DA7912F67194C7 /* LivingDocsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B8A69E39933C5AA4300336E /* LivingDocsView.swift */; };
+		8A2D24920386940D049DB9E8 /* contracts in Resources */ = {isa = PBXBuildFile; fileRef = 2E393E7F52306C72212C347E /* contracts */; };
+		8E7A55BF30D6C3778FC7FC90 /* ProjectCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EE330743FFE3C0D2C9505F /* ProjectCard.swift */; };
+		945DAAB70CF9F52B9E89CBE7 /* WindowState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A244791944B79118D68F7381 /* WindowState.swift */; };
+		A2BC307A87D16D7CBDF5C8A3 /* TerminalProcess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 175D812CBDF62E172CBEF6B8 /* TerminalProcess.swift */; };
+		A2FACA2F008D0A741A999EC6 /* SessionWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 874F4B01E2D58EF3A6EBEFDC /* SessionWorkspaceView.swift */; };
+		A4F36FA403510893E8F71856 /* ProjectCockpitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7286E04C45FE5F5FED122184 /* ProjectCockpitView.swift */; };
+		A647E220974E471071A1524C /* SessionRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 502FE1C998A90A7BDBAF444F /* SessionRow.swift */; };
+		A8488B162CE3158EC55DF8E3 /* TerminalController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6572C5FAED4B924A0CF5CBE3 /* TerminalController.swift */; };
+		AC60D904CC26588B17BC0925 /* ProjectsDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BA936525D989EDACCB3818A /* ProjectsDashboard.swift */; };
+		B4AD6B14A41EC1A3F7687291 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74697C941F3F1E496B424CC5 /* AppModel.swift */; };
+		BF2968222E04FF4535308EDC /* OpenMultiAgentApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FEB5DDBD3950E602F9AAB54 /* OpenMultiAgentApp.swift */; };
+		BFBCFAC623630B2201C7F7AE /* NewSessionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B27839153A9477CCE2BEFE /* NewSessionSheet.swift */; };
+		BFE1776614C17C4239D92BD0 /* TerminalRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0248166877761AE521FC3C5 /* TerminalRepresentable.swift */; };
+		CB0C2664E41EDD82FFC620F1 /* Surfaces.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF9C9F181A58400E71A8549A /* Surfaces.swift */; };
+		D71889163AAB78E7C8B88B55 /* SessionsOverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5220AFD305007855625F9C61 /* SessionsOverviewView.swift */; };
+		E1E00CF6F2B820C784C55568 /* PromotionReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D81ACFB7B14459BCE4F042B /* PromotionReviewView.swift */; };
+		E2A18E5E7ED21DA261EB6841 /* TranscriptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9F34D0864B048A22DB0A7B9 /* TranscriptView.swift */; };
+		E77EA01D4B3FDBA282B84E6E /* SessionWorkspaceModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA53374AE2D9FAEFAF9D4605 /* SessionWorkspaceModelTests.swift */; };
+		ED05384BF878F30400D7B2CE /* OMAColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = E227033629B7079CFC8B3ED1 /* OMAColors.swift */; };
+		ED464A13AC7CC950EE9C7993 /* DTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1EE7B665D883461B3D1128F /* DTOs.swift */; };
+		F41C832C18062A8C62B95926 /* ProjectsModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 539874FBD27EA9EABBF93443 /* ProjectsModel.swift */; };
+		F4E3CA602B01E7FDE73AF75A /* TerminalWorkspaceModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FF13DAE64A588271564032C /* TerminalWorkspaceModelTests.swift */; };
+		FA1456FCC2F9A8CE7DDE4105 /* RPCEnvelope.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2926BADAD098A4F890F39D94 /* RPCEnvelope.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		BE84C826282886A1A42C7859 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CD6BE0444F54C54F5731771D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 31FE0760C32B8E818155FC47;
+			remoteInfo = OpenMultiAgent;
+		};
+		C5E70D4EE4DDD345624EEE5B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CD6BE0444F54C54F5731771D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 31FE0760C32B8E818155FC47;
+			remoteInfo = OpenMultiAgent;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		08699397F46B0EE752D58547 /* ChangesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangesView.swift; sourceTree = "<group>"; };
+		091D7E5D375B75B8FD432FCC /* TerminalWorkspaceModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalWorkspaceModel.swift; sourceTree = "<group>"; };
+		0C76281BC0710F5A09C42643 /* MemorySearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemorySearchView.swift; sourceTree = "<group>"; };
+		14EE330743FFE3C0D2C9505F /* ProjectCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectCard.swift; sourceTree = "<group>"; };
+		1740A2E42EE5F8598288E11B /* SessionWorkspaceModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWorkspaceModel.swift; sourceTree = "<group>"; };
+		175D812CBDF62E172CBEF6B8 /* TerminalProcess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalProcess.swift; sourceTree = "<group>"; };
+		2926BADAD098A4F890F39D94 /* RPCEnvelope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RPCEnvelope.swift; sourceTree = "<group>"; };
+		2AF7F33343F628EDFF4CF3A0 /* SidecarClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidecarClient.swift; sourceTree = "<group>"; };
+		2E393E7F52306C72212C347E /* contracts */ = {isa = PBXFileReference; lastKnownFileType = folder; name = contracts; path = "../../packages/desktop-api/testdata/contracts"; sourceTree = SOURCE_ROOT; };
+		37D38EF0B8B13D0ADD1BD87B /* fixture-sidecar.ts */ = {isa = PBXFileReference; path = "fixture-sidecar.ts"; sourceTree = "<group>"; };
+		3C4A3463BA17E0B7DFD4E092 /* ProjectCockpitModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectCockpitModelTests.swift; sourceTree = "<group>"; };
+		3F2FAE50C0A20F89B707F172 /* DTOContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DTOContractTests.swift; sourceTree = "<group>"; };
+		4FF13DAE64A588271564032C /* TerminalWorkspaceModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalWorkspaceModelTests.swift; sourceTree = "<group>"; };
+		502FE1C998A90A7BDBAF444F /* SessionRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRow.swift; sourceTree = "<group>"; };
+		5220AFD305007855625F9C61 /* SessionsOverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsOverviewView.swift; sourceTree = "<group>"; };
+		539874FBD27EA9EABBF93443 /* ProjectsModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectsModel.swift; sourceTree = "<group>"; };
+		544B85D36118910DB8966FCA /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		54B27839153A9477CCE2BEFE /* NewSessionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewSessionSheet.swift; sourceTree = "<group>"; };
+		6478EC656FF56986F3E084E9 /* RecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryView.swift; sourceTree = "<group>"; };
+		6572C5FAED4B924A0CF5CBE3 /* TerminalController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalController.swift; sourceTree = "<group>"; };
+		65CD351195628D6D49E31DC2 /* OpenMultiAgentTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenMultiAgentTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		6D81ACFB7B14459BCE4F042B /* PromotionReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromotionReviewView.swift; sourceTree = "<group>"; };
+		7286E04C45FE5F5FED122184 /* ProjectCockpitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectCockpitView.swift; sourceTree = "<group>"; };
+		74697C941F3F1E496B424CC5 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		7B8A69E39933C5AA4300336E /* LivingDocsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LivingDocsView.swift; sourceTree = "<group>"; };
+		7BA936525D989EDACCB3818A /* ProjectsDashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectsDashboard.swift; sourceTree = "<group>"; };
+		874F4B01E2D58EF3A6EBEFDC /* SessionWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWorkspaceView.swift; sourceTree = "<group>"; };
+		976A48F6881481A8F2BA4F1C /* ProjectCockpitModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectCockpitModel.swift; sourceTree = "<group>"; };
+		9FEB5DDBD3950E602F9AAB54 /* OpenMultiAgentApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenMultiAgentApp.swift; sourceTree = "<group>"; };
+		A244791944B79118D68F7381 /* WindowState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowState.swift; sourceTree = "<group>"; };
+		A9F34D0864B048A22DB0A7B9 /* TranscriptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptView.swift; sourceTree = "<group>"; };
+		AE13ACC287E8AFFA1616AB67 /* SidecarClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidecarClientTests.swift; sourceTree = "<group>"; };
+		B1EE7B665D883461B3D1128F /* DTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DTOs.swift; sourceTree = "<group>"; };
+		B2BA5F4DB24190B76CA51315 /* TerminalGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalGridView.swift; sourceTree = "<group>"; };
+		CD17A89C588441F519B5A07C /* SessionInspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionInspector.swift; sourceTree = "<group>"; };
+		D6161E7514792D6305D88B81 /* MemorySearchModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemorySearchModel.swift; sourceTree = "<group>"; };
+		D850DC9AD8239199DC61307C /* OpenMultiAgent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenMultiAgent.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		DF12D3CD70A0557EE36FD5F7 /* CriticalFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CriticalFlowUITests.swift; sourceTree = "<group>"; };
+		DF9C9F181A58400E71A8549A /* Surfaces.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Surfaces.swift; sourceTree = "<group>"; };
+		DFDDB92B0E86E61CDA9434BE /* WindowStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowStateTests.swift; sourceTree = "<group>"; };
+		E0248166877761AE521FC3C5 /* TerminalRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalRepresentable.swift; sourceTree = "<group>"; };
+		E227033629B7079CFC8B3ED1 /* OMAColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OMAColors.swift; sourceTree = "<group>"; };
+		E2F017756E7716B6CF72DF37 /* OpenMultiAgentUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenMultiAgentUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E59BF6A11E88AE323CDD434E /* AppCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCommands.swift; sourceTree = "<group>"; };
+		EE5631F7B41744A2EEB62573 /* SwitchAgentSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwitchAgentSheet.swift; sourceTree = "<group>"; };
+		EFD5EB74F9E42FA3F3CD0938 /* ProjectsModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectsModelTests.swift; sourceTree = "<group>"; };
+		FA53374AE2D9FAEFAF9D4605 /* SessionWorkspaceModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWorkspaceModelTests.swift; sourceTree = "<group>"; };
+		FF6500FD4D971176C7D39B02 /* SmokeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeUITests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		9E61BB7ADCFE469E0EEBEC19 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4C2D622B6F82ECA29106843B /* SwiftTerm in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0A80C3C3FDDC58B6C4B2EBD9 /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				E227033629B7079CFC8B3ED1 /* OMAColors.swift */,
+				DF9C9F181A58400E71A8549A /* Surfaces.swift */,
+			);
+			path = DesignSystem;
+			sourceTree = "<group>";
+		};
+		42B309510B6E5072F5B15929 /* Terminal */ = {
+			isa = PBXGroup;
+			children = (
+				6572C5FAED4B924A0CF5CBE3 /* TerminalController.swift */,
+				B2BA5F4DB24190B76CA51315 /* TerminalGridView.swift */,
+				175D812CBDF62E172CBEF6B8 /* TerminalProcess.swift */,
+				E0248166877761AE521FC3C5 /* TerminalRepresentable.swift */,
+				091D7E5D375B75B8FD432FCC /* TerminalWorkspaceModel.swift */,
+			);
+			path = Terminal;
+			sourceTree = "<group>";
+		};
+		4704FC692FAA25EFA32ED111 /* Client */ = {
+			isa = PBXGroup;
+			children = (
+				B1EE7B665D883461B3D1128F /* DTOs.swift */,
+				2926BADAD098A4F890F39D94 /* RPCEnvelope.swift */,
+				2AF7F33343F628EDFF4CF3A0 /* SidecarClient.swift */,
+			);
+			path = Client;
+			sourceTree = "<group>";
+		};
+		47DB85CC017CB6F9BED70F9C /* App */ = {
+			isa = PBXGroup;
+			children = (
+				E59BF6A11E88AE323CDD434E /* AppCommands.swift */,
+				74697C941F3F1E496B424CC5 /* AppModel.swift */,
+				9FEB5DDBD3950E602F9AAB54 /* OpenMultiAgentApp.swift */,
+				6478EC656FF56986F3E084E9 /* RecoveryView.swift */,
+				544B85D36118910DB8966FCA /* RootView.swift */,
+				A244791944B79118D68F7381 /* WindowState.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		70892BC121DBDD435D7B6CEF /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D850DC9AD8239199DC61307C /* OpenMultiAgent.app */,
+				65CD351195628D6D49E31DC2 /* OpenMultiAgentTests.xctest */,
+				E2F017756E7716B6CF72DF37 /* OpenMultiAgentUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		748D78C5A08537F9D39F3F53 /* UITests */ = {
+			isa = PBXGroup;
+			children = (
+				DF12D3CD70A0557EE36FD5F7 /* CriticalFlowUITests.swift */,
+				FF6500FD4D971176C7D39B02 /* SmokeUITests.swift */,
+			);
+			path = UITests;
+			sourceTree = "<group>";
+		};
+		80F8E9FD97BA5ED6FD1CABF0 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				47DB85CC017CB6F9BED70F9C /* App */,
+				4704FC692FAA25EFA32ED111 /* Client */,
+				0A80C3C3FDDC58B6C4B2EBD9 /* DesignSystem */,
+				B68A27E416A59165D4AC6D12 /* Memory */,
+				ACB4B4065726CFD8109C09C2 /* Projects */,
+				D7E04B5056E564676B211779 /* Sessions */,
+				42B309510B6E5072F5B15929 /* Terminal */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		A549CB71A457ECE5E1838744 /* FixtureSidecar */ = {
+			isa = PBXGroup;
+			children = (
+				37D38EF0B8B13D0ADD1BD87B /* fixture-sidecar.ts */,
+			);
+			name = FixtureSidecar;
+			path = UITests/FixtureSidecar;
+			sourceTree = "<group>";
+		};
+		A5FBD7BF405DAF867A1F4A5B /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				3F2FAE50C0A20F89B707F172 /* DTOContractTests.swift */,
+				3C4A3463BA17E0B7DFD4E092 /* ProjectCockpitModelTests.swift */,
+				EFD5EB74F9E42FA3F3CD0938 /* ProjectsModelTests.swift */,
+				FA53374AE2D9FAEFAF9D4605 /* SessionWorkspaceModelTests.swift */,
+				AE13ACC287E8AFFA1616AB67 /* SidecarClientTests.swift */,
+				4FF13DAE64A588271564032C /* TerminalWorkspaceModelTests.swift */,
+				DFDDB92B0E86E61CDA9434BE /* WindowStateTests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		ACB4B4065726CFD8109C09C2 /* Projects */ = {
+			isa = PBXGroup;
+			children = (
+				14EE330743FFE3C0D2C9505F /* ProjectCard.swift */,
+				976A48F6881481A8F2BA4F1C /* ProjectCockpitModel.swift */,
+				7286E04C45FE5F5FED122184 /* ProjectCockpitView.swift */,
+				7BA936525D989EDACCB3818A /* ProjectsDashboard.swift */,
+				539874FBD27EA9EABBF93443 /* ProjectsModel.swift */,
+			);
+			path = Projects;
+			sourceTree = "<group>";
+		};
+		B68A27E416A59165D4AC6D12 /* Memory */ = {
+			isa = PBXGroup;
+			children = (
+				7B8A69E39933C5AA4300336E /* LivingDocsView.swift */,
+				D6161E7514792D6305D88B81 /* MemorySearchModel.swift */,
+				0C76281BC0710F5A09C42643 /* MemorySearchView.swift */,
+				6D81ACFB7B14459BCE4F042B /* PromotionReviewView.swift */,
+			);
+			path = Memory;
+			sourceTree = "<group>";
+		};
+		D7E04B5056E564676B211779 /* Sessions */ = {
+			isa = PBXGroup;
+			children = (
+				08699397F46B0EE752D58547 /* ChangesView.swift */,
+				54B27839153A9477CCE2BEFE /* NewSessionSheet.swift */,
+				CD17A89C588441F519B5A07C /* SessionInspector.swift */,
+				502FE1C998A90A7BDBAF444F /* SessionRow.swift */,
+				5220AFD305007855625F9C61 /* SessionsOverviewView.swift */,
+				1740A2E42EE5F8598288E11B /* SessionWorkspaceModel.swift */,
+				874F4B01E2D58EF3A6EBEFDC /* SessionWorkspaceView.swift */,
+				EE5631F7B41744A2EEB62573 /* SwitchAgentSheet.swift */,
+				A9F34D0864B048A22DB0A7B9 /* TranscriptView.swift */,
+			);
+			path = Sessions;
+			sourceTree = "<group>";
+		};
+		FC22A665DA199E82D08DF02D = {
+			isa = PBXGroup;
+			children = (
+				2E393E7F52306C72212C347E /* contracts */,
+				A549CB71A457ECE5E1838744 /* FixtureSidecar */,
+				80F8E9FD97BA5ED6FD1CABF0 /* Sources */,
+				A5FBD7BF405DAF867A1F4A5B /* Tests */,
+				748D78C5A08537F9D39F3F53 /* UITests */,
+				70892BC121DBDD435D7B6CEF /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		31FE0760C32B8E818155FC47 /* OpenMultiAgent */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D57F97981A5CE76797FAAD08 /* Build configuration list for PBXNativeTarget "OpenMultiAgent" */;
+			buildPhases = (
+				E8E90385C0314C48BA3F1C13 /* Sources */,
+				9E61BB7ADCFE469E0EEBEC19 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = OpenMultiAgent;
+			packageProductDependencies = (
+				EB0718B61BD3BD3D5CE06FBA /* SwiftTerm */,
+			);
+			productName = OpenMultiAgent;
+			productReference = D850DC9AD8239199DC61307C /* OpenMultiAgent.app */;
+			productType = "com.apple.product-type.application";
+		};
+		B62E3561F0060FF9CA9BCBD5 /* OpenMultiAgentTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4EC228D5A72FB446A036F7AE /* Build configuration list for PBXNativeTarget "OpenMultiAgentTests" */;
+			buildPhases = (
+				398401F0D75493C2FEA5B93C /* Sources */,
+				5E9925F1532DE30D8675D8C6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D7EC6E5055FBA01FD1033A1B /* PBXTargetDependency */,
+			);
+			name = OpenMultiAgentTests;
+			packageProductDependencies = (
+			);
+			productName = OpenMultiAgentTests;
+			productReference = 65CD351195628D6D49E31DC2 /* OpenMultiAgentTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		F49C37694688D66A9498B76F /* OpenMultiAgentUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9AD4414D41FD490752645B28 /* Build configuration list for PBXNativeTarget "OpenMultiAgentUITests" */;
+			buildPhases = (
+				36D3F318A39D264DE6D1027B /* Sources */,
+				46ABEB41018AE8C7DF55F892 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2828696A4ABD15291E86C187 /* PBXTargetDependency */,
+			);
+			name = OpenMultiAgentUITests;
+			packageProductDependencies = (
+			);
+			productName = OpenMultiAgentUITests;
+			productReference = E2F017756E7716B6CF72DF37 /* OpenMultiAgentUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		CD6BE0444F54C54F5731771D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					31FE0760C32B8E818155FC47 = {
+						ProvisioningStyle = Manual;
+					};
+					B62E3561F0060FF9CA9BCBD5 = {
+						ProvisioningStyle = Manual;
+					};
+					F49C37694688D66A9498B76F = {
+						ProvisioningStyle = Manual;
+						TestTargetID = 31FE0760C32B8E818155FC47;
+					};
+				};
+			};
+			buildConfigurationList = 5CDBD5181DA89E359C9B4E01 /* Build configuration list for PBXProject "OpenMultiAgent" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = FC22A665DA199E82D08DF02D;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A5AC4C024AF24C08885181DC /* XCRemoteSwiftPackageReference "SwiftTerm" */,
+			);
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				31FE0760C32B8E818155FC47 /* OpenMultiAgent */,
+				B62E3561F0060FF9CA9BCBD5 /* OpenMultiAgentTests */,
+				F49C37694688D66A9498B76F /* OpenMultiAgentUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		46ABEB41018AE8C7DF55F892 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6ADEEC7FE3F3D478F94C90E3 /* fixture-sidecar.ts in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E9925F1532DE30D8675D8C6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8A2D24920386940D049DB9E8 /* contracts in Resources */,
+				6B1ABCA2A8CD9B6C40C4DFBB /* fixture-sidecar.ts in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		36D3F318A39D264DE6D1027B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0CCA8791A3C6BEE54B361A4C /* CriticalFlowUITests.swift in Sources */,
+				3DFFB318AA546842D95EA828 /* SmokeUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		398401F0D75493C2FEA5B93C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5978EACFCC573681289153D8 /* DTOContractTests.swift in Sources */,
+				5F52189E4E41DB84015601A3 /* ProjectCockpitModelTests.swift in Sources */,
+				00C5B98C7A9B60B9A4369278 /* ProjectsModelTests.swift in Sources */,
+				E77EA01D4B3FDBA282B84E6E /* SessionWorkspaceModelTests.swift in Sources */,
+				348A6CB46378351C113D8237 /* SidecarClientTests.swift in Sources */,
+				F4E3CA602B01E7FDE73AF75A /* TerminalWorkspaceModelTests.swift in Sources */,
+				6FD1B65B4090AA3327658D09 /* WindowStateTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E8E90385C0314C48BA3F1C13 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4ECE8C04A78693AD28E8975C /* AppCommands.swift in Sources */,
+				B4AD6B14A41EC1A3F7687291 /* AppModel.swift in Sources */,
+				3E470FC2CC743B53FCD33F5E /* ChangesView.swift in Sources */,
+				ED464A13AC7CC950EE9C7993 /* DTOs.swift in Sources */,
+				89FE30A206DA7912F67194C7 /* LivingDocsView.swift in Sources */,
+				7978EFBD30C6BFEA42CC8629 /* MemorySearchModel.swift in Sources */,
+				1C109972A77D51961FBB7D9A /* MemorySearchView.swift in Sources */,
+				BFBCFAC623630B2201C7F7AE /* NewSessionSheet.swift in Sources */,
+				ED05384BF878F30400D7B2CE /* OMAColors.swift in Sources */,
+				BF2968222E04FF4535308EDC /* OpenMultiAgentApp.swift in Sources */,
+				8E7A55BF30D6C3778FC7FC90 /* ProjectCard.swift in Sources */,
+				05CFA57ED235D5453F4A7E4B /* ProjectCockpitModel.swift in Sources */,
+				A4F36FA403510893E8F71856 /* ProjectCockpitView.swift in Sources */,
+				AC60D904CC26588B17BC0925 /* ProjectsDashboard.swift in Sources */,
+				F41C832C18062A8C62B95926 /* ProjectsModel.swift in Sources */,
+				E1E00CF6F2B820C784C55568 /* PromotionReviewView.swift in Sources */,
+				FA1456FCC2F9A8CE7DDE4105 /* RPCEnvelope.swift in Sources */,
+				20E9B06EB19D83E89E581C1A /* RecoveryView.swift in Sources */,
+				893BB79A29C958A92B9C0787 /* RootView.swift in Sources */,
+				6861A8F342751D66CE3F2120 /* SessionInspector.swift in Sources */,
+				A647E220974E471071A1524C /* SessionRow.swift in Sources */,
+				19886F801125340CFED855AD /* SessionWorkspaceModel.swift in Sources */,
+				A2FACA2F008D0A741A999EC6 /* SessionWorkspaceView.swift in Sources */,
+				D71889163AAB78E7C8B88B55 /* SessionsOverviewView.swift in Sources */,
+				5FE941D891B2B75F048291E2 /* SidecarClient.swift in Sources */,
+				CB0C2664E41EDD82FFC620F1 /* Surfaces.swift in Sources */,
+				6DAF26BEC649D28ACB858789 /* SwitchAgentSheet.swift in Sources */,
+				A8488B162CE3158EC55DF8E3 /* TerminalController.swift in Sources */,
+				475BB09E7713BF06CF18DB97 /* TerminalGridView.swift in Sources */,
+				A2BC307A87D16D7CBDF5C8A3 /* TerminalProcess.swift in Sources */,
+				BFE1776614C17C4239D92BD0 /* TerminalRepresentable.swift in Sources */,
+				3C0307A5466816ADC156684B /* TerminalWorkspaceModel.swift in Sources */,
+				E2A18E5E7ED21DA261EB6841 /* TranscriptView.swift in Sources */,
+				945DAAB70CF9F52B9E89CBE7 /* WindowState.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		2828696A4ABD15291E86C187 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 31FE0760C32B8E818155FC47 /* OpenMultiAgent */;
+			targetProxy = BE84C826282886A1A42C7859 /* PBXContainerItemProxy */;
+		};
+		D7EC6E5055FBA01FD1033A1B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 31FE0760C32B8E818155FC47 /* OpenMultiAgent */;
+			targetProxy = C5E70D4EE4DDD345624EEE5B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		1FDFD280480127514E57FB35 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.openmultiagent.OpenMultiAgentTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpenMultiAgent.app/Contents/MacOS/OpenMultiAgent";
+			};
+			name = Release;
+		};
+		3240ED7A145924B3C7DEBDF4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		418622C0B05A9CFBB1D23ACD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.openmultiagent.OpenMultiAgentUITests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = OpenMultiAgent;
+			};
+			name = Debug;
+		};
+		6D5552044E0B54DEACB95E01 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.openmultiagent.OpenMultiAgentTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpenMultiAgent.app/Contents/MacOS/OpenMultiAgent";
+			};
+			name = Debug;
+		};
+		8CE170E14B2A466EA9C83CAC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = OpenMultiAgent/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.openmultiagent.OpenMultiAgent;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		8E7E648EED1ABF17EA3806D6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.openmultiagent.OpenMultiAgentUITests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = OpenMultiAgent;
+			};
+			name = Release;
+		};
+		DC25891809183599866F47D1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		DFCF9C8DFDA73AD0AC0FF0E4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = OpenMultiAgent/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.openmultiagent.OpenMultiAgent;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		4EC228D5A72FB446A036F7AE /* Build configuration list for PBXNativeTarget "OpenMultiAgentTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6D5552044E0B54DEACB95E01 /* Debug */,
+				1FDFD280480127514E57FB35 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5CDBD5181DA89E359C9B4E01 /* Build configuration list for PBXProject "OpenMultiAgent" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DC25891809183599866F47D1 /* Debug */,
+				3240ED7A145924B3C7DEBDF4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9AD4414D41FD490752645B28 /* Build configuration list for PBXNativeTarget "OpenMultiAgentUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				418622C0B05A9CFBB1D23ACD /* Debug */,
+				8E7E648EED1ABF17EA3806D6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D57F97981A5CE76797FAAD08 /* Build configuration list for PBXNativeTarget "OpenMultiAgent" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8CE170E14B2A466EA9C83CAC /* Debug */,
+				DFCF9C8DFDA73AD0AC0FF0E4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A5AC4C024AF24C08885181DC /* XCRemoteSwiftPackageReference "SwiftTerm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/migueldeicaza/SwiftTerm.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.18.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		EB0718B61BD3BD3D5CE06FBA /* SwiftTerm */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A5AC4C024AF24C08885181DC /* XCRemoteSwiftPackageReference "SwiftTerm" */;
+			productName = SwiftTerm;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = CD6BE0444F54C54F5731771D /* Project object */;
+}

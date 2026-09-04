@@ -1,0 +1,15 @@
+{
+  "name": "@oma/desktop-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "oma-desktop-api": "./src/index.ts"
+  },
+  "dependencies": {
+    "@oma/adapters": "workspace:*",
+    "@oma/core": "workspace:*",
+    "@oma/docs": "workspace:*",
+    "@oma/ingest": "workspace:*"
+  }
+}

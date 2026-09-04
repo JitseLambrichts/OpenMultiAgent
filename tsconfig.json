@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "lib": ["ESNext"],
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "types": ["bun-types"],
+    "baseUrl": ".",
+    "paths": {
+      "@oma/core": ["packages/core/src/index.ts"],
+      "@oma/core/*": ["packages/core/src/*"],
+      "@oma/ingest": ["packages/ingest/src/index.ts"],
+      "@oma/ingest/*": ["packages/ingest/src/*"],
+      "@oma/adapters": ["packages/adapters/src/index.ts"],
+      "@oma/adapters/*": ["packages/adapters/src/*"],
+      "@oma/mcp": ["packages/mcp/src/index.ts"],
+      "@oma/mcp/*": ["packages/mcp/src/*"],
+      "@oma/docs": ["packages/docs/src/index.ts"],
+      "@oma/docs/*": ["packages/docs/src/*"]
+    }
+  },
+  "include": ["packages/**/*.ts"],
+  "exclude": ["node_modules"]
+}
