@@ -61,28 +61,39 @@ struct OpenMultiAgentApp: App {
         .commands { AppCommands(model: model) }
 
         Settings {
-            SettingsView()
+            SettingsView(app: model)
         }
     }
 }
 
 struct SettingsView: View {
+    let app: AppModel
     @AppStorage(AppearanceSetting.storageKey) private var appearance: AppearanceSetting = .dark
 
     var body: some View {
-        Form {
-            Picker("Weergave", selection: $appearance) {
-                ForEach(AppearanceSetting.allCases) { setting in
-                    Text(setting.title).tag(setting)
+        TabView {
+            Tab("Algemeen", systemImage: "gearshape") {
+                Form {
+                    Picker("Weergave", selection: $appearance) {
+                        ForEach(AppearanceSetting.allCases) { setting in
+                            Text(setting.title).tag(setting)
+                        }
+                    }
+                    .pickerStyle(.radioGroup)
+                    Text("Donker is de standaard voor deze ontwikkeltool. Systeem volgt de macOS-instelling.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .formStyle(.grouped)
+                .padding()
+            }
+            Tab("Agents", systemImage: "terminal") {
+                ScrollView {
+                    AgentsSettingsView(app: app)
+                        .padding()
                 }
             }
-            .pickerStyle(.radioGroup)
-            Text("Donker is de standaard voor deze ontwikkeltool. Systeem volgt de macOS-instelling.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
-        .formStyle(.grouped)
-        .frame(width: 380)
-        .padding()
+        .frame(width: 560, height: 520)
     }
 }

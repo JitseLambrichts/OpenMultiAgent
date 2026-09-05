@@ -16,6 +16,45 @@ struct CockpitAlert: Equatable, Identifiable, Sendable {
     let primaryAction: CockpitAlertAction
     let secondaryAction: CockpitAlertAction?
     let isDestructive: Bool
+
+    /// Removal states whether the worktree will be retained before anything happens.
+    static func removeConfirmation(for view: SessionViewDTO) -> CockpitAlert {
+        let retains = !view.session.usesWorktree
+        return CockpitAlert(
+            id: "remove-\(view.id)",
+            sessionID: view.id,
+            title: "Sessie “\(view.session.displayTitle)” verwijderen?",
+            message: retains
+                ? "Het sessierecord verdwijnt uit OpenMultiAgent. De repository zelf wordt niet aangeraakt."
+                : "Het sessierecord en de worktree \(view.session.worktreePath ?? "") worden verwijderd. Een worktree met niet-gecommitte wijzigingen blijft beschermd.",
+            primaryAction: .removeSession,
+            secondaryAction: nil,
+            isDestructive: true
+        )
+    }
+
+    static func dirtyWorktree(sessionID: String) -> CockpitAlert {
+        CockpitAlert(
+            id: "dirty-\(sessionID)",
+            sessionID: sessionID,
+            title: "De worktree bevat niet-gecommitte wijzigingen",
+            message: "OpenMultiAgent verwijdert geen worktree met openstaand werk. Behoud de worktree en verwijder alleen de sessie, of forceer verwijdering en verlies de wijzigingen.",
+            primaryAction: .keepWorktreeAndRetry,
+            secondaryAction: .forceRemove,
+            isDestructive: true
+        )
+    }
+}
+
+extension CockpitAlertAction {
+    var title: String {
+        switch self {
+        case .endSession: "Beëindig"
+        case .removeSession: "Verwijder"
+        case .keepWorktreeAndRetry: "Behoud worktree"
+        case .forceRemove: "Forceer verwijdering"
+        }
+    }
 }
 
 /// Changed files of one active session, for the cockpit panel.
@@ -179,21 +218,9 @@ final class ProjectCockpitModel {
         }
     }
 
-    /// Removal states whether the worktree will be retained before anything happens.
     func requestRemove(sessionID: String) {
         guard let view = session(withID: sessionID) else { return }
-        let retains = !view.session.usesWorktree
-        alert = CockpitAlert(
-            id: "remove-\(sessionID)",
-            sessionID: sessionID,
-            title: "Sessie “\(view.session.displayTitle)” verwijderen?",
-            message: retains
-                ? "Het sessierecord verdwijnt uit OpenMultiAgent. De repository zelf wordt niet aangeraakt."
-                : "Het sessierecord en de worktree \(view.session.worktreePath ?? "") worden verwijderd. Een worktree met niet-gecommitte wijzigingen blijft beschermd.",
-            primaryAction: .removeSession,
-            secondaryAction: nil,
-            isDestructive: true
-        )
+        alert = .removeConfirmation(for: view)
     }
 
     func remove(sessionID: String, force: Bool, keepWorktree: Bool) async {
@@ -206,15 +233,7 @@ final class ProjectCockpitModel {
             if selectedSessionID == sessionID { selectedSessionID = nil }
             notice = nil
         } catch let error as RPCErrorDTO where error.recoveryAction == .keepWorktreeOrForce {
-            alert = CockpitAlert(
-                id: "dirty-\(sessionID)",
-                sessionID: sessionID,
-                title: "De worktree bevat niet-gecommitte wijzigingen",
-                message: "OpenMultiAgent verwijdert geen worktree met openstaand werk. Behoud de worktree en verwijder alleen de sessie, of forceer verwijdering en verlies de wijzigingen.",
-                primaryAction: .keepWorktreeAndRetry,
-                secondaryAction: .forceRemove,
-                isDestructive: true
-            )
+            alert = .dirtyWorktree(sessionID: sessionID)
         } catch {
             notice = ProjectsNotice(message: message(for: error), action: .retry)
         }

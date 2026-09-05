@@ -23,10 +23,23 @@ const PARSERS: Partial<Record<AgentName, TranscriptParser>> = {
   gemini: geminiParser,
 };
 
+const genericParser: TranscriptParser = {
+  agent: "custom",
+  parse: () => ({
+    events: [],
+    meta: {
+      nativeSessionId: null,
+      cwd: null,
+      gitBranch: null,
+      parentSessionId: null,
+    },
+    touchedFiles: [],
+    skippedLines: 0,
+  }),
+};
+
 export function parserFor(agent: AgentName): TranscriptParser {
-  const parser = PARSERS[agent];
-  if (!parser) throw new Error(`no transcript parser for agent '${agent}'`);
-  return parser;
+  return PARSERS[agent] ?? genericParser;
 }
 
 export function parseTranscriptFile(

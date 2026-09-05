@@ -4,6 +4,9 @@ import SwiftUI
 /// sheet only collects the target agent and an optional prompt.
 struct SwitchAgentSheet: View {
     let session: SessionViewDTO
+    let agents: [AgentKind]
+    let displayName: (AgentKind) -> String
+    let symbol: (AgentKind) -> String
     let onSwitch: (AgentKind, String?) async -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -11,11 +14,15 @@ struct SwitchAgentSheet: View {
     @State private var prompt = ""
     @State private var isSubmitting = false
 
-    init(session: SessionViewDTO, onSwitch: @escaping (AgentKind, String?) async -> Void) {
+    init(session: SessionViewDTO, agents: [AgentKind] = AgentKind.allCases, displayName: @escaping (AgentKind) -> String = { $0.title }, symbol: @escaping (AgentKind) -> String = { $0.symbol }, onSwitch: @escaping (AgentKind, String?) async -> Void) {
         self.session = session
+        self.agents = agents.isEmpty ? AgentKind.allCases : agents
+        self.displayName = displayName
+        self.symbol = symbol
         self.onSwitch = onSwitch
         let current = session.currentAgent ?? .claude
-        _agent = State(initialValue: AgentKind.allCases.first { $0 != current } ?? current)
+        let all = agents.isEmpty ? AgentKind.allCases : agents
+        _agent = State(initialValue: all.first { $0 != current } ?? current)
     }
 
     var body: some View {
@@ -31,8 +38,8 @@ struct SwitchAgentSheet: View {
             Form {
                 LabeledContent("Huidige agent", value: session.currentAgent?.title ?? "Onbekend")
                 Picker("Nieuwe agent", selection: $agent) {
-                    ForEach(AgentKind.allCases) { candidate in
-                        Label(candidate.title, systemImage: candidate.symbol).tag(candidate)
+                    ForEach(agents) { candidate in
+                        Label(displayName(candidate), systemImage: symbol(candidate)).tag(candidate)
                     }
                 }
                 TextField("Prompt (optioneel)", text: $prompt, axis: .vertical)

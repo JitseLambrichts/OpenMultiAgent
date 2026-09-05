@@ -124,21 +124,85 @@ struct ProjectDetailDTO: Decodable, Equatable, Sendable {
     let sessions: [SessionViewDTO]
 }
 
-enum AgentKind: String, Codable, CaseIterable, Identifiable, Sendable {
-    case claude
-    case codex
-    case gemini
+struct AgentKind: Codable, Hashable, Identifiable, Sendable {
+    let rawValue: String
 
-    var id: Self { self }
+    init(rawValue: String) {
+        self.rawValue = rawValue
+    }
 
-    var title: String { rawValue.capitalized }
+    init(from decoder: Decoder) throws {
+        rawValue = try decoder.singleValueContainer().decode(String.self)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+
+    static let claude = AgentKind(rawValue: "claude")
+    static let codex = AgentKind(rawValue: "codex")
+    static let gemini = AgentKind(rawValue: "gemini")
+
+    static var builtins: [AgentKind] { [.claude, .codex, .gemini] }
+    static var allCases: [AgentKind] { builtins }
+
+    var id: String { rawValue }
+
+    var title: String {
+        rawValue
+            .replacingOccurrences(of: "-", with: " ")
+            .replacingOccurrences(of: "_", with: " ")
+            .capitalized
+    }
+
+    var isBuiltin: Bool { Self.builtins.contains(self) }
 
     var symbol: String {
-        switch self {
-        case .claude: "sparkles"
-        case .codex: "chevron.left.forwardslash.chevron.right"
-        case .gemini: "diamond.fill"
+        switch rawValue {
+        case "claude": "sparkles"
+        case "codex": "chevron.left.forwardslash.chevron.right"
+        case "gemini": "diamond.fill"
+        default: "terminal"
         }
+    }
+
+    func resolvedSymbol(in customAgents: [CustomAgentDTO]) -> String {
+        customAgents.first { $0.id == rawValue }?.symbol ?? symbol
+    }
+}
+
+struct CustomAgentDTO: Codable, Equatable, Identifiable, Sendable {
+    let id: String
+    let name: String
+    let binary: String
+    let launchArgs: [String]
+    let symbol: String
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case binary
+        case launchArgs = "launch_args"
+        case symbol
+    }
+
+    init(id: String, name: String, binary: String, launchArgs: [String], symbol: String = "terminal") {
+        self.id = id
+        self.name = name
+        self.binary = binary
+        self.launchArgs = launchArgs
+        self.symbol = symbol.isEmpty ? "terminal" : symbol
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        binary = try container.decode(String.self, forKey: .binary)
+        launchArgs = try container.decode([String].self, forKey: .launchArgs)
+        let decoded = try container.decodeIfPresent(String.self, forKey: .symbol) ?? "terminal"
+        symbol = decoded.isEmpty ? "terminal" : decoded
     }
 }
 
@@ -202,7 +266,7 @@ extension SessionDTO {
 
 extension SessionViewDTO {
     var currentAgent: AgentKind? {
-        runs.last.flatMap { AgentKind(rawValue: $0.agent) }
+        runs.last.map { AgentKind(rawValue: $0.agent) }
     }
 }
 

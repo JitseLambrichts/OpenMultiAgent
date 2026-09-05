@@ -1,18 +1,85 @@
 import SwiftUI
 
-/// Cross-project session overview. Opening a session jumps to its project.
-struct SessionsOverviewView: View {
-    let model: AppModel
-    @State private var sessions: [SessionViewDTO] = []
-    @State private var notice: String?
-    @State private var isLoading = false
+@MainActor
+@Observable
+final class SessionsOverviewModel {
+    @ObservationIgnored let client: any DesktopAPI
 
-    private var active: [SessionViewDTO] {
-        sessions.filter { $0.session.isActive }.sorted { $0.session.startedAt > $1.session.startedAt }
+    private(set) var sessions: [SessionViewDTO] = []
+    private(set) var isLoading = false
+    private(set) var notice: String?
+    private(set) var busySessionIDs: Set<String> = []
+    private(set) var alert: CockpitAlert?
+
+    init(client: any DesktopAPI) {
+        self.client = client
     }
 
-    private var recent: [SessionViewDTO] {
+    var active: [SessionViewDTO] {
+        sessions.filter(\.session.isActive).sorted { $0.session.startedAt > $1.session.startedAt }
+    }
+
+    var recent: [SessionViewDTO] {
         sessions.filter { !$0.session.isActive }.sorted { $0.session.startedAt > $1.session.startedAt }
+    }
+
+    func load() async {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            sessions = try await client.listSessions(repoPath: nil, status: nil)
+            notice = nil
+        } catch {
+            notice = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        }
+    }
+
+    func requestRemove(sessionID: String) {
+        guard let view = sessions.first(where: { $0.id == sessionID }) else { return }
+        alert = .removeConfirmation(for: view)
+    }
+
+    func remove(sessionID: String, force: Bool, keepWorktree: Bool) async {
+        busySessionIDs.insert(sessionID)
+        defer { busySessionIDs.remove(sessionID) }
+        do {
+            try await client.removeSession(id: sessionID, force: force, keepWorktree: keepWorktree)
+            sessions.removeAll { $0.id == sessionID }
+            notice = nil
+        } catch let error as RPCErrorDTO where error.recoveryAction == .keepWorktreeOrForce {
+            alert = .dirtyWorktree(sessionID: sessionID)
+        } catch {
+            notice = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        }
+    }
+
+    func perform(_ action: CockpitAlertAction, for sessionID: String) async {
+        alert = nil
+        switch action {
+        case .endSession:
+            break
+        case .removeSession:
+            await remove(sessionID: sessionID, force: false, keepWorktree: false)
+        case .keepWorktreeAndRetry:
+            await remove(sessionID: sessionID, force: false, keepWorktree: true)
+        case .forceRemove:
+            await remove(sessionID: sessionID, force: true, keepWorktree: false)
+        }
+    }
+
+    func dismissAlert() {
+        alert = nil
+    }
+}
+
+/// Cross-project session overview. Opening a session jumps to its project.
+struct SessionsOverviewView: View {
+    let app: AppModel
+    @State private var model: SessionsOverviewModel
+
+    init(app: AppModel) {
+        self.app = app
+        _model = State(initialValue: SessionsOverviewModel(client: app.client))
     }
 
     var body: some View {
@@ -26,12 +93,12 @@ struct SessionsOverviewView: View {
                         Text("Alle agentsessies over je projecten heen.")
                             .foregroundStyle(.secondary)
                     }
-                    if let notice {
-                        InlineNotice(notice, actionTitle: "Opnieuw") { Task { await load() } }
+                    if let notice = model.notice {
+                        InlineNotice(notice, actionTitle: "Opnieuw") { Task { await model.load() } }
                     }
-                    section("Actief", symbol: "bolt.fill", sessions: active,
+                    section("Actief", symbol: "bolt.fill", sessions: model.active,
                             empty: "Geen actieve sessies. Start er een met ⌘N.")
-                    section("Recent", symbol: "clock", sessions: recent,
+                    section("Recent", symbol: "clock", sessions: model.recent,
                             empty: "Afgeronde sessies verschijnen hier.")
                 }
                 .padding(28)
@@ -40,19 +107,24 @@ struct SessionsOverviewView: View {
         .navigationTitle("Sessies")
         .toolbar {
             ToolbarItem {
-                Button("Vernieuw", systemImage: "arrow.clockwise") { Task { await load() } }
+                Button("Vernieuw", systemImage: "arrow.clockwise") { Task { await model.load() } }
                     .help("Vernieuw sessies")
-                    .symbolEffect(.rotate, isActive: isLoading)
+                    .symbolEffect(.rotate, isActive: model.isLoading)
             }
             ToolbarItem(placement: .primaryAction) {
-                Button("Nieuwe sessie", systemImage: "plus") { model.request(.newSession) }
+                Button("Nieuwe sessie", systemImage: "plus") { app.request(.newSession) }
                     .help("Start een nieuwe agentsessie (⌘N)")
                     .buttonStyle(.borderedProminent)
                     .tint(OMAColor.accent)
             }
         }
-        .task { await load() }
-        .onChange(of: model.reconciliationTick) { _, _ in Task { await load() } }
+        .alert(item: Binding(get: { model.alert }, set: { if $0 == nil { model.dismissAlert() } })) { alert in
+            sessionLifecycleAlert(alert) { action in
+                Task { await model.perform(action, for: alert.sessionID) }
+            }
+        }
+        .task { await model.load() }
+        .onChange(of: app.reconciliationTick) { _, _ in Task { await model.load() } }
     }
 
     private func section(_ title: String, symbol: String, sessions: [SessionViewDTO], empty: String) -> some View {
@@ -69,25 +141,23 @@ struct SessionsOverviewView: View {
             } else {
                 ForEach(sessions) { view in
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(model.projects.project(forRepoPath: view.session.repoPath)?.displayName ?? view.session.repoPath)
+                        Text(app.projects.project(forRepoPath: view.session.repoPath)?.displayName ?? view.session.repoPath)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .padding(.leading, 4)
-                        SessionRow(view: view) { model.openSession(view) }
+                        SessionRow(view: view, actions: actions(for: view), agentSymbol: view.currentAgent.map { app.symbol(for: $0) })
+                            .opacity(model.busySessionIDs.contains(view.id) ? 0.55 : 1)
+                            .disabled(model.busySessionIDs.contains(view.id))
                     }
                 }
             }
         }
     }
 
-    private func load() async {
-        isLoading = true
-        defer { isLoading = false }
-        do {
-            sessions = try await model.client.listSessions(repoPath: nil, status: nil)
-            notice = nil
-        } catch {
-            notice = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-        }
+    private func actions(for view: SessionViewDTO) -> SessionRowActions {
+        SessionRowActions(
+            open: { app.openSession(view) },
+            remove: { model.requestRemove(sessionID: view.id) }
+        )
     }
 }

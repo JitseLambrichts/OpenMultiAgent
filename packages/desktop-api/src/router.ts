@@ -13,7 +13,10 @@ type Params = Record<string, unknown>;
 function objectParams(value: unknown): Params {
   if (value === undefined) return {};
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new DesktopError(RPC_ERROR.INVALID_PARAMS, "params must be an object");
+    throw new DesktopError(
+      RPC_ERROR.INVALID_PARAMS,
+      "params must be an object",
+    );
   }
   return value as Params;
 }
@@ -33,7 +36,10 @@ function optionalString(params: Params, name: string): string | undefined {
   const value = params[name];
   if (value === undefined) return undefined;
   if (typeof value !== "string") {
-    throw new DesktopError(RPC_ERROR.INVALID_PARAMS, `${name} must be a string`);
+    throw new DesktopError(
+      RPC_ERROR.INVALID_PARAMS,
+      `${name} must be a string`,
+    );
   }
   return value;
 }
@@ -42,7 +48,10 @@ function optionalBoolean(params: Params, name: string): boolean | undefined {
   const value = params[name];
   if (value === undefined) return undefined;
   if (typeof value !== "boolean") {
-    throw new DesktopError(RPC_ERROR.INVALID_PARAMS, `${name} must be a boolean`);
+    throw new DesktopError(
+      RPC_ERROR.INVALID_PARAMS,
+      `${name} must be a boolean`,
+    );
   }
   return value;
 }
@@ -51,9 +60,27 @@ function optionalInteger(params: Params, name: string): number | undefined {
   const value = params[name];
   if (value === undefined) return undefined;
   if (typeof value !== "number" || !Number.isInteger(value)) {
-    throw new DesktopError(RPC_ERROR.INVALID_PARAMS, `${name} must be an integer`);
+    throw new DesktopError(
+      RPC_ERROR.INVALID_PARAMS,
+      `${name} must be an integer`,
+    );
   }
   return value;
+}
+
+function optionalStringArray(
+  params: Params,
+  name: string,
+): string[] | undefined {
+  const value = params[name];
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.some((v) => typeof v !== "string")) {
+    throw new DesktopError(
+      RPC_ERROR.INVALID_PARAMS,
+      `${name} must be a string array`,
+    );
+  }
+  return value as string[];
 }
 
 function requiredAgent(params: Params) {
@@ -61,7 +88,7 @@ function requiredAgent(params: Params) {
   if (!isAgentName(agent)) {
     throw new DesktopError(
       RPC_ERROR.INVALID_PARAMS,
-      "agent must be claude, codex, or gemini",
+      "agent must be a valid slug (a-z, 0-9, -, _)",
     );
   }
   return agent;
@@ -178,6 +205,28 @@ async function invoke(
       return services.terminalAttachment({
         session_id: requiredString(params, "session_id"),
       });
+    case "agent.list":
+      return services.customAgentList();
+    case "agent.add":
+      return services.customAgentAdd({
+        id: optionalString(params, "id"),
+        name: optionalString(params, "name"),
+        binary: optionalString(params, "binary"),
+        launchArgs: optionalStringArray(params, "launch_args"),
+        symbol: optionalString(params, "symbol"),
+      });
+    case "agent.update":
+      return services.customAgentUpdate({
+        id: requiredString(params, "id"),
+        name: optionalString(params, "name"),
+        binary: optionalString(params, "binary"),
+        launchArgs: optionalStringArray(params, "launch_args"),
+        symbol: optionalString(params, "symbol"),
+      });
+    case "agent.remove":
+      return services.customAgentRemove({
+        id: requiredString(params, "id"),
+      });
     default:
       throw new DesktopError(
         RPC_ERROR.METHOD_NOT_FOUND,
@@ -196,7 +245,12 @@ export function createRouter(services: DesktopServices) {
       } catch (error) {
         if (notification) return null;
         if (error instanceof DesktopError) {
-          return failure(request.id ?? null, error.code, error.message, error.data);
+          return failure(
+            request.id ?? null,
+            error.code,
+            error.message,
+            error.data,
+          );
         }
         return failure(
           request.id ?? null,

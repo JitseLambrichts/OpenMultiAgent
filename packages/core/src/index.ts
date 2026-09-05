@@ -1,4 +1,5 @@
 export * from "./types.ts";
+export * from "./custom-agents.ts";
 export * from "./agent.ts";
 export * from "./paths.ts";
 export * from "./db.ts";

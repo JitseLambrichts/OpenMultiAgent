@@ -35,7 +35,19 @@ import {
   tmux,
 } from "@oma/core";
 import { adapterFor, availableAgents } from "@oma/adapters";
-import { extractSession, listCandidates, previewPromotion, promoteSession } from "@oma/docs";
+import {
+  addCustomAgent,
+  listCustomAgents,
+  removeCustomAgent,
+  updateCustomAgent,
+  type CustomAgentDef,
+} from "@oma/core";
+import {
+  extractSession,
+  listCandidates,
+  previewPromotion,
+  promoteSession,
+} from "@oma/docs";
 import { ingestRun } from "@oma/ingest";
 
 export class DesktopError extends Error {
@@ -57,7 +69,10 @@ const MISSING_BINARY = /is not on PATH/i;
  * promises stable codes plus a recovery hint, so the mapping happens here and
  * Swift never has to parse message text.
  */
-export function toDesktopError(error: unknown, context: Record<string, unknown> = {}): DesktopError {
+export function toDesktopError(
+  error: unknown,
+  context: Record<string, unknown> = {},
+): DesktopError {
   if (error instanceof DesktopError) return error;
   const message = error instanceof Error ? error.message : String(error);
   if (DIRTY_WORKTREE.test(message)) {
@@ -80,7 +95,10 @@ export function toDesktopError(error: unknown, context: Record<string, unknown> 
   });
 }
 
-async function guarded<T>(context: Record<string, unknown>, fn: () => Promise<T>): Promise<T> {
+async function guarded<T>(
+  context: Record<string, unknown>,
+  fn: () => Promise<T>,
+): Promise<T> {
   try {
     return await fn();
   } catch (error) {
@@ -116,6 +134,25 @@ export interface TerminalAttachment {
   executable: string;
   arguments: string[];
   cwd: string;
+}
+
+/** Wire shape for custom providers. Snake_case like every other contract. */
+export interface CustomAgentResult {
+  id: string;
+  name: string;
+  binary: string;
+  launch_args: string[];
+  symbol: string;
+}
+
+function toCustomAgentResult(def: CustomAgentDef): CustomAgentResult {
+  return {
+    id: def.id,
+    name: def.name,
+    binary: def.binary,
+    launch_args: def.launchArgs,
+    symbol: def.symbol,
+  };
 }
 
 export interface DesktopServices {
@@ -188,6 +225,24 @@ export interface DesktopServices {
   terminalAttachment(input: {
     session_id: string;
   }): Promise<TerminalAttachment>;
+  customAgentList(): Promise<CustomAgentResult[]>;
+  customAgentAdd(input: {
+    id?: string;
+    name?: string;
+    binary?: string;
+    launchArgs?: string[];
+    symbol?: string;
+  }): Promise<CustomAgentResult>;
+  customAgentUpdate(input: {
+    id: string;
+    name?: string;
+    binary?: string;
+    launchArgs?: string[];
+    symbol?: string;
+  }): Promise<CustomAgentResult>;
+  customAgentRemove(input: {
+    id: string;
+  }): Promise<{ removed_agent_id: string }>;
 }
 
 export interface SessionOperations {
@@ -388,7 +443,9 @@ export function createDesktopServices(
       });
     },
     promotionExtract: async ({ session_id }) => ({
-      candidate_count: await extractKnowledge(resolveSession(db, session_id).id),
+      candidate_count: await extractKnowledge(
+        resolveSession(db, session_id).id,
+      ),
     }),
     promotionPreview: async ({ session_id }) => {
       const session = resolveSession(db, session_id);
@@ -403,11 +460,44 @@ export function createDesktopServices(
     },
     terminalAttachment: async ({ session_id }) => {
       const session = resolveSession(db, session_id);
+      await tmux
+        .ensureMouseEnabled(tmuxSessionName(session.id))
+        .catch(() => {});
       return {
         executable: await findTmuxExecutable(),
         arguments: ["attach", "-t", tmuxSessionName(session.id)],
         cwd: session.worktree_path,
       };
+    },
+    customAgentList: async () => listCustomAgents().map(toCustomAgentResult),
+    customAgentAdd: async (input) => {
+      try {
+        return toCustomAgentResult(
+          addCustomAgent({
+            id: input.id,
+            name: input.name,
+            binary: input.binary,
+            launchArgs: input.launchArgs,
+            symbol: input.symbol,
+          }),
+        );
+      } catch (error) {
+        throw toDesktopError(error, { agent: input.id ?? input.name });
+      }
+    },
+    customAgentUpdate: async ({ id, ...input }) => {
+      try {
+        return toCustomAgentResult(updateCustomAgent(id, input));
+      } catch (error) {
+        throw toDesktopError(error, { agent: id });
+      }
+    },
+    customAgentRemove: async ({ id }) => {
+      try {
+        return { removed_agent_id: removeCustomAgent(id) };
+      } catch (error) {
+        throw toDesktopError(error, { agent: id });
+      }
     },
   };
 }

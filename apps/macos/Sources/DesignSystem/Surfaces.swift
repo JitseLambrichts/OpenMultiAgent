@@ -130,10 +130,11 @@ struct InlineNotice: View {
 
 extension AgentKind {
     var tint: Color {
-        switch self {
-        case .claude: OMAColor.attention
-        case .codex: OMAColor.positive
-        case .gemini: OMAColor.accent
+        switch rawValue {
+        case "claude": OMAColor.attention
+        case "codex": OMAColor.positive
+        case "gemini": OMAColor.accent
+        default: OMAColor.accent
         }
     }
 }

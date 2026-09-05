@@ -4,25 +4,32 @@ import SwiftUI
 /// When several projects are offered, the sheet adds a project picker.
 struct NewSessionSheet: View {
     let projects: [ProjectDTO]
+    let agents: [AgentKind]
+    let displayName: (AgentKind) -> String
+    let symbol: (AgentKind) -> String
     let onCreate: (NewSessionRequest) async -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var selectedProjectID: String?
     @State private var title = ""
     @State private var prompt = ""
-    @State private var agent: AgentKind = .claude
+    @State private var agent: AgentKind
     @State private var usesWorktree = true
     @State private var isSubmitting = false
     @FocusState private var titleFocused: Bool
 
-    init(projects: [ProjectDTO], preselected: ProjectDTO?, onCreate: @escaping (NewSessionRequest) async -> Void) {
+    init(projects: [ProjectDTO], preselected: ProjectDTO?, agents: [AgentKind] = AgentKind.allCases, displayName: @escaping (AgentKind) -> String = { $0.title }, symbol: @escaping (AgentKind) -> String = { $0.symbol }, onCreate: @escaping (NewSessionRequest) async -> Void) {
         self.projects = projects
+        self.agents = agents.isEmpty ? AgentKind.allCases : agents
+        self.displayName = displayName
+        self.symbol = symbol
         self.onCreate = onCreate
         _selectedProjectID = State(initialValue: preselected?.id ?? projects.first?.id)
+        _agent = State(initialValue: (agents.isEmpty ? AgentKind.allCases : agents).first ?? .claude)
     }
 
-    init(project: ProjectDTO, onCreate: @escaping (NewSessionRequest) async -> Void) {
-        self.init(projects: [project], preselected: project, onCreate: onCreate)
+    init(project: ProjectDTO, agents: [AgentKind] = AgentKind.allCases, displayName: @escaping (AgentKind) -> String = { $0.title }, symbol: @escaping (AgentKind) -> String = { $0.symbol }, onCreate: @escaping (NewSessionRequest) async -> Void) {
+        self.init(projects: [project], preselected: project, agents: agents, displayName: displayName, symbol: symbol, onCreate: onCreate)
     }
 
     private var selectedProject: ProjectDTO? {
@@ -62,8 +69,8 @@ struct NewSessionSheet: View {
                     .focused($titleFocused)
 
                 Picker("Agent", selection: $agent) {
-                    ForEach(AgentKind.allCases) { agent in
-                        Label(agent.title, systemImage: agent.symbol).tag(agent)
+                    ForEach(agents) { agent in
+                        Label(displayName(agent), systemImage: symbol(agent)).tag(agent)
                     }
                 }
 

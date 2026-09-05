@@ -22,9 +22,7 @@ const session: Session = {
   ended_at: null,
 };
 
-function services(
-  overrides: Partial<DesktopServices> = {},
-): DesktopServices {
+function services(overrides: Partial<DesktopServices> = {}): DesktopServices {
   return {
     hello: async () => ({
       protocol_version: 1,
@@ -63,6 +61,22 @@ function services(
       arguments: ["attach", "-t", "oma-session-1"],
       cwd: "/repo",
     }),
+    customAgentList: async () => [],
+    customAgentAdd: async (input) => ({
+      id: input.id ?? "opencode",
+      name: input.name ?? "opencode",
+      binary: input.binary ?? "opencode",
+      launch_args: input.launchArgs ?? [],
+      symbol: input.symbol ?? "terminal",
+    }),
+    customAgentUpdate: async (input) => ({
+      id: input.id,
+      name: input.name ?? input.id,
+      binary: input.binary ?? input.id,
+      launch_args: input.launchArgs ?? [],
+      symbol: input.symbol ?? "terminal",
+    }),
+    customAgentRemove: async (input) => ({ removed_agent_id: input.id }),
     ...overrides,
   };
 }
@@ -83,6 +97,31 @@ describe("desktop router", () => {
         protocol_version: 1,
         app_version: "0.1.0",
         agents: ["claude", "codex", "gemini"],
+      },
+    });
+  });
+
+  test("creates a custom agent with snake_case wire keys", async () => {
+    const response = await createRouter(services()).dispatch({
+      jsonrpc: "2.0",
+      id: "add-agent",
+      method: "agent.add",
+      params: {
+        name: "Opencode",
+        binary: "opencode",
+        launch_args: ["run"],
+        symbol: "terminal.fill",
+      },
+    });
+
+    expect(response).toMatchObject({
+      id: "add-agent",
+      result: {
+        id: "opencode",
+        name: "Opencode",
+        binary: "opencode",
+        launch_args: ["run"],
+        symbol: "terminal.fill",
       },
     });
   });

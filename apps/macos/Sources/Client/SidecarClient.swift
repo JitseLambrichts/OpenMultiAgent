@@ -188,6 +188,10 @@ protocol DesktopAPI: Sendable {
     func previewPromotion(sessionID: String) async throws -> PromotionPreviewDTO
     func applyPromotion(sessionID: String) async throws -> PromotionApplyDTO
     func terminalAttachment(sessionID: String) async throws -> TerminalAttachmentDTO
+    func listCustomAgents() async throws -> [CustomAgentDTO]
+    func addCustomAgent(name: String, binary: String, launchArgs: [String], symbol: String) async throws -> CustomAgentDTO
+    func updateCustomAgent(id: String, name: String, binary: String, launchArgs: [String], symbol: String) async throws -> CustomAgentDTO
+    func removeCustomAgent(id: String) async throws
 }
 
 /// Defaults keep focused test stubs small: a stub only implements the calls the
@@ -211,6 +215,10 @@ extension DesktopAPI {
     func previewPromotion(sessionID: String) async throws -> PromotionPreviewDTO { throw notWired }
     func applyPromotion(sessionID: String) async throws -> PromotionApplyDTO { throw notWired }
     func terminalAttachment(sessionID: String) async throws -> TerminalAttachmentDTO { throw notWired }
+    func listCustomAgents() async throws -> [CustomAgentDTO] { throw notWired }
+    func addCustomAgent(name: String, binary: String, launchArgs: [String], symbol: String) async throws -> CustomAgentDTO { throw notWired }
+    func updateCustomAgent(id: String, name: String, binary: String, launchArgs: [String], symbol: String) async throws -> CustomAgentDTO { throw notWired }
+    func removeCustomAgent(id: String) async throws { throw notWired }
 }
 
 actor SidecarClient: DesktopAPI {
@@ -231,6 +239,14 @@ actor SidecarClient: DesktopAPI {
 
         private enum CodingKeys: String, CodingKey {
             case removedProjectID = "removed_project_id"
+        }
+    }
+
+    private struct RemovedAgentDTO: Decodable, Sendable {
+        let removedAgentID: String
+
+        private enum CodingKeys: String, CodingKey {
+            case removedAgentID = "removed_agent_id"
         }
     }
 
@@ -391,6 +407,36 @@ actor SidecarClient: DesktopAPI {
 
     func terminalAttachment(sessionID: String) async throws -> TerminalAttachmentDTO {
         try await request(method: "terminal.attachment", params: ["session_id": .string(sessionID)])
+    }
+
+    func listCustomAgents() async throws -> [CustomAgentDTO] {
+        try await request(method: "agent.list")
+    }
+
+    func addCustomAgent(name: String, binary: String, launchArgs: [String], symbol: String) async throws -> CustomAgentDTO {
+        try await request(method: "agent.add", params: [
+            "name": .string(name),
+            "binary": .string(binary),
+            "launch_args": .array(launchArgs.map(JSONValue.string)),
+            "symbol": .string(symbol),
+        ])
+    }
+
+    func updateCustomAgent(id: String, name: String, binary: String, launchArgs: [String], symbol: String) async throws -> CustomAgentDTO {
+        try await request(method: "agent.update", params: [
+            "id": .string(id),
+            "name": .string(name),
+            "binary": .string(binary),
+            "launch_args": .array(launchArgs.map(JSONValue.string)),
+            "symbol": .string(symbol),
+        ])
+    }
+
+    func removeCustomAgent(id: String) async throws {
+        let _: RemovedAgentDTO = try await request(
+            method: "agent.remove",
+            params: ["id": .string(id)]
+        )
     }
 
     // MARK: Lifecycle

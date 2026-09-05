@@ -4,6 +4,7 @@ import SwiftUI
 struct SessionInspectorSections: View {
     let session: SessionViewDTO
     let status: SessionStatusDTO?
+    var symbolForAgent: (String) -> String = { AgentKind(rawValue: $0).symbol }
 
     var body: some View {
         Section("Sessie") {
@@ -49,7 +50,7 @@ struct SessionInspectorSections: View {
             }
             ForEach(session.runs) { run in
                 VStack(alignment: .leading, spacing: 3) {
-                    Label(run.agent.capitalized, systemImage: AgentKind(rawValue: run.agent)?.symbol ?? "terminal")
+                    Label(run.agent.capitalized, systemImage: symbolForAgent(run.agent))
                         .font(.body.weight(.medium))
                     Text(run.startedAt.formatted(date: .abbreviated, time: .shortened)
                          + (run.endedAt.map { " – \($0.formatted(date: .omitted, time: .shortened))" } ?? " – nu"))
@@ -68,10 +69,11 @@ struct SessionInspectorSections: View {
 struct SessionInspector: View {
     let session: SessionViewDTO
     let status: SessionStatusDTO?
+    var symbolForAgent: (String) -> String = { AgentKind(rawValue: $0).symbol }
 
     var body: some View {
         List {
-            SessionInspectorSections(session: session, status: status)
+            SessionInspectorSections(session: session, status: status, symbolForAgent: symbolForAgent)
         }
         .scrollContentBackground(.hidden)
         .background(OMAColor.canvas)

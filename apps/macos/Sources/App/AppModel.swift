@@ -61,6 +61,7 @@ final class AppModel {
     let projects: ProjectsModel
 
     private(set) var connection: SidecarConnection = .connecting
+    private(set) var customAgents: [CustomAgentDTO] = []
     var selection: SidebarDestination = .projects
     var selectedProject: ProjectDTO?
     var selectedSession: SessionViewDTO?
@@ -99,9 +100,40 @@ final class AppModel {
             // blocks browsing projects, memory, and docs.
             let health = (try? await client.health()) ?? HealthDTO(ok: false, tmuxAvailable: false)
             connection = .ready(agents: hello.agents, tmuxAvailable: health.tmuxAvailable)
+            customAgents = (try? await client.listCustomAgents()) ?? []
             await projects.load()
         } catch {
             connection = .failed(detail: userMessage(for: error))
+        }
+    }
+
+    var availableAgents: [AgentKind] {
+        if case .ready(let agents, _) = connection, !agents.isEmpty {
+            return agents.map { AgentKind(rawValue: $0) }
+        }
+        return AgentKind.builtins + customAgents.map { AgentKind(rawValue: $0.id) }
+    }
+
+    func displayName(for agent: AgentKind) -> String {
+        customAgents.first { $0.id == agent.rawValue }?.name ?? agent.title
+    }
+
+    func symbol(for agent: AgentKind) -> String {
+        agent.resolvedSymbol(in: customAgents)
+    }
+
+    func symbol(forAgentID id: String) -> String {
+        symbol(for: AgentKind(rawValue: id))
+    }
+
+    func refreshCustomAgents() async {
+        customAgents = (try? await client.listCustomAgents()) ?? []
+        if let hello = try? await client.hello() {
+            if case .ready(_, let tmuxAvailable) = connection {
+                connection = .ready(agents: hello.agents, tmuxAvailable: tmuxAvailable)
+            } else {
+                connection = .ready(agents: hello.agents, tmuxAvailable: true)
+            }
         }
     }
 

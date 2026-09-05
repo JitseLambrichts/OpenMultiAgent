@@ -43,16 +43,23 @@ let extracted = false;
 import { appendFileSync } from "node:fs";
 const logPath = process.env.FIXTURE_LOG;
 function log(message: string): void {
-  if (logPath) appendFileSync(logPath, `${new Date().toISOString()} ${message}\n`);
+  if (logPath)
+    appendFileSync(logPath, `${new Date().toISOString()} ${message}\n`);
 }
-log(`start pid=${process.pid} cwd=${process.cwd()} argv=${process.argv.join(" ")}`);
+log(
+  `start pid=${process.pid} cwd=${process.cwd()} argv=${process.argv.join(" ")}`,
+);
 process.on("uncaughtException", (error) => log(`uncaught ${String(error)}`));
 process.on("exit", (code) => log(`exit ${code}`));
 
 function result(method: string, params: Record<string, unknown>): unknown {
   switch (method) {
     case "system.hello":
-      return { protocol_version: 1, app_version: "fixture", agents: ["claude", "codex", "gemini"] };
+      return {
+        protocol_version: 1,
+        app_version: "fixture",
+        agents: ["claude", "codex", "gemini"],
+      };
     case "system.health":
       return { ok: true, tmux_available: true };
     case "system.shutdown":
@@ -83,12 +90,38 @@ function result(method: string, params: Record<string, unknown>): unknown {
       return { candidate_count: 1 };
     case "promotion.preview":
       return extracted
-        ? { diff: "--- .oma/docs/decisions.md\n+++ .oma/docs/decisions.md\n@@ -1,0 +1,1 @@\n+- Use native SwiftUI", candidate_count: 1 }
+        ? {
+            diff: "--- .oma/docs/decisions.md\n+++ .oma/docs/decisions.md\n@@ -1,0 +1,1 @@\n+- Use native SwiftUI",
+            candidate_count: 1,
+          }
         : { diff: "No pending knowledge candidates.", candidate_count: 0 };
     case "promotion.apply":
-      return { promoted: 1, files: [`${project.repo_path}/.oma/docs/decisions.md`] };
+      return {
+        promoted: 1,
+        files: [`${project.repo_path}/.oma/docs/decisions.md`],
+      };
     case "terminal.attachment":
       return { executable: "/usr/bin/true", arguments: [], cwd: "/" };
+    case "agent.list":
+      return [];
+    case "agent.add":
+      return {
+        id: "opencode",
+        name: params["name"] ?? "opencode",
+        binary: params["binary"] ?? "opencode",
+        launch_args: params["launch_args"] ?? [],
+        symbol: params["symbol"] ?? "terminal",
+      };
+    case "agent.update":
+      return {
+        id: params["id"] ?? "opencode",
+        name: params["name"] ?? "opencode",
+        binary: params["binary"] ?? "opencode",
+        launch_args: params["launch_args"] ?? [],
+        symbol: params["symbol"] ?? "terminal",
+      };
+    case "agent.remove":
+      return { removed_agent_id: params["id"] ?? "opencode" };
     default:
       throw new Error(`unsupported ${method}`);
   }
@@ -105,15 +138,26 @@ process.stdin.on("data", (chunk: string) => {
   buffer = lines.pop() ?? "";
   for (const line of lines) {
     if (!line.trim()) continue;
-    const request = JSON.parse(line) as { id?: number; method: string; params?: Record<string, unknown> };
+    const request = JSON.parse(line) as {
+      id?: number;
+      method: string;
+      params?: Record<string, unknown>;
+    };
     let response: unknown;
     try {
-      response = { jsonrpc: "2.0", id: request.id ?? null, result: result(request.method, request.params ?? {}) };
+      response = {
+        jsonrpc: "2.0",
+        id: request.id ?? null,
+        result: result(request.method, request.params ?? {}),
+      };
     } catch (error) {
       response = {
         jsonrpc: "2.0",
         id: request.id ?? null,
-        error: { code: -32601, message: error instanceof Error ? error.message : String(error) },
+        error: {
+          code: -32601,
+          message: error instanceof Error ? error.message : String(error),
+        },
       };
     }
     const written = process.stdout.write(`${JSON.stringify(response)}\n`);

@@ -52,6 +52,11 @@ export async function newSession(opts: NewSessionOptions): Promise<void> {
   ];
   await execOrThrow(cmd);
   await exec(["tmux", "set-option", "-t", opts.name, "history-limit", "50000"]);
+  await ensureMouseEnabled(opts.name);
+}
+
+export async function ensureMouseEnabled(name: string): Promise<void> {
+  await exec(["tmux", "set-option", "-t", name, "mouse", "on"]);
 }
 
 /**
@@ -80,7 +85,9 @@ export async function listSessions(): Promise<TmuxSession[]> {
       name: name!,
       sessionId: name!.slice(TMUX_PREFIX.length),
       windows: Number.parseInt(windows ?? "0", 10),
-      created: new Date(Number.parseInt(created ?? "0", 10) * 1000).toISOString(),
+      created: new Date(
+        Number.parseInt(created ?? "0", 10) * 1000,
+      ).toISOString(),
     }));
 }
 
@@ -96,10 +103,7 @@ export async function sendKeys(name: string, text: string): Promise<void> {
   await execOrThrow(["tmux", "send-keys", "-t", name, text, "Enter"]);
 }
 
-export async function capturePane(
-  name: string,
-  lines = 200,
-): Promise<string> {
+export async function capturePane(name: string, lines = 200): Promise<string> {
   const result = await exec([
     "tmux",
     "capture-pane",

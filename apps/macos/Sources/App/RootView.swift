@@ -37,7 +37,10 @@ struct RootView: View {
         .sheet(isPresented: $showsRootSessionSheet) {
             NewSessionSheet(
                 projects: model.projects.projects,
-                preselected: model.selectedProject
+                preselected: model.selectedProject,
+                agents: model.availableAgents,
+                displayName: { model.displayName(for: $0) },
+                symbol: { model.symbol(for: $0) }
             ) { request in
                 do {
                     try await model.createSession(request)
@@ -77,7 +80,7 @@ struct RootView: View {
             case .projects:
                 projectsColumn
             case .sessions:
-                SessionsOverviewView(model: model)
+                SessionsOverviewView(app: model)
             case .memory:
                 MemorySearchView(
                     client: model.client,

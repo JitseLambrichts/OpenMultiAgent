@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Database } from "bun:sqlite";
 import type { AgentAdapter, Launch, LaunchContext } from "./agent.ts";
+import type { AgentName } from "./types.ts";
 import { openDb } from "./db.ts";
 import { exec } from "./exec.ts";
 import { tmuxSessionName } from "./paths.ts";
@@ -60,7 +61,8 @@ afterEach(async () => {
     await tmux.killSession(tmuxSessionName(session.id));
   }
   db.close();
-  while (created.length) rmSync(created.pop()!, { recursive: true, force: true });
+  while (created.length)
+    rmSync(created.pop()!, { recursive: true, force: true });
 });
 
 const manager = (adapter = fakeAdapter()) =>
@@ -69,7 +71,7 @@ const manager = (adapter = fakeAdapter()) =>
     startLock: (fn) => fn(),
   });
 
-function managerFor(adapters: Partial<Record<"claude" | "codex" | "gemini", AgentAdapter>>) {
+function managerFor(adapters: Partial<Record<AgentName, AgentAdapter>>) {
   return new SessionManager(db, {
     startLock: (fn) => fn(),
     adapterFor: (agent) => {
@@ -176,12 +178,18 @@ describe("SessionManager.create", () => {
       },
     });
     await expect(
-      manager(broken).create({ repoPath: repo, agent: "claude", worktree: true }),
+      manager(broken).create({
+        repoPath: repo,
+        agent: "claude",
+        worktree: true,
+      }),
     ).rejects.toThrow("boom");
 
     // `git worktree remove` leaves the empty `.worktrees` parent behind, which
     // is harmless; what matters is that git no longer tracks a second tree.
-    const listed = (await exec(["git", "worktree", "list"], { cwd: repo })).stdout
+    const listed = (
+      await exec(["git", "worktree", "list"], { cwd: repo })
+    ).stdout
       .split("\n")
       .filter((l) => l.trim() !== "");
     expect(listed).toHaveLength(1);
@@ -209,7 +217,10 @@ describe("SessionManager.create", () => {
           name: "oma",
           command: "bun",
           args: ["run", "mcp"],
-          env: { OMA_SESSION_ID: scope.sessionId, OMA_REPO_PATH: scope.repoPath },
+          env: {
+            OMA_SESSION_ID: scope.sessionId,
+            OMA_REPO_PATH: scope.repoPath,
+          },
         },
       ],
     });
@@ -238,9 +249,9 @@ describe("SessionManager.create", () => {
       transcriptDiscovery: { attempts: 1, intervalMs: 1 },
     });
 
-    await expect(mgr.create({ repoPath: repo, agent: "codex" })).rejects.toThrow(
-      /correlatable transcript/,
-    );
+    await expect(
+      mgr.create({ repoPath: repo, agent: "codex" }),
+    ).rejects.toThrow(/correlatable transcript/);
     expect(
       db.query<{ n: number }, []>("SELECT COUNT(*) AS n FROM session").get()?.n,
     ).toBe(0);
@@ -272,7 +283,10 @@ describe("SessionManager.list", () => {
   test("status includes the worktree changes and current pane output", async () => {
     const mgr = manager();
     const view = await mgr.create({ repoPath: repo, agent: "claude" });
-    writeFileSync(join(view.session.worktree_path, "pending file.ts"), "export {};\n");
+    writeFileSync(
+      join(view.session.worktree_path, "pending file.ts"),
+      "export {};\n",
+    );
 
     const status = await mgr.status(view.session.id);
 
@@ -298,7 +312,10 @@ describe("SessionManager.end and remove", () => {
   test("end records which files the session changed", async () => {
     const mgr = manager();
     const view = await mgr.create({ repoPath: repo, agent: "claude" });
-    writeFileSync(join(view.session.worktree_path, "new-file.ts"), "export {};\n");
+    writeFileSync(
+      join(view.session.worktree_path, "new-file.ts"),
+      "export {};\n",
+    );
 
     await mgr.end(view.session.id);
 
@@ -307,7 +324,9 @@ describe("SessionManager.end and remove", () => {
         "SELECT path, change_kind FROM artifact WHERE session_id = ?",
       )
       .all(view.session.id);
-    expect(artifacts).toEqual([{ path: "new-file.ts", change_kind: "created" }]);
+    expect(artifacts).toEqual([
+      { path: "new-file.ts", change_kind: "created" },
+    ]);
   });
 
   test("rm removes the worktree and the session record", async () => {
@@ -334,7 +353,10 @@ describe("SessionManager.end and remove", () => {
       agent: "claude",
       worktree: true,
     });
-    writeFileSync(join(view.session.worktree_path, "dirty.txt"), "uncommitted\n");
+    writeFileSync(
+      join(view.session.worktree_path, "dirty.txt"),
+      "uncommitted\n",
+    );
 
     await mgr.remove(view.session.id, { force: true });
     expect(existsSync(view.session.worktree_path)).toBe(false);
@@ -347,9 +369,14 @@ describe("SessionManager.end and remove", () => {
       agent: "claude",
       worktree: true,
     });
-    writeFileSync(join(view.session.worktree_path, "dirty.txt"), "uncommitted\n");
+    writeFileSync(
+      join(view.session.worktree_path, "dirty.txt"),
+      "uncommitted\n",
+    );
 
-    await expect(mgr.remove(view.session.id)).rejects.toThrow(/worktree remove/);
+    await expect(mgr.remove(view.session.id)).rejects.toThrow(
+      /worktree remove/,
+    );
     expect(existsSync(view.session.worktree_path)).toBe(true);
     expect(mgr.view(view.session.id).session.id).toBe(view.session.id);
   });
@@ -393,9 +420,15 @@ describe("SessionManager.switchAgent and resume", () => {
     expect(switched.session.worktree_path).toBe(original.session.worktree_path);
     expect(switched.runs.map((run) => run.agent)).toEqual(["claude", "codex"]);
     expect(switched.runs[0]?.ended_at).not.toBeNull();
-    expect(switchContexts.at(-1)?.systemPrompt).toContain("Finish retry handling");
-    expect(switchContexts.at(-1)?.systemPrompt).toContain("continuity of knowledge");
-    expect(await tmux.hasSession(tmuxSessionName(original.session.id))).toBe(true);
+    expect(switchContexts.at(-1)?.systemPrompt).toContain(
+      "Finish retry handling",
+    );
+    expect(switchContexts.at(-1)?.systemPrompt).toContain(
+      "continuity of knowledge",
+    );
+    expect(await tmux.hasSession(tmuxSessionName(original.session.id))).toBe(
+      true,
+    );
   });
 
   test("keeps the current agent alive when the replacement cannot be staged", async () => {
@@ -418,7 +451,9 @@ describe("SessionManager.switchAgent and resume", () => {
     await expect(mgr.switchAgent(original.session.id, "codex")).rejects.toThrow(
       /invalid tmux environment variable/,
     );
-    expect(await tmux.hasSession(tmuxSessionName(original.session.id))).toBe(true);
+    expect(await tmux.hasSession(tmuxSessionName(original.session.id))).toBe(
+      true,
+    );
     expect(mgr.view(original.session.id).runs).toHaveLength(1);
   });
 
@@ -438,7 +473,9 @@ describe("SessionManager.switchAgent and resume", () => {
     await expect(mgr.switchAgent(original.session.id, "codex")).rejects.toThrow(
       /replacement agent exited/,
     );
-    expect(await tmux.hasSession(tmuxSessionName(original.session.id))).toBe(true);
+    expect(await tmux.hasSession(tmuxSessionName(original.session.id))).toBe(
+      true,
+    );
     expect(mgr.view(original.session.id).runs).toHaveLength(1);
   });
 
@@ -458,7 +495,9 @@ describe("SessionManager.switchAgent and resume", () => {
     await expect(mgr.switchAgent(original.session.id, "codex")).rejects.toThrow(
       /replacement agent exited during activation/,
     );
-    expect(await tmux.hasSession(tmuxSessionName(original.session.id))).toBe(true);
+    expect(await tmux.hasSession(tmuxSessionName(original.session.id))).toBe(
+      true,
+    );
     expect(mgr.view(original.session.id).runs).toHaveLength(1);
   });
 
@@ -484,7 +523,9 @@ describe("SessionManager.switchAgent and resume", () => {
     await expect(mgr.switchAgent(original.session.id, "codex")).rejects.toThrow(
       /correlatable transcript/,
     );
-    expect(await tmux.hasSession(tmuxSessionName(original.session.id))).toBe(true);
+    expect(await tmux.hasSession(tmuxSessionName(original.session.id))).toBe(
+      true,
+    );
     expect(mgr.view(original.session.id).runs).toHaveLength(1);
   });
 
@@ -495,7 +536,8 @@ describe("SessionManager.switchAgent and resume", () => {
         resumeContexts.push(ctx);
         return {
           command: ["sleep", "30"],
-          nativeSessionId: ctx.resumeNativeSessionId ?? `native-${ctx.sessionId}`,
+          nativeSessionId:
+            ctx.resumeNativeSessionId ?? `native-${ctx.sessionId}`,
           transcriptPath: join(ctx.cwd, "transcript.jsonl"),
           writtenFiles: [],
         };
@@ -508,13 +550,16 @@ describe("SessionManager.switchAgent and resume", () => {
     const resumed = await mgr.resume(original.session.id);
 
     const originalNativeId = original.runs[0]?.native_session_id;
-    if (!originalNativeId) throw new Error("test adapter did not assign a native id");
+    if (!originalNativeId)
+      throw new Error("test adapter did not assign a native id");
     expect(resumeContexts.at(-1)?.resumeNativeSessionId).toBe(originalNativeId);
     expect(resumed.session.status).toBe("active");
     // A native resume continues the same agent_run; replaying it as a second
     // run would duplicate the transcript in the event index.
     expect(resumed.runs).toHaveLength(1);
-    expect(await tmux.hasSession(tmuxSessionName(original.session.id))).toBe(true);
+    expect(await tmux.hasSession(tmuxSessionName(original.session.id))).toBe(
+      true,
+    );
   });
 
   test("forks the latest native run into a new run in the same worktree", async () => {
@@ -524,8 +569,13 @@ describe("SessionManager.switchAgent and resume", () => {
         contexts.push(ctx);
         return {
           command: ["sleep", "30"],
-          nativeSessionId: ctx.forkNativeSessionId ? "forked-id" : "original-id",
-          transcriptPath: join(ctx.cwd, `${ctx.forkNativeSessionId ? "fork" : "original"}.jsonl`),
+          nativeSessionId: ctx.forkNativeSessionId
+            ? "forked-id"
+            : "original-id",
+          transcriptPath: join(
+            ctx.cwd,
+            `${ctx.forkNativeSessionId ? "fork" : "original"}.jsonl`,
+          ),
           writtenFiles: [],
         };
       },
@@ -552,6 +602,8 @@ describe("SessionManager.switchAgent and resume", () => {
       /gemini does not support native session forks/,
     );
     expect(mgr.view(original.session.id).runs).toHaveLength(1);
-    expect(await tmux.hasSession(tmuxSessionName(original.session.id))).toBe(true);
+    expect(await tmux.hasSession(tmuxSessionName(original.session.id))).toBe(
+      true,
+    );
   });
 });

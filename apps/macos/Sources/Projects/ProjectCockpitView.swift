@@ -39,11 +39,12 @@ struct ProjectCockpitView: View {
         .toolbar { toolbarContent }
         .inspector(isPresented: Binding(get: { app.isInspectorVisible }, set: { app.isInspectorVisible = $0 })) {
             ProjectInspector(project: model.project, session: model.selectedSession,
-                             status: model.selectedSessionID.flatMap { model.statuses[$0] })
+                             status: model.selectedSessionID.flatMap { model.statuses[$0] },
+                             symbolForAgent: { app.symbol(forAgentID: $0) })
                 .inspectorColumnWidth(min: 260, ideal: 300, max: 380)
         }
         .sheet(item: $model.switchTarget) { target in
-            SwitchAgentSheet(session: target) { agent, prompt in
+            SwitchAgentSheet(session: target, agents: app.availableAgents, displayName: { app.displayName(for: $0) }, symbol: { app.symbol(for: $0) }) { agent, prompt in
                 await model.switchAgent(sessionID: target.id, agent: agent, prompt: prompt)
             }
         }
@@ -132,7 +133,7 @@ struct ProjectCockpitView: View {
                     .omaCard()
             } else {
                 ForEach(sessions) { view in
-                    SessionRow(view: view, actions: actions(for: view))
+                    SessionRow(view: view, actions: actions(for: view), agentSymbol: view.currentAgent.map { app.symbol(for: $0) })
                         .opacity(model.busySessionIDs.contains(view.id) ? 0.55 : 1)
                         .disabled(model.busySessionIDs.contains(view.id))
                 }
@@ -246,30 +247,32 @@ struct ProjectCockpitView: View {
     // MARK: Alerts
 
     private func cockpitAlert(_ alert: CockpitAlert) -> Alert {
-        let primary = Alert.Button.destructive(Text(title(for: alert.primaryAction))) {
-            Task { await model.perform(alert.primaryAction, for: alert.sessionID) }
+        sessionLifecycleAlert(alert) { action in
+            Task { await model.perform(action, for: alert.sessionID) }
         }
-        if let secondary = alert.secondaryAction {
-            return Alert(
-                title: Text(alert.title),
-                message: Text(alert.message),
-                primaryButton: primary,
-                secondaryButton: .destructive(Text(title(for: secondary))) {
-                    Task { await model.perform(secondary, for: alert.sessionID) }
-                }
-            )
-        }
-        return Alert(title: Text(alert.title), message: Text(alert.message), primaryButton: primary, secondaryButton: .cancel(Text("Annuleer")))
     }
+}
 
-    private func title(for action: CockpitAlertAction) -> String {
-        switch action {
-        case .endSession: "Beëindig"
-        case .removeSession: "Verwijder"
-        case .keepWorktreeAndRetry: "Behoud worktree"
-        case .forceRemove: "Forceer verwijdering"
-        }
+func sessionLifecycleAlert(_ alert: CockpitAlert, perform: @escaping (CockpitAlertAction) -> Void) -> Alert {
+    let primary = Alert.Button.destructive(Text(alert.primaryAction.title)) {
+        perform(alert.primaryAction)
     }
+    if let secondary = alert.secondaryAction {
+        return Alert(
+            title: Text(alert.title),
+            message: Text(alert.message),
+            primaryButton: primary,
+            secondaryButton: .destructive(Text(secondary.title)) {
+                perform(secondary)
+            }
+        )
+    }
+    return Alert(
+        title: Text(alert.title),
+        message: Text(alert.message),
+        primaryButton: primary,
+        secondaryButton: .cancel(Text("Annuleer"))
+    )
 }
 
 struct ChangedFileRow: View {
@@ -311,6 +314,7 @@ struct ProjectInspector: View {
     let project: ProjectDTO
     let session: SessionViewDTO?
     let status: SessionStatusDTO?
+    var symbolForAgent: (String) -> String = { AgentKind(rawValue: $0).symbol }
 
     var body: some View {
         List {
@@ -322,7 +326,7 @@ struct ProjectInspector: View {
                 LabeledContent("Geopend", value: project.lastOpenedAt.formatted(date: .abbreviated, time: .shortened))
             }
             if let session {
-                SessionInspectorSections(session: session, status: status)
+                SessionInspectorSections(session: session, status: status, symbolForAgent: symbolForAgent)
             } else {
                 Section("Sessie") {
                     Text("Selecteer een sessie voor worktree- en rundetails.")

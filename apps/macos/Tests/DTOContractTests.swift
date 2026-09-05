@@ -87,6 +87,28 @@ struct DTOContractTests {
         #expect(RPCErrorDTO(code: -32001, message: "Bad path").recoveryAction == .chooseAnotherFolder)
     }
 
+    @Test func decodesCustomAgentAndDynamicKind() throws {
+        let data = """
+        [{"id":"opencode","name":"Opencode","binary":"opencode","launch_args":["run"]}]
+        """.data(using: .utf8)!
+        let agents = try JSONDecoder.oma.decode([CustomAgentDTO].self, from: data)
+
+        #expect(agents.first?.launchArgs == ["run"])
+        #expect(agents.first?.symbol == "terminal")
+        #expect(AgentKind(rawValue: "opencode").symbol == "terminal")
+        #expect(AgentKind(rawValue: "grok-build").title == "Grok Build")
+        #expect(AgentKind(rawValue: "opencode").tint == OMAColor.accent)
+        #expect(AgentKind.builtins.map(\.rawValue) == ["claude", "codex", "gemini"])
+
+        let grokData = """
+        [{"id":"grok","name":"Grok","binary":"grok","launch_args":[],"symbol":"sparkle"}]
+        """.data(using: .utf8)!
+        let grok = try JSONDecoder.oma.decode([CustomAgentDTO].self, from: grokData)
+        #expect(grok.first?.symbol == "sparkle")
+        #expect(AgentKind(rawValue: "grok").resolvedSymbol(in: grok) == "sparkle")
+        #expect(AgentKind.claude.resolvedSymbol(in: grok) == "sparkles")
+    }
+
     @Test func sidecarConfigurationPrefersEnvironmentThenBundleThenCheckout() {
         let fromEnvironment = SidecarConfiguration.resolve(
             environment: [

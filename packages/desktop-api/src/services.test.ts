@@ -92,7 +92,10 @@ describe("desktop services", () => {
       throw new Error("projectAdd unexpectedly succeeded");
     } catch (error) {
       expect(error).toBeInstanceOf(DesktopError);
-      expect(error).toMatchObject({ code: -32001, message: "Not a Git repository" });
+      expect(error).toMatchObject({
+        code: -32001,
+        message: "Not a Git repository",
+      });
     }
   });
 
@@ -123,7 +126,9 @@ describe("desktop services", () => {
     });
     const service = createDesktopServices({ db, manager: sessionOperations() });
 
-    expect(await service.sessionStatus({ session_id: storedSession.id })).toEqual({
+    expect(
+      await service.sessionStatus({ session_id: storedSession.id }),
+    ).toEqual({
       session: storedSession,
       runs: [],
       tmux_alive: true,
@@ -156,7 +161,10 @@ describe("desktop lifecycle error mapping", () => {
       expect(error).toBeInstanceOf(DesktopError);
       expect(error).toMatchObject({
         code: -32003,
-        data: { recovery: "keep_worktree_or_force", session_id: storedSession.id },
+        data: {
+          recovery: "keep_worktree_or_force",
+          session_id: storedSession.id,
+        },
       });
     }
   });
@@ -190,6 +198,59 @@ describe("desktop health", () => {
       },
     });
 
-    expect(await service.health()).toEqual({ ok: false, tmux_available: false });
+    expect(await service.health()).toEqual({
+      ok: false,
+      tmux_available: false,
+    });
+  });
+});
+
+describe("custom agents", () => {
+  test("round-trips providers with snake_case wire keys", async () => {
+    const home = mkdtempSync(join(tmpdir(), "oma-agents-home-"));
+    tempDirs.push(home);
+    const previous = process.env.OMA_HOME;
+    process.env.OMA_HOME = home;
+    try {
+      const service = createDesktopServices({
+        db,
+        manager: sessionOperations(),
+      });
+
+      const added = await service.customAgentAdd({
+        name: "Opencode",
+        binary: "opencode",
+        launchArgs: ["run"],
+      });
+      expect(added).toEqual({
+        id: "opencode",
+        name: "Opencode",
+        binary: "opencode",
+        launch_args: ["run"],
+        symbol: "terminal",
+      });
+      expect(JSON.stringify(added)).not.toContain("launchArgs");
+
+      expect(await service.customAgentList()).toEqual([added]);
+
+      const updated = await service.customAgentUpdate({
+        id: "opencode",
+        launchArgs: [],
+        symbol: "cursorarrow",
+      });
+      expect(updated).toMatchObject({
+        id: "opencode",
+        launch_args: [],
+        symbol: "cursorarrow",
+      });
+
+      expect(await service.customAgentRemove({ id: "opencode" })).toEqual({
+        removed_agent_id: "opencode",
+      });
+      expect(await service.customAgentList()).toEqual([]);
+    } finally {
+      if (previous === undefined) delete process.env.OMA_HOME;
+      else process.env.OMA_HOME = previous;
+    }
   });
 });

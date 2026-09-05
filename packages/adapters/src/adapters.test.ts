@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { adapterFor } from "./index.ts";
+import { createGenericAdapter } from "./generic.ts";
 import { claudeAdapter, findClaudeTranscript } from "./claude.ts";
 import { codexAdapter, mcpConfigArgs } from "./codex.ts";
 import { geminiAdapter } from "./gemini.ts";
@@ -17,7 +18,8 @@ function tempDir(): string {
 }
 
 afterEach(() => {
-  while (tempDirs.length) rmSync(tempDirs.pop()!, { recursive: true, force: true });
+  while (tempDirs.length)
+    rmSync(tempDirs.pop()!, { recursive: true, force: true });
 });
 
 const MEMORY_SERVER: McpServerSpec = {
@@ -31,6 +33,69 @@ describe("adapterFor", () => {
     expect(adapterFor("claude").name).toBe("claude");
     expect(adapterFor("codex").name).toBe("codex");
     expect(adapterFor("gemini").name).toBe("gemini");
+  });
+
+  test("rejects unknown agents", () => {
+    expect(() => adapterFor("nope-not-installed-xyz")).toThrow(/unknown agent/);
+  });
+});
+
+describe("generic adapter", () => {
+  test("appends the prompt when no placeholder is used", () => {
+    const adapter = createGenericAdapter({
+      id: "opencode",
+      name: "Opencode",
+      binary: "opencode",
+      launchArgs: ["run"],
+      symbol: "terminal",
+    });
+    const launch = adapter.buildLaunch({
+      sessionId: "oma-1",
+      cwd: "/tmp/x",
+      systemPrompt: "BRIEF",
+      prompt: "do the thing",
+    });
+    expect(launch.command).toEqual([
+      "opencode",
+      "run",
+      "BRIEF\n\ndo the thing",
+    ]);
+    expect(launch.nativeSessionId).toBeNull();
+    expect(launch.transcriptPath).toBeNull();
+  });
+
+  test("expands placeholders instead of appending", () => {
+    const adapter = createGenericAdapter({
+      id: "opencode",
+      name: "Opencode",
+      binary: "opencode",
+      launchArgs: ["run", "{{system}}", "--", "{{prompt}}"],
+      symbol: "terminal",
+    });
+    const launch = adapter.buildLaunch({
+      sessionId: "oma-1",
+      cwd: "/tmp/x",
+      systemPrompt: "BRIEF",
+      prompt: "do it",
+    });
+    expect(launch.command).toEqual(["opencode", "run", "BRIEF", "--", "do it"]);
+  });
+
+  test("resume and fork are rejected with a clear error", () => {
+    const adapter = createGenericAdapter({
+      id: "opencode",
+      name: "Opencode",
+      binary: "opencode",
+      launchArgs: [],
+      symbol: "terminal",
+    });
+    expect(() =>
+      adapter.buildLaunch({
+        sessionId: "oma-1",
+        cwd: "/tmp/x",
+        resumeNativeSessionId: "abc",
+      }),
+    ).toThrow(/does not support resume/);
   });
 });
 
@@ -49,9 +114,7 @@ describe("gemini adapter", () => {
     if (!settingsPath) throw new Error("missing Gemini settings path");
     expect(launch.writtenFiles).toEqual([settingsPath]);
 
-    const settings = JSON.parse(
-      readFileSync(settingsPath, "utf8"),
-    );
+    const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
     expect(settings.mcpServers.oma).toEqual({
       command: "bun",
       args: ["run", "/opt/oma/mcp.ts"],
@@ -95,7 +158,11 @@ describe("gemini adapter", () => {
 
   test("headless invocation asks for JSON output", () => {
     expect(
-      geminiAdapter.headlessCommand({ cwd: "/tmp/x", prompt: "hi", json: true }),
+      geminiAdapter.headlessCommand({
+        cwd: "/tmp/x",
+        prompt: "hi",
+        json: true,
+      }),
     ).toEqual(["gemini", "--output-format", "json", "--prompt", "hi"]);
   });
 });
@@ -263,7 +330,10 @@ describe("claude adapter", () => {
 
 describe("codex adapter", () => {
   test("cannot know its transcript upfront, so it reports neither", () => {
-    const launch = codexAdapter.buildLaunch({ sessionId: "oma-1", cwd: "/tmp/x" });
+    const launch = codexAdapter.buildLaunch({
+      sessionId: "oma-1",
+      cwd: "/tmp/x",
+    });
     expect(launch.nativeSessionId).toBeNull();
     expect(launch.transcriptPath).toBeNull();
     expect(launch.command).toEqual(["codex", "-C", "/tmp/x"]);
@@ -287,7 +357,11 @@ describe("codex adapter", () => {
       cwd: "/tmp/x",
       forkNativeSessionId: "existing-id",
     });
-    expect(launch.command.slice(0, 3)).toEqual(["codex", "fork", "existing-id"]);
+    expect(launch.command.slice(0, 3)).toEqual([
+      "codex",
+      "fork",
+      "existing-id",
+    ]);
     expect(launch.nativeSessionId).toBeNull();
   });
 
@@ -312,7 +386,8 @@ describe("codex adapter", () => {
   });
 
   test("headless invocation asks for JSONL events", () => {
-    expect(codexAdapter.headlessCommand({ cwd: "/tmp/x", prompt: "hi", json: true }))
-      .toEqual(["codex", "exec", "-C", "/tmp/x", "--json", "hi"]);
+    expect(
+      codexAdapter.headlessCommand({ cwd: "/tmp/x", prompt: "hi", json: true }),
+    ).toEqual(["codex", "exec", "-C", "/tmp/x", "--json", "hi"]);
   });
 });

@@ -26,7 +26,7 @@ struct SessionWorkspaceView: View {
         .navigationTitle(model.session.session.displayTitle)
         .toolbar { toolbarContent }
         .inspector(isPresented: Binding(get: { app.isInspectorVisible }, set: { app.isInspectorVisible = $0 })) {
-            SessionInspector(session: model.session, status: model.status)
+            SessionInspector(session: model.session, status: model.status, symbolForAgent: { app.symbol(forAgentID: $0) })
                 .inspectorColumnWidth(min: 260, ideal: 300, max: 380)
         }
         .sheet(isPresented: Binding(get: { model.route == .promotionPreview }, set: { if !$0 { model.dismissRoute() } })) {
@@ -42,7 +42,8 @@ struct SessionWorkspaceView: View {
             SessionPickerSheet(
                 client: app.client,
                 repoPath: model.session.session.repoPath,
-                excluded: Set(terminals.occupiedSessionIDs)
+                excluded: Set(terminals.occupiedSessionIDs),
+                symbolForAgent: { app.symbol(for: $0) }
             ) { session in
                 knownTitles[session.id] = session.session.displayTitle
                 Task { try? await terminals.open(sessionID: session.id, into: cellID) }
@@ -98,7 +99,7 @@ struct SessionWorkspaceView: View {
     private var header: some View {
         HStack(spacing: 14) {
             let agent = model.session.currentAgent
-            Image(systemName: agent?.symbol ?? "terminal")
+            Image(systemName: agent.map { app.symbol(for: $0) } ?? "terminal")
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(agent?.tint ?? .secondary)
                 .font(.title3)
@@ -246,6 +247,7 @@ struct SessionPickerSheet: View {
     let client: any DesktopAPI
     let repoPath: String
     let excluded: Set<String>
+    var symbolForAgent: (AgentKind) -> String = { $0.symbol }
     let onPick: (SessionViewDTO) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -270,7 +272,7 @@ struct SessionPickerSheet: View {
                 ScrollView {
                     VStack(spacing: 8) {
                         ForEach(available) { session in
-                            SessionRow(view: session) {
+                            SessionRow(view: session, agentSymbol: session.currentAgent.map { symbolForAgent($0) }) {
                                 onPick(session)
                                 dismiss()
                             }

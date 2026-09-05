@@ -1,11 +1,28 @@
 /** Shared domain types. The DB is the only owner of state; these mirror its rows. */
 
-export type AgentName = "claude" | "codex" | "gemini";
+/** Built-in agents with first-class adapters. Custom providers use any other slug. */
 
-export const AGENT_NAMES: readonly AgentName[] = ["claude", "codex", "gemini"];
+export type BuiltinAgentName = "claude" | "codex" | "gemini";
+
+export type AgentName = string;
+
+export const BUILTIN_AGENT_NAMES: readonly BuiltinAgentName[] = [
+  "claude",
+  "codex",
+  "gemini",
+];
+
+/** @deprecated Use BUILTIN_AGENT_NAMES; kept for existing imports. */
+export const AGENT_NAMES: readonly BuiltinAgentName[] = BUILTIN_AGENT_NAMES;
+
+const AGENT_SLUG = /^[a-z0-9][a-z0-9_-]{0,31}$/;
+
+export function isBuiltinAgentName(value: string): value is BuiltinAgentName {
+  return (BUILTIN_AGENT_NAMES as readonly string[]).includes(value);
+}
 
 export function isAgentName(value: string): value is AgentName {
-  return (AGENT_NAMES as readonly string[]).includes(value);
+  return AGENT_SLUG.test(value);
 }
 
 export type SessionStatus = "active" | "ended";
