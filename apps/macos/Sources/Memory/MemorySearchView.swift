@@ -6,34 +6,54 @@ struct MemorySearchView: View {
     @State private var model: MemorySearchModel
     let projects: [ProjectDTO]
     let app: AppModel?
+    let scopeRepoPath: String?
     @FocusState private var queryFocused: Bool
     @State private var query = ""
 
     init(client: any DesktopAPI, scopeRepoPath: String?, projects: [ProjectDTO], app: AppModel?) {
         _model = State(initialValue: MemorySearchModel(client: client, repoPath: scopeRepoPath))
+        self.scopeRepoPath = scopeRepoPath
         self.projects = projects
         self.app = app
     }
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .topLeading) {
             OMAColor.canvas.ignoresSafeArea()
-            VStack(alignment: .leading, spacing: 16) {
-                searchBar
-                if let notice = model.notice {
-                    InlineNotice(notice, actionTitle: "Opnieuw") {
-                        Task { await model.loadRecent() }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    if scopeRepoPath == nil {
+                        header
                     }
+                    searchBar
+                    if let notice = model.notice {
+                        InlineNotice(notice, actionTitle: "Opnieuw") {
+                            Task { await model.loadRecent() }
+                        }
+                    }
+                    content
                 }
-                content
+                .padding(28)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             }
-            .padding(24)
         }
         .navigationTitle("Geheugen")
         .task { await model.loadRecent() }
         .onAppear { consumeSearchCommand() }
         .onChange(of: app?.pendingCommand) { _, _ in consumeSearchCommand() }
         .onChange(of: app?.reconciliationTick) { _, _ in Task { await model.loadRecent() } }
+    }
+
+    private var header: some View {
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Geheugen")
+                    .font(.largeTitle.weight(.semibold))
+                Text("Beslissingen, invarianten en how-tos uit al je projecten.")
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
     }
 
     private var searchBar: some View {
@@ -56,8 +76,10 @@ struct MemorySearchView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(OMAColor.surface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay { RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(OMAColor.separator) }
+            .layoutPriority(1)
 
             if projects.count > 1 || model.repoPath == nil {
                 Picker("Project", selection: Binding(
@@ -70,10 +92,11 @@ struct MemorySearchView: View {
                     }
                 }
                 .labelsHidden()
-                .frame(maxWidth: 240)
+                .frame(width: 200)
                 .help("Beperk tot één project")
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
@@ -82,14 +105,14 @@ struct MemorySearchView: View {
             recentList
         } else if model.hits.isEmpty && !model.isSearching {
             ContentUnavailableView.search(text: query)
+                .frame(maxWidth: .infinity, minHeight: 320)
         } else {
-            List(model.hits) { hit in
-                SearchHitRow(hit: hit)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+            LazyVStack(spacing: 10) {
+                ForEach(model.hits) { hit in
+                    SearchHitRow(hit: hit)
+                }
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
     }
 
@@ -101,14 +124,14 @@ struct MemorySearchView: View {
             } description: {
                 Text("Beslissingen, invarianten en how-tos verschijnen hier zodra je kennis uit een sessie promoveert.")
             }
+            .frame(maxWidth: .infinity, minHeight: 320)
         } else {
-            List(model.recent) { memory in
-                MemoryRow(memory: memory)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+            LazyVStack(spacing: 10) {
+                ForEach(model.recent) { memory in
+                    MemoryRow(memory: memory)
+                }
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
     }
 
