@@ -1,0 +1,21 @@
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "items": [
+      {
+        "id": "event-1",
+        "session_id": "session-1",
+        "agent_run_id": "run-1",
+        "seq": 1,
+        "ts": "2026-08-11T10:01:00.000Z",
+        "role": "assistant",
+        "kind": "text",
+        "tool_name": null,
+        "text": "The dashboard is ready.",
+        "raw": {}
+      }
+    ],
+    "next_cursor": "WyJydW4tMSIsMV0"
+  }
+}

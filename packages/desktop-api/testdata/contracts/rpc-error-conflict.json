@@ -1,0 +1,13 @@
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "error": {
+    "code": -32003,
+    "message": "The worktree has uncommitted changes",
+    "data": {
+      "session_id": "session-1",
+      "recovery": "keep_worktree_or_force",
+      "detail": "fatal: '/repo/.worktrees/m4' contains modified or untracked files, use --force to delete it"
+    }
+  }
+}

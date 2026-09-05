@@ -1,0 +1,8 @@
+{
+  "jsonrpc": "2.0",
+  "id": 9,
+  "result": {
+    "diff": "--- .oma/docs/decisions.md\n+++ .oma/docs/decisions.md\n@@ -1,0 +1,3 @@\n+# Decisions\n+\n+- Use native SwiftUI",
+    "candidate_count": 1
+  }
+}

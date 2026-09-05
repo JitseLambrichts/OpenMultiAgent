@@ -1,0 +1,6 @@
+{"sessionId":"99999999-aaaa-bbbb-cccc-dddddddddddd","projectHash":"demo","startTime":"2026-08-11T09:00:00.000Z","lastUpdated":"2026-08-11T09:02:00.000Z","kind":"main"}
+{"id":"u1","timestamp":"2026-08-11T09:00:01.000Z","type":"user","content":[{"text":"Implement the queue consumer"}]}
+{"id":"g1","timestamp":"2026-08-11T09:00:02.000Z","type":"gemini","content":"I will update the worker.","thoughts":[{"subject":"Plan","description":"Preserve at-least-once delivery","timestamp":"2026-08-11T09:00:02.100Z"}],"toolCalls":[{"id":"t1","name":"write_file","displayName":"WriteFile","description":"Write the worker","args":{"file_path":"/Users/dev/Projects/Demo/src/worker.ts","content":"export {}"},"result":[{"functionResponse":{"name":"write_file","response":{"output":"ok"}}}],"status":"success","timestamp":"2026-08-11T09:00:03.000Z"}]}
+{"id":"i1","timestamp":"2026-08-11T09:00:04.000Z","type":"info","content":"model changed"}
+{"$set":{"lastUpdated":"2026-08-11T09:02:00.000Z"}}
+{"broken":

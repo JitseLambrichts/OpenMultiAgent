@@ -1,0 +1,31 @@
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "result": [
+    {
+      "type": "memory",
+      "id": "memory-1",
+      "kind": "decision",
+      "scope": "repo",
+      "repo_path": "/Users/example/OpenMultiAgent",
+      "title": "Use native SwiftUI",
+      "body": "It provides the strongest Mac experience.",
+      "confidence": 0.94,
+      "created_at": "2026-08-11T12:00:00.000Z",
+      "source_session_id": "session-1",
+      "score": -3.2
+    },
+    {
+      "type": "event",
+      "id": "event-9",
+      "session_id": "session-1",
+      "agent": "claude",
+      "ts": "2026-08-11T10:05:00.000Z",
+      "role": "assistant",
+      "kind": "text",
+      "tool_name": null,
+      "text": "We chose SwiftUI because the app must feel native.",
+      "score": -1.1
+    }
+  ]
+}

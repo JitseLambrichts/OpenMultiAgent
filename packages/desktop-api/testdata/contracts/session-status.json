@@ -1,0 +1,36 @@
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "session": {
+      "id": "session-1",
+      "repo_path": "/Users/example/OpenMultiAgent",
+      "worktree_path": "/Users/example/OpenMultiAgent/.worktrees/m4",
+      "branch": "oma/m4",
+      "title": "Build M4",
+      "status": "active",
+      "started_at": "2026-08-11T10:00:00.000Z",
+      "ended_at": null
+    },
+    "runs": [
+      {
+        "id": "run-1",
+        "session_id": "session-1",
+        "agent": "claude",
+        "native_session_id": "native-1",
+        "transcript_path": "/Users/example/.claude/session.jsonl",
+        "started_at": "2026-08-11T10:00:00.000Z",
+        "ended_at": null
+      }
+    ],
+    "tmux_alive": true,
+    "changed_files": [
+      {
+        "path": "README.md",
+        "status": "M"
+      }
+    ],
+    "diff_stat": "README.md | 1 +",
+    "pane": "agent output"
+  }
+}

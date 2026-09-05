@@ -1,0 +1,30 @@
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "result": [
+    {
+      "id": "memory-1",
+      "kind": "decision",
+      "scope": "repo",
+      "repo_path": "/Users/example/OpenMultiAgent",
+      "title": "Use native SwiftUI",
+      "body": "It provides the strongest Mac experience.",
+      "confidence": 0.94,
+      "source_session_id": "session-1",
+      "created_at": "2026-08-11T12:00:00.000Z",
+      "superseded_by": null
+    },
+    {
+      "id": "memory-2",
+      "kind": "invariant",
+      "scope": "global",
+      "repo_path": null,
+      "title": "Swift never opens oma.db",
+      "body": "All state flows through the sidecar.",
+      "confidence": 0.8,
+      "source_session_id": null,
+      "created_at": "2026-08-10T12:00:00.000Z",
+      "superseded_by": null
+    }
+  ]
+}

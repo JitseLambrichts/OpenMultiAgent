@@ -5,26 +5,50 @@ AI coding agents with memory that outlives any one agent or session. It keeps
 the durable state in SQLite, reads the agents' own structured transcripts and
 offers relevant knowledge back through MCP.
 
-OMA currently delivers the command-line vertical slice: persistent tmux
+OMA currently ships a macOS desktop app and a matching CLI: persistent tmux
 sessions, optional Git worktrees, Claude Code, Codex and Gemini adapters,
 agent switching/resume, transcript ingestion, full-text memory search, an MCP
 memory server, and reviewed living-document promotion.
 
 ## Requirements
 
-- Bun 1.2 or newer
+Everyone needs:
+
+- macOS 15 or newer on Apple Silicon (the compiled sidecar is `arm64` only)
+- [Bun](https://bun.sh) 1.2 or newer
 - Git and tmux
-- At least one supported agent CLI (`claude`, `codex`, or `gemini`)
+- At least one supported agent CLI (`claude`, `codex`, or `gemini`), already
+  signed in with that vendor. OMA stores no API keys of its own.
+
+To build the Mac app you also need **Xcode 26** and
+[XcodeGen](https://github.com/yonaskolb/XcodeGen).
+
+```sh
+brew install bun git tmux xcodegen
+```
 
 ## Setup
 
 ```sh
+git clone https://github.com/jlambrichtsopt/OpenMultiAgent.git
+cd OpenMultiAgent
 bun install
 bun run check
 ```
 
-Use `bun run oma -- ...` from a checkout, or link the package so `oma` is on
-your `PATH`.
+Most people only need the Mac app. That UI talks to the same engine as the
+CLI; you do not have to run `oma` yourself.
+
+```sh
+bun run macos:build
+open apps/macos/Build/DerivedData/Build/Products/Debug/OpenMultiAgent.app
+```
+
+On first launch macOS may ask for access to the folder that contains this
+checkout. Grant it, or the sidecar cannot start.
+
+The optional CLI is `bun run oma -- ...` from a checkout, or link the package
+so `oma` is on your `PATH`.
 
 ```sh
 bun run oma -- new /path/to/repo --agent claude --worktree
@@ -78,8 +102,9 @@ never opens `oma.db`; it talks JSON-RPC 2.0 over stdin/stdout to the
 `@oma/desktop-api` sidecar and embeds tmux terminals through SwiftTerm using an
 executable plus argument array, never a shell string.
 
-Requirements: macOS 15 or newer, Xcode 26, [XcodeGen](https://github.com/yonaslab/XcodeGen)
-(`brew install xcodegen`), and Bun on `PATH`.
+Requirements: macOS 15 or newer on Apple Silicon, Xcode 26,
+[XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`),
+and Bun on `PATH`.
 
 ```sh
 bun run macos:generate   # regenerate apps/macos/OpenMultiAgent.xcodeproj

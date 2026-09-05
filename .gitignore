@@ -1,19 +1,28 @@
+# Dependencies and build output
 node_modules/
 dist/
 *.bun-build
+.DS_Store
+
+# Local secrets and env overrides
+.env
+.env.*
+
+# Local runtime state (never commit user databases)
 *.db
 *.db-shm
 *.db-wal
 .oma/*
 !.oma/docs/
 !.oma/docs/**
-.DS_Store
 tmp/
+
+# Xcode derived data and user-specific project state
 apps/macos/Build/
 apps/macos/OpenMultiAgent.xcodeproj/xcuserdata/
 
-docs/
-testdata/
-scripts/
+# Private planning notes — not required to build or run
 COMPLETE_PLAN.md
 PLAN.md
+PLAN.MD
+/docs/superpowers/

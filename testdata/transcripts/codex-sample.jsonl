@@ -1,0 +1,16 @@
+{"timestamp":"2026-08-11T11:00:00.000Z","type":"session_meta","payload":{"session_id":"019ff1c2-1111-2222-3333-444455556666","id":"019ff1c2-1111-2222-3333-444455556666","timestamp":"2026-08-11T11:00:00.000Z","cwd":"/Users/dev/Projects/Demo","originator":"codex_cli","cli_version":"0.147.0","source":"cli","model_provider":"openai","base_instructions":{"text":"You are Codex."}}}
+{"timestamp":"2026-08-11T11:00:00.100Z","type":"turn_context","payload":{"turn_id":"turn-1","cwd":"/Users/dev/Projects/Demo","model":"gpt-5","approval_policy":"on-request","current_date":"2026-08-11"}}
+{"timestamp":"2026-08-11T11:00:01.000Z","type":"event_msg","payload":{"type":"task_started","turn_id":"turn-1","started_at":1786467563,"model_context_window":258400}}
+{"timestamp":"2026-08-11T11:00:02.000Z","type":"response_item","payload":{"type":"message","role":"developer","content":[{"type":"input_text","text":"System preamble that should not be indexed as user speech."}]}}
+{"timestamp":"2026-08-11T11:00:03.000Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Which database are we using for memory search?"}]}}
+{"timestamp":"2026-08-11T11:00:05.000Z","type":"response_item","payload":{"type":"reasoning","id":"rs_1","summary":[{"type":"summary_text","text":"Recall the storage decision."}],"encrypted_content":"opaque"}}
+{"timestamp":"2026-08-11T11:00:06.000Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"We use SQLite with FTS5 via bun:sqlite, so search needs no extra dependency."}]}}
+{"timestamp":"2026-08-11T11:00:08.000Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"{\"cmd\":\"grep -rn fts5 packages/core\",\"workdir\":\"/Users/dev/Projects/Demo\"}","call_id":"call_001"}}
+{"timestamp":"2026-08-11T11:00:09.000Z","type":"response_item","payload":{"type":"function_call_output","call_id":"call_001","output":"packages/core/src/migrations/001_init.sql:74:USING fts5"}}
+{"timestamp":"2026-08-11T11:00:11.000Z","type":"response_item","payload":{"type":"custom_tool_call","name":"exec","call_id":"call_002","input":"{\"cmd\":[\"bash\",\"-lc\",\"bun test\"],\"workdir\":\"/Users/dev/Projects/Demo\"}"}}
+{"timestamp":"2026-08-11T11:00:13.000Z","type":"response_item","payload":{"type":"custom_tool_call_output","call_id":"call_002","id":"out_002","output":"14 pass 0 fail"}}
+{"timestamp":"2026-08-11T11:00:14.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":900,"output_tokens":120}}}}
+{"timestamp":"2026-08-11T11:00:15.000Z","type":"event_msg","payload":{"type":"agent_message","message":"We use SQLite with FTS5 via bun:sqlite, so search needs no extra dependency."}}
+{"timestamp":"2026-08-11T11:00:16.000Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"turn-1"}}
+{"timestamp":"2026-08-11T11:00:17.000Z","type":"world_state_of_the_future","payload":{"unknown":"shape"}}
+{"timestamp":"2026-08-11T11:00:18.000Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","tex
