@@ -15,15 +15,12 @@ afterEach(() => {
 test("sidecar serves newline-delimited requests and shuts down cleanly", async () => {
   const omaHome = mkdtempSync(join(tmpdir(), "oma-desktop-home-"));
   tempDirs.push(omaHome);
-  const process = Bun.spawn(
-    ["bun", "run", join(import.meta.dir, "index.ts")],
-    {
-      env: { ...Bun.env, OMA_HOME: omaHome },
-      stdin: "pipe",
-      stdout: "pipe",
-      stderr: "pipe",
-    },
-  );
+  const process = Bun.spawn(["bun", "run", join(import.meta.dir, "index.ts")], {
+    env: { ...Bun.env, OMA_HOME: omaHome },
+    stdin: "pipe",
+    stdout: "pipe",
+    stderr: "pipe",
+  });
 
   process.stdin.write(
     '{"jsonrpc":"2.0","id":1,"method":"system.hello","params":{}}\n',
@@ -41,14 +38,19 @@ test("sidecar serves newline-delimited requests and shuts down cleanly", async (
 
   expect(code).toBe(0);
   expect(stderr).toBe("");
-  expect(stdout.trim().split("\n").map((line) => JSON.parse(line))).toEqual([
+  expect(
+    stdout
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line)),
+  ).toEqual([
     {
       jsonrpc: "2.0",
       id: 1,
       result: {
         protocol_version: 1,
         app_version: "0.1.0",
-        agents: ["claude", "codex", "gemini"],
+        agents: ["claude", "codex", "gemini", "terminal"],
       },
     },
     {
@@ -62,15 +64,12 @@ test("sidecar serves newline-delimited requests and shuts down cleanly", async (
 test("sidecar answers each request while the client keeps stdin open", async () => {
   const omaHome = mkdtempSync(join(tmpdir(), "oma-desktop-home-"));
   tempDirs.push(omaHome);
-  const process = Bun.spawn(
-    ["bun", "run", join(import.meta.dir, "index.ts")],
-    {
-      env: { ...Bun.env, OMA_HOME: omaHome },
-      stdin: "pipe",
-      stdout: "pipe",
-      stderr: "pipe",
-    },
-  );
+  const process = Bun.spawn(["bun", "run", join(import.meta.dir, "index.ts")], {
+    env: { ...Bun.env, OMA_HOME: omaHome },
+    stdin: "pipe",
+    stdout: "pipe",
+    stderr: "pipe",
+  });
   const reader = process.stdout.getReader();
   const decoder = new TextDecoder();
   let buffered = "";
@@ -126,39 +125,38 @@ test("parentAlive probes liveness instead of trusting a cached ppid", () => {
   expect(parentAlive(2147483000)).toBe(false);
 });
 
-test(
-  "sidecar exits on its own when its parent process disappears",
-  async () => {
-    const omaHome = mkdtempSync(join(tmpdir(), "oma-desktop-home-"));
-    tempDirs.push(omaHome);
-    const entry = join(import.meta.dir, "index.ts");
-    // `sleep` keeps the sidecar's stdin open, so only the parent watchdog can
-    // end it once the intermediate shell (its parent) is killed.
-    const shell = Bun.spawn(["/bin/sh", "-c", `sleep 30 | bun run ${JSON.stringify(entry)}`], {
+test("sidecar exits on its own when its parent process disappears", async () => {
+  const omaHome = mkdtempSync(join(tmpdir(), "oma-desktop-home-"));
+  tempDirs.push(omaHome);
+  const entry = join(import.meta.dir, "index.ts");
+  // `sleep` keeps the sidecar's stdin open, so only the parent watchdog can
+  // end it once the intermediate shell (its parent) is killed.
+  const shell = Bun.spawn(
+    ["/bin/sh", "-c", `sleep 30 | bun run ${JSON.stringify(entry)}`],
+    {
       env: { ...Bun.env, OMA_HOME: omaHome },
       stdout: "ignore",
       stderr: "ignore",
-    });
-    await Bun.sleep(1500);
-    const findSidecar = () =>
-      Bun.spawnSync(["pgrep", "-f", `bun run ${entry}`])
-        .stdout.toString()
-        .trim()
-        .split("\n")
-        .filter(Boolean);
-    expect(findSidecar().length).toBeGreaterThan(0);
+    },
+  );
+  await Bun.sleep(1500);
+  const findSidecar = () =>
+    Bun.spawnSync(["pgrep", "-f", `bun run ${entry}`])
+      .stdout.toString()
+      .trim()
+      .split("\n")
+      .filter(Boolean);
+  expect(findSidecar().length).toBeGreaterThan(0);
 
-    shell.kill(9);
-    await shell.exited;
-    const started = Date.now();
-    let survivors = findSidecar();
-    while (survivors.length > 0 && Date.now() - started < 8000) {
-      await Bun.sleep(400);
-      survivors = findSidecar();
-    }
-    for (const pid of survivors) Bun.spawnSync(["kill", "-9", pid]);
-    Bun.spawnSync(["pkill", "-f", "sleep 30"]);
-    expect(survivors).toEqual([]);
-  },
-  15000,
-);
+  shell.kill(9);
+  await shell.exited;
+  const started = Date.now();
+  let survivors = findSidecar();
+  while (survivors.length > 0 && Date.now() - started < 8000) {
+    await Bun.sleep(400);
+    survivors = findSidecar();
+  }
+  for (const pid of survivors) Bun.spawnSync(["kill", "-9", pid]);
+  Bun.spawnSync(["pkill", "-f", "sleep 30"]);
+  expect(survivors).toEqual([]);
+}, 15000);

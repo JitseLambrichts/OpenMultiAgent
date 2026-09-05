@@ -231,7 +231,8 @@ export class SessionManager {
 
       // Codex only reveals its transcript once it has written `session_meta`,
       // so the path is filled in on a short poll rather than at launch.
-      if (!launch.transcriptPath) {
+      // A plain terminal never publishes a transcript, so skip discovery.
+      if (!launch.transcriptPath && adapter.name !== "terminal") {
         const discovery = this.discoverTranscript(
           adapter,
           run.id,
@@ -313,9 +314,7 @@ export class SessionManager {
   }
 
   async list(): Promise<SessionView[]> {
-    const alive = new Set(
-      (await tmux.listSessions()).map((s) => s.sessionId),
-    );
+    const alive = new Set((await tmux.listSessions()).map((s) => s.sessionId));
     return listSessions(this.db).map((session) => ({
       session,
       runs: listAgentRuns(this.db, session.id),
@@ -340,202 +339,224 @@ export class SessionManager {
     agent: AgentName,
     opts: { prompt?: string } = {},
   ): Promise<SessionView> {
-    return this.serialise(() => this.withStartLock(async () => {
-      const session = resolveSession(this.db, sessionId);
-      if (!existsSync(session.worktree_path)) {
-        throw new Error(`session worktree no longer exists: ${session.worktree_path}`);
-      }
-      const adapter = this.options.adapterFor(agent);
-      if (!(await adapter.isAvailable())) {
-        throw new Error(`'${adapter.binary}' is not on PATH`);
-      }
-      if (!(await tmux.tmuxAvailable())) throw new Error("tmux is not on PATH");
+    return this.serialise(() =>
+      this.withStartLock(async () => {
+        const session = resolveSession(this.db, sessionId);
+        if (!existsSync(session.worktree_path)) {
+          throw new Error(
+            `session worktree no longer exists: ${session.worktree_path}`,
+          );
+        }
+        const adapter = this.options.adapterFor(agent);
+        if (!(await adapter.isAvailable())) {
+          throw new Error(`'${adapter.binary}' is not on PATH`);
+        }
+        if (!(await tmux.tmuxAvailable()))
+          throw new Error("tmux is not on PATH");
 
-      await this.snapshotArtifacts(session);
-      const handoff = buildHandoffBrief(this.db, session.id, {
-        diffStat: await diffStat(session.worktree_path),
-      });
-      const startedAt = this.now;
-      const launch = adapter.buildLaunch({
-        sessionId: session.id,
-        cwd: session.worktree_path,
-        prompt: opts.prompt ?? "Continue the task from the Handoff Brief.",
-        systemPrompt: handoff,
-        mcpServers: this.options.mcpServers?.({
+        await this.snapshotArtifacts(session);
+        const handoff = buildHandoffBrief(this.db, session.id, {
+          diffStat: await diffStat(session.worktree_path),
+        });
+        const startedAt = this.now;
+        const launch = adapter.buildLaunch({
           sessionId: session.id,
-          repoPath: session.repo_path,
-          worktreePath: session.worktree_path,
-        }),
-      });
+          cwd: session.worktree_path,
+          prompt: opts.prompt ?? "Continue the task from the Handoff Brief.",
+          systemPrompt: handoff,
+          mcpServers: this.options.mcpServers?.({
+            sessionId: session.id,
+            repoPath: session.repo_path,
+            worktreePath: session.worktree_path,
+          }),
+        });
 
-      let transcriptPath = launch.transcriptPath;
-      await this.replaceTmuxSession(
-        session,
-        launch,
-        adapter.name === "codex" && !transcriptPath
-          ? async () => {
-              transcriptPath = await this.resolveTranscriptWithRetry(
-                adapter,
-                session.worktree_path,
-                startedAt,
-                launch.nativeSessionId,
-                undefined,
-                this.discoveryAttempts,
-                this.discoveryIntervalMs,
-              );
-              if (!transcriptPath) {
-                throw new Error("codex did not publish a correlatable transcript");
+        let transcriptPath = launch.transcriptPath;
+        await this.replaceTmuxSession(
+          session,
+          launch,
+          adapter.name === "codex" && !transcriptPath
+            ? async () => {
+                transcriptPath = await this.resolveTranscriptWithRetry(
+                  adapter,
+                  session.worktree_path,
+                  startedAt,
+                  launch.nativeSessionId,
+                  undefined,
+                  this.discoveryAttempts,
+                  this.discoveryIntervalMs,
+                );
+                if (!transcriptPath) {
+                  throw new Error(
+                    "codex did not publish a correlatable transcript",
+                  );
+                }
               }
-            }
-          : undefined,
-      );
-      endActiveAgentRuns(this.db, session.id);
-      const run = createAgentRun(this.db, {
-        session_id: session.id,
-        agent,
-        native_session_id: launch.nativeSessionId,
-        transcript_path: transcriptPath,
-      });
-      activateSession(this.db, session.id);
-      if (!transcriptPath) {
-        const discovery = this.discoverTranscript(
-          adapter,
-          run.id,
-          session.worktree_path,
-          startedAt,
-          launch.nativeSessionId,
+            : undefined,
         );
-        void discovery;
-      }
-      return this.view(session.id);
-    }));
+        endActiveAgentRuns(this.db, session.id);
+        const run = createAgentRun(this.db, {
+          session_id: session.id,
+          agent,
+          native_session_id: launch.nativeSessionId,
+          transcript_path: transcriptPath,
+        });
+        activateSession(this.db, session.id);
+        if (!transcriptPath && adapter.name !== "terminal") {
+          const discovery = this.discoverTranscript(
+            adapter,
+            run.id,
+            session.worktree_path,
+            startedAt,
+            launch.nativeSessionId,
+          );
+          void discovery;
+        }
+        return this.view(session.id);
+      }),
+    );
   }
 
   async resume(sessionId: string): Promise<SessionView> {
-    return this.serialise(() => this.withStartLock(async () => {
-      const session = resolveSession(this.db, sessionId);
-      if (!existsSync(session.worktree_path)) {
-        throw new Error(`session worktree no longer exists: ${session.worktree_path}`);
-      }
-      const runs = listAgentRuns(this.db, session.id);
-      const run = runs.at(-1);
-      if (!run) throw new Error("session has no agent run to resume");
-      if (!run.native_session_id) {
-        throw new Error(
-          `cannot resume ${run.agent}: its native session id has not been discovered yet`,
-        );
-      }
-      if (await tmux.hasSession(tmuxSessionName(session.id))) {
-        throw new Error("session is already running");
-      }
-      const adapter = this.options.adapterFor(run.agent);
-      if (!(await adapter.isAvailable())) {
-        throw new Error(`'${adapter.binary}' is not on PATH`);
-      }
-      const launch = adapter.buildLaunch({
-        sessionId: session.id,
-        cwd: session.worktree_path,
-        resumeNativeSessionId: run.native_session_id,
-        mcpServers: this.options.mcpServers?.({
+    return this.serialise(() =>
+      this.withStartLock(async () => {
+        const session = resolveSession(this.db, sessionId);
+        if (!existsSync(session.worktree_path)) {
+          throw new Error(
+            `session worktree no longer exists: ${session.worktree_path}`,
+          );
+        }
+        const runs = listAgentRuns(this.db, session.id);
+        const run = runs.at(-1);
+        if (!run) throw new Error("session has no agent run to resume");
+        const isTerminal = run.agent === "terminal";
+        if (!isTerminal && !run.native_session_id) {
+          throw new Error(
+            `cannot resume ${run.agent}: its native session id has not been discovered yet`,
+          );
+        }
+        if (await tmux.hasSession(tmuxSessionName(session.id))) {
+          throw new Error("session is already running");
+        }
+        const adapter = this.options.adapterFor(run.agent);
+        if (!(await adapter.isAvailable())) {
+          throw new Error(`'${adapter.binary}' is not on PATH`);
+        }
+        const launch = adapter.buildLaunch({
           sessionId: session.id,
-          repoPath: session.repo_path,
-          worktreePath: session.worktree_path,
-        }),
-      });
-      await tmux.newSession({
-        name: tmuxSessionName(session.id),
-        cwd: session.worktree_path,
-        command: shellQuote(launch.command),
-        env: launch.env,
-      });
-      reopenAgentRun(this.db, run.id);
-      activateSession(this.db, session.id);
-      return this.view(session.id);
-    }));
+          cwd: session.worktree_path,
+          resumeNativeSessionId: run.native_session_id ?? undefined,
+          mcpServers: isTerminal
+            ? undefined
+            : this.options.mcpServers?.({
+                sessionId: session.id,
+                repoPath: session.repo_path,
+                worktreePath: session.worktree_path,
+              }),
+        });
+        await tmux.newSession({
+          name: tmuxSessionName(session.id),
+          cwd: session.worktree_path,
+          command: shellQuote(launch.command),
+          env: launch.env,
+        });
+        reopenAgentRun(this.db, run.id);
+        activateSession(this.db, session.id);
+        return this.view(session.id);
+      }),
+    );
   }
 
   async forkAgent(
     sessionId: string,
     opts: { prompt?: string } = {},
   ): Promise<SessionView> {
-    return this.serialise(() => this.withStartLock(async () => {
-      const session = resolveSession(this.db, sessionId);
-      if (!existsSync(session.worktree_path)) {
-        throw new Error(`session worktree no longer exists: ${session.worktree_path}`);
-      }
-      const previous = listAgentRuns(this.db, session.id).at(-1);
-      if (!previous) throw new Error("session has no agent run to fork");
-      if (!previous.native_session_id) {
-        throw new Error(
-          `cannot fork ${previous.agent}: its native session id has not been discovered yet`,
-        );
-      }
-      const adapter = this.options.adapterFor(previous.agent);
-      if (adapter.supportsNativeFork === false) {
-        throw new Error(`${previous.agent} does not support native session forks`);
-      }
-      if (!(await adapter.isAvailable())) {
-        throw new Error(`'${adapter.binary}' is not on PATH`);
-      }
-      await this.snapshotArtifacts(session);
-      const handoff = buildHandoffBrief(this.db, session.id, {
-        diffStat: await diffStat(session.worktree_path),
-      });
-      const startedAt = this.now;
-      const launch = adapter.buildLaunch({
-        sessionId: session.id,
-        cwd: session.worktree_path,
-        forkNativeSessionId: previous.native_session_id,
-        systemPrompt: handoff,
-        prompt: opts.prompt,
-        mcpServers: this.options.mcpServers?.({
+    return this.serialise(() =>
+      this.withStartLock(async () => {
+        const session = resolveSession(this.db, sessionId);
+        if (!existsSync(session.worktree_path)) {
+          throw new Error(
+            `session worktree no longer exists: ${session.worktree_path}`,
+          );
+        }
+        const previous = listAgentRuns(this.db, session.id).at(-1);
+        if (!previous) throw new Error("session has no agent run to fork");
+        if (!previous.native_session_id) {
+          throw new Error(
+            `cannot fork ${previous.agent}: its native session id has not been discovered yet`,
+          );
+        }
+        const adapter = this.options.adapterFor(previous.agent);
+        if (adapter.supportsNativeFork === false) {
+          throw new Error(
+            `${previous.agent} does not support native session forks`,
+          );
+        }
+        if (!(await adapter.isAvailable())) {
+          throw new Error(`'${adapter.binary}' is not on PATH`);
+        }
+        await this.snapshotArtifacts(session);
+        const handoff = buildHandoffBrief(this.db, session.id, {
+          diffStat: await diffStat(session.worktree_path),
+        });
+        const startedAt = this.now;
+        const launch = adapter.buildLaunch({
           sessionId: session.id,
-          repoPath: session.repo_path,
-          worktreePath: session.worktree_path,
-        }),
-      });
-      let transcriptPath = launch.transcriptPath;
-      await this.replaceTmuxSession(
-        session,
-        launch,
-        adapter.name === "codex" && !transcriptPath
-          ? async () => {
-              transcriptPath = await this.resolveTranscriptWithRetry(
-                adapter,
-                session.worktree_path,
-                startedAt,
-                launch.nativeSessionId,
-                previous.native_session_id,
-                this.discoveryAttempts,
-                this.discoveryIntervalMs,
-              );
-              if (!transcriptPath) {
-                throw new Error("codex did not publish a correlatable transcript");
+          cwd: session.worktree_path,
+          forkNativeSessionId: previous.native_session_id,
+          systemPrompt: handoff,
+          prompt: opts.prompt,
+          mcpServers: this.options.mcpServers?.({
+            sessionId: session.id,
+            repoPath: session.repo_path,
+            worktreePath: session.worktree_path,
+          }),
+        });
+        let transcriptPath = launch.transcriptPath;
+        await this.replaceTmuxSession(
+          session,
+          launch,
+          adapter.name === "codex" && !transcriptPath
+            ? async () => {
+                transcriptPath = await this.resolveTranscriptWithRetry(
+                  adapter,
+                  session.worktree_path,
+                  startedAt,
+                  launch.nativeSessionId,
+                  previous.native_session_id,
+                  this.discoveryAttempts,
+                  this.discoveryIntervalMs,
+                );
+                if (!transcriptPath) {
+                  throw new Error(
+                    "codex did not publish a correlatable transcript",
+                  );
+                }
               }
-            }
-          : undefined,
-      );
-      endActiveAgentRuns(this.db, session.id);
-      const run = createAgentRun(this.db, {
-        session_id: session.id,
-        agent: previous.agent,
-        native_session_id: launch.nativeSessionId,
-        transcript_path: transcriptPath,
-      });
-      activateSession(this.db, session.id);
-      if (!transcriptPath) {
-        const discovery = this.discoverTranscript(
-          adapter,
-          run.id,
-          session.worktree_path,
-          startedAt,
-          launch.nativeSessionId,
-          previous.native_session_id,
+            : undefined,
         );
-        void discovery;
-      }
-      return this.view(session.id);
-    }));
+        endActiveAgentRuns(this.db, session.id);
+        const run = createAgentRun(this.db, {
+          session_id: session.id,
+          agent: previous.agent,
+          native_session_id: launch.nativeSessionId,
+          transcript_path: transcriptPath,
+        });
+        activateSession(this.db, session.id);
+        if (!transcriptPath) {
+          const discovery = this.discoverTranscript(
+            adapter,
+            run.id,
+            session.worktree_path,
+            startedAt,
+            launch.nativeSessionId,
+            previous.native_session_id,
+          );
+          void discovery;
+        }
+        return this.view(session.id);
+      }),
+    );
   }
 
   attachCommand(sessionId: string): string[] {
@@ -551,7 +572,11 @@ export class SessionManager {
         this.db,
         session.id,
         file.path,
-        file.status === "D" ? "deleted" : file.status === "??" ? "created" : "modified",
+        file.status === "D"
+          ? "deleted"
+          : file.status === "??"
+            ? "created"
+            : "modified",
       );
     }
   }

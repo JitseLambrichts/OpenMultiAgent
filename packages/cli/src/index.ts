@@ -18,11 +18,7 @@ import {
   type McpServerSpec,
 } from "@oma/core";
 import { ingestAll, ingestRun } from "@oma/ingest";
-import {
-  extractSession,
-  previewPromotion,
-  promoteSession,
-} from "@oma/docs";
+import { extractSession, previewPromotion, promoteSession } from "@oma/docs";
 import {
   formatSearchHits,
   formatSessions,
@@ -33,12 +29,12 @@ import {
 const USAGE = `oma — OpenMultiAgent
 
 Usage:
-  oma new <repo> [--agent claude|codex|gemini] [--worktree] [--title T] [--prompt P]
+  oma new <repo> [--agent claude|codex|gemini|terminal] [--worktree] [--title T] [--prompt P]
   oma ls
   oma watch [--interval SECONDS]
   oma status <id>
   oma attach <id>
-  oma switch <id> --agent claude|codex|gemini [--prompt P]
+  oma switch <id> --agent claude|codex|gemini|terminal [--prompt P]
   oma resume <id>
   oma fork <id> [--prompt P]
   oma extract <id> [--agent claude|codex|gemini]
@@ -233,19 +229,15 @@ async function cmdExtract(db: Database, argv: string[]): Promise<void> {
   const session = resolveSession(db, id);
   syncReports(db, session.id);
   const runs = listAgentRuns(db, session.id);
-  const agent = values.agent
-    ? requireAgent(values.agent)
-    : runs.at(-1)?.agent;
+  const agent = values.agent ? requireAgent(values.agent) : runs.at(-1)?.agent;
   if (!agent) fail("extract needs an agent because the session has no runs");
 
-  const candidates = await extractSession(
-    db,
-    session.id,
-    adapterFor(agent),
-  );
+  const candidates = await extractSession(db, session.id, adapterFor(agent));
   console.log(`Extracted ${candidates.length} review candidate(s).`);
   console.log(previewPromotion(db, session.id));
-  console.log(`\nReview the diff, then apply it with: oma promote ${shortId(session.id)} --apply`);
+  console.log(
+    `\nReview the diff, then apply it with: oma promote ${shortId(session.id)} --apply`,
+  );
 }
 
 async function cmdPromote(db: Database, argv: string[]): Promise<void> {
@@ -259,7 +251,9 @@ async function cmdPromote(db: Database, argv: string[]): Promise<void> {
   const session = resolveSession(db, id);
   console.log(previewPromotion(db, session.id));
   if (!values.apply) {
-    console.log(`\nPreview only. Apply with: oma promote ${shortId(session.id)} --apply`);
+    console.log(
+      `\nPreview only. Apply with: oma promote ${shortId(session.id)} --apply`,
+    );
     return;
   }
   const result = promoteSession(db, session.id);
@@ -290,11 +284,7 @@ async function cmdEnd(db: Database, argv: string[]): Promise<void> {
   const agent = runs.at(-1)?.agent;
   if (!agent) return;
   try {
-    const candidates = await extractSession(
-      db,
-      session.id,
-      adapterFor(agent),
-    );
+    const candidates = await extractSession(db, session.id, adapterFor(agent));
     console.log(`Extracted ${candidates.length} review candidate(s).`);
     console.log(previewPromotion(db, session.id));
     console.log(
@@ -397,7 +387,8 @@ async function cmdRemember(db: Database, argv: string[]): Promise<void> {
   const title = positionals.join(" ");
   const kind = values.kind ?? "decision";
   if (!title) fail("remember needs a title");
-  if (!isMemoryKind(kind)) fail(`kind must be one of: ${MEMORY_KINDS.join(", ")}`);
+  if (!isMemoryKind(kind))
+    fail(`kind must be one of: ${MEMORY_KINDS.join(", ")}`);
   if (!values.body) fail("remember needs --body (record why, not only what)");
   const confidence = values.confidence
     ? Number.parseFloat(values.confidence)

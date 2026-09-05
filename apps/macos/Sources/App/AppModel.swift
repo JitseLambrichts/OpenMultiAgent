@@ -111,7 +111,7 @@ final class AppModel {
         if case .ready(let agents, _) = connection, !agents.isEmpty {
             return agents.map { AgentKind(rawValue: $0) }
         }
-        return AgentKind.builtins + customAgents.map { AgentKind(rawValue: $0.id) }
+        return AgentKind.allCases + customAgents.map { AgentKind(rawValue: $0.id) }
     }
 
     func displayName(for agent: AgentKind) -> String {

@@ -3,11 +3,13 @@ import { isBuiltinAgentName, listCustomAgents } from "@oma/core";
 import { claudeAdapter } from "./claude.ts";
 import { codexAdapter } from "./codex.ts";
 import { geminiAdapter } from "./gemini.ts";
+import { terminalAdapter } from "./terminal.ts";
 import { createGenericAdapter } from "./generic.ts";
 
 export { claudeAdapter, writeMcpConfig } from "./claude.ts";
 export { codexAdapter, mcpConfigArgs } from "./codex.ts";
 export { geminiAdapter, writeGeminiSettings } from "./gemini.ts";
+export { terminalAdapter } from "./terminal.ts";
 export { createGenericAdapter, renderCustomArgs } from "./generic.ts";
 
 /**
@@ -23,6 +25,8 @@ export function adapterFor(agent: AgentName): AgentAdapter {
       return codexAdapter;
     case "gemini":
       return geminiAdapter;
+    case "terminal":
+      return terminalAdapter;
   }
   if (isBuiltinAgentName(agent)) {
     throw new Error(`agent '${agent}' is not supported yet`);
@@ -35,5 +39,11 @@ export function adapterFor(agent: AgentName): AgentAdapter {
 }
 
 export function availableAgents(): AgentName[] {
-  return ["claude", "codex", "gemini", ...listCustomAgents().map((d) => d.id)];
+  return [
+    "claude",
+    "codex",
+    "gemini",
+    "terminal",
+    ...listCustomAgents().map((d) => d.id),
+  ];
 }

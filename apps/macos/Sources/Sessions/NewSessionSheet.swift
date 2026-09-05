@@ -75,9 +75,12 @@ struct NewSessionSheet: View {
                 }
 
                 Toggle("Maak een geïsoleerde Git-worktree", isOn: $usesWorktree)
+                    .disabled(agent == .terminal)
 
-                TextField("Startprompt (optioneel)", text: $prompt, axis: .vertical)
-                    .lineLimit(3...6)
+                if agent != .terminal {
+                    TextField("Startprompt (optioneel)", text: $prompt, axis: .vertical)
+                        .lineLimit(3...6)
+                }
             }
             .formStyle(.grouped)
 
@@ -96,7 +99,10 @@ struct NewSessionSheet: View {
                     if isSubmitting {
                         Label("Sessie starten…", systemImage: "progress.indicator")
                             .symbolEffect(.variableColor.iterative, isActive: isSubmitting)
-                    } else {
+                } else if agent == .terminal {
+                    Text("Start een kale shell in dit project, zonder agent of worktree.")
+                        .foregroundStyle(.secondary)
+                } else {
                         Text("Maak sessie")
                     }
                 }
@@ -114,12 +120,13 @@ struct NewSessionSheet: View {
 
     private func submit() {
         guard let selectedProject, canSubmit else { return }
+        let isTerminal = agent == .terminal
         let request = NewSessionRequest(
             repoPath: selectedProject.repoPath,
             agent: agent,
-            usesWorktree: usesWorktree,
+            usesWorktree: isTerminal ? false : usesWorktree,
             title: title.nilIfBlank,
-            prompt: prompt.nilIfBlank
+            prompt: isTerminal ? nil : prompt.nilIfBlank
         )
         isSubmitting = true
         Task {

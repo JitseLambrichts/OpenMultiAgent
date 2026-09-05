@@ -30,7 +30,9 @@ struct SwitchAgentSheet: View {
             VStack(alignment: .leading, spacing: 5) {
                 Text("Wissel van agent")
                     .font(.title2.weight(.semibold))
-                Text("De nieuwe agent start in dezelfde worktree met een Handoff Brief en toegang tot het gedeelde geheugen.")
+                Text(agent == .terminal
+                    ? "De terminal start een kale shell in dezelfde map, zonder Handoff Brief."
+                    : "De nieuwe agent start in dezelfde worktree met een Handoff Brief en toegang tot het gedeelde geheugen.")
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -42,8 +44,10 @@ struct SwitchAgentSheet: View {
                         Label(displayName(candidate), systemImage: symbol(candidate)).tag(candidate)
                     }
                 }
-                TextField("Prompt (optioneel)", text: $prompt, axis: .vertical)
-                    .lineLimit(2...5)
+                if agent != .terminal {
+                    TextField("Prompt (optioneel)", text: $prompt, axis: .vertical)
+                        .lineLimit(2...5)
+                }
             }
             .formStyle(.grouped)
 
@@ -54,7 +58,7 @@ struct SwitchAgentSheet: View {
                 Button("Wissel agent") {
                     isSubmitting = true
                     Task {
-                        await onSwitch(agent, prompt.nilIfBlank)
+                        await onSwitch(agent, agent == .terminal ? nil : prompt.nilIfBlank)
                         isSubmitting = false
                         dismiss()
                     }

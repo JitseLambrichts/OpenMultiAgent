@@ -143,9 +143,10 @@ struct AgentKind: Codable, Hashable, Identifiable, Sendable {
     static let claude = AgentKind(rawValue: "claude")
     static let codex = AgentKind(rawValue: "codex")
     static let gemini = AgentKind(rawValue: "gemini")
+    static let terminal = AgentKind(rawValue: "terminal")
 
     static var builtins: [AgentKind] { [.claude, .codex, .gemini] }
-    static var allCases: [AgentKind] { builtins }
+    static var allCases: [AgentKind] { builtins + [.terminal] }
 
     var id: String { rawValue }
 
