@@ -403,6 +403,42 @@ describe("promotion extraction", () => {
     expect(autoResult).toEqual({ candidate_count: 1 });
     expect(manualResult).toEqual({ candidate_count: 1 });
   });
+
+  test("sums pending candidates across every session for the sidebar badge", async () => {
+    const repo = await makeRepo();
+    const sessionA = createSession(db, {
+      repo_path: repo,
+      worktree_path: repo,
+    });
+    const sessionB = createSession(db, {
+      repo_path: repo,
+      worktree_path: repo,
+    });
+    const service = createDesktopServices({ db, manager: sessionOperations() });
+
+    expect(await service.promotionPendingCount()).toEqual({ count: 0 });
+
+    saveCandidates(db, sessionA.id, [
+      {
+        kind: "decision",
+        title: "A",
+        body: "a",
+        confidence: 0.9,
+        supersedes_memory_id: null,
+      },
+    ]);
+    saveCandidates(db, sessionB.id, [
+      {
+        kind: "risk",
+        title: "B",
+        body: "b",
+        confidence: 0.8,
+        supersedes_memory_id: null,
+      },
+    ]);
+
+    expect(await service.promotionPendingCount()).toEqual({ count: 2 });
+  });
 });
 
 describe("desktop health", () => {

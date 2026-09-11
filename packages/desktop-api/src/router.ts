@@ -197,6 +197,8 @@ async function invoke(
       return services.promotionAutoCheck({
         session_id: requiredString(params, "session_id"),
       });
+    case "promotion.pending_count":
+      return services.promotionPendingCount();
     case "promotion.preview":
       return services.promotionPreview({
         session_id: requiredString(params, "session_id"),

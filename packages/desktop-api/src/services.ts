@@ -43,6 +43,7 @@ import {
   type CustomAgentDef,
 } from "@oma/core";
 import {
+  countPendingCandidates,
   extractSession,
   listCandidates,
   previewPromotion,
@@ -220,6 +221,7 @@ export interface DesktopServices {
   promotionAutoCheck(input: {
     session_id: string;
   }): Promise<{ candidate_count: number }>;
+  promotionPendingCount(): Promise<{ count: number }>;
   promotionPreview(input: {
     session_id: string;
   }): Promise<{ diff: string; candidate_count: number }>;
@@ -514,6 +516,9 @@ export function createDesktopServices(
           candidate_count: listCandidates(db, session.id, "pending").length,
         };
       }),
+    promotionPendingCount: async () => ({
+      count: countPendingCandidates(db),
+    }),
     promotionPreview: async ({ session_id }) =>
       guarded({ session_id }, async () => {
         const session = resolveSession(db, session_id);
