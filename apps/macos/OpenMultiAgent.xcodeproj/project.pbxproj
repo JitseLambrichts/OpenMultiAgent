@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		00C5B98C7A9B60B9A4369278 /* ProjectsModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFD5EB74F9E42FA3F3CD0938 /* ProjectsModelTests.swift */; };
+		46C1EB077F4846F34E32DD54 /* AppModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92E375A7E00AF1ACBECFCC09 /* AppModelTests.swift */; };
 		05CFA57ED235D5453F4A7E4B /* ProjectCockpitModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 976A48F6881481A8F2BA4F1C /* ProjectCockpitModel.swift */; };
 		0CCA8791A3C6BEE54B361A4C /* CriticalFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF12D3CD70A0557EE36FD5F7 /* CriticalFlowUITests.swift */; };
 		19886F801125340CFED855AD /* SessionWorkspaceModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1740A2E42EE5F8598288E11B /* SessionWorkspaceModel.swift */; };
@@ -78,6 +79,7 @@
 /* Begin PBXFileReference section */
 		08699397F46B0EE752D58547 /* ChangesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangesView.swift; sourceTree = "<group>"; };
 		091D7E5D375B75B8FD432FCC /* TerminalWorkspaceModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalWorkspaceModel.swift; sourceTree = "<group>"; };
+		92E375A7E00AF1ACBECFCC09 /* AppModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelTests.swift; sourceTree = "<group>"; };
 		0C76281BC0710F5A09C42643 /* MemorySearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemorySearchView.swift; sourceTree = "<group>"; };
 		14EE330743FFE3C0D2C9505F /* ProjectCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectCard.swift; sourceTree = "<group>"; };
 		1740A2E42EE5F8598288E11B /* SessionWorkspaceModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWorkspaceModel.swift; sourceTree = "<group>"; };
@@ -230,6 +232,7 @@
 		A5FBD7BF405DAF867A1F4A5B /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				92E375A7E00AF1ACBECFCC09 /* AppModelTests.swift */,
 				3F2FAE50C0A20F89B707F172 /* DTOContractTests.swift */,
 				3C4A3463BA17E0B7DFD4E092 /* ProjectCockpitModelTests.swift */,
 				EFD5EB74F9E42FA3F3CD0938 /* ProjectsModelTests.swift */,
@@ -432,6 +435,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				46C1EB077F4846F34E32DD54 /* AppModelTests.swift in Sources */,
 				5978EACFCC573681289153D8 /* DTOContractTests.swift in Sources */,
 				5F52189E4E41DB84015601A3 /* ProjectCockpitModelTests.swift in Sources */,
 				00C5B98C7A9B60B9A4369278 /* ProjectsModelTests.swift in Sources */,

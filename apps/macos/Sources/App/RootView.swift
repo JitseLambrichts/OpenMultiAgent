@@ -15,6 +15,7 @@ struct RootView: View {
             List(SidebarDestination.allCases, selection: sidebarSelection) { destination in
                 Label(destination.title, systemImage: destination.symbol)
                     .tag(destination)
+                    .badge(destination == .memory ? model.pendingPromotionCount : 0)
             }
             .navigationTitle("OpenMultiAgent")
             .navigationSplitViewColumnWidth(min: 190, ideal: 220, max: 260)
@@ -24,7 +25,13 @@ struct RootView: View {
         }
         .navigationSplitViewStyle(.balanced)
         .tint(OMAColor.accent)
-        .task { await model.connect() }
+        .task {
+            await model.connect()
+            model.startPendingPromotionCountLoop()
+        }
+        .onChange(of: model.reconciliationTick) { _, _ in
+            Task { await model.refreshPendingPromotionCount() }
+        }
         .onChange(of: model.projects.projects) { _, projects in restoreIfNeeded(projects: projects) }
         .onChange(of: model.selection) { _, value in windowState.destination = value }
         .onChange(of: model.selectedProject) { _, value in windowState.projectID = value?.id }

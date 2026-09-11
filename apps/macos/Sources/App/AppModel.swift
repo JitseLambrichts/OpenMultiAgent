@@ -70,23 +70,29 @@ final class AppModel {
     /// Incremented after lifecycle changes and on wake; feature models reload
     /// when it changes so a missed notification cannot leave stale state.
     private(set) var reconciliationTick = 0
+    private(set) var pendingPromotionCount = 0
+    @ObservationIgnored private var pendingPromotionCountTask: Task<Void, Never>?
+    @ObservationIgnored private let pendingPromotionCountInterval: Duration
 
-    init(client: any DesktopAPI) {
+    init(client: any DesktopAPI, pendingPromotionCountInterval: Duration = .seconds(60)) {
         self.client = client
         self.configuration = nil
         self.projects = ProjectsModel(client: client)
         self.makeClient = { SidecarClient(configuration: $0) }
+        self.pendingPromotionCountInterval = pendingPromotionCountInterval
     }
 
     init(
         configuration: SidecarConfiguration = .resolve(),
-        makeClient: @escaping (SidecarConfiguration) -> SidecarClient = { SidecarClient(configuration: $0) }
+        makeClient: @escaping (SidecarConfiguration) -> SidecarClient = { SidecarClient(configuration: $0) },
+        pendingPromotionCountInterval: Duration = .seconds(60)
     ) {
         let sidecar = makeClient(configuration)
         self.client = sidecar
         self.configuration = configuration
         self.projects = ProjectsModel(client: sidecar)
         self.makeClient = makeClient
+        self.pendingPromotionCountInterval = pendingPromotionCountInterval
         observe(sidecar)
     }
 
@@ -238,6 +244,25 @@ final class AppModel {
 
     func reconcile() {
         reconciliationTick &+= 1
+    }
+
+    func startPendingPromotionCountLoop() {
+        guard pendingPromotionCountTask == nil else { return }
+        pendingPromotionCountTask = Task { [weak self] in
+            guard let self else { return }
+            await self.refreshPendingPromotionCount()
+            while !Task.isCancelled {
+                try? await Task.sleep(for: self.pendingPromotionCountInterval)
+                if Task.isCancelled { break }
+                await self.refreshPendingPromotionCount()
+            }
+        }
+    }
+
+    func refreshPendingPromotionCount() async {
+        if let result = try? await client.pendingPromotionCount() {
+            pendingPromotionCount = result.count
+        }
     }
 
     /// Creates a session from the root-level sheet and navigates to it.
