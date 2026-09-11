@@ -15,7 +15,7 @@ import {
   DesktopError,
   type SessionOperations,
 } from "./services.ts";
-import { saveCandidates } from "@oma/docs";
+import { AUTO_EXTRACT_MIN_EVENTS, saveCandidates } from "@oma/docs";
 
 let db: Database;
 const tempDirs: string[] = [];
@@ -284,6 +284,124 @@ describe("promotion extraction", () => {
     expect(extractCalls).toBe(1);
     expect(firstResult).toEqual({ candidate_count: 1 });
     expect(secondResult).toEqual({ candidate_count: 1 });
+  });
+
+  test("does not extract when the session is below the auto-extract threshold", async () => {
+    const repo = await makeRepo();
+    const storedSession = createSession(db, {
+      repo_path: repo,
+      worktree_path: repo,
+    });
+    let extractCalls = 0;
+    const service = createDesktopServices({
+      db,
+      manager: sessionOperations(),
+      ingestSessionEvents: () => AUTO_EXTRACT_MIN_EVENTS - 1,
+      extractKnowledge: async () => {
+        extractCalls += 1;
+        return 0;
+      },
+    });
+
+    expect(
+      await service.promotionAutoCheck({ session_id: storedSession.id }),
+    ).toEqual({ candidate_count: 0 });
+    expect(extractCalls).toBe(0);
+  });
+
+  test("extracts once the session reaches the auto-extract threshold", async () => {
+    const repo = await makeRepo();
+    const storedSession = createSession(db, {
+      repo_path: repo,
+      worktree_path: repo,
+    });
+    let extractCalls = 0;
+    const service = createDesktopServices({
+      db,
+      manager: sessionOperations(),
+      ingestSessionEvents: () => AUTO_EXTRACT_MIN_EVENTS,
+      extractKnowledge: async (sessionId) => {
+        extractCalls += 1;
+        saveCandidates(db, sessionId, [
+          {
+            kind: "decision",
+            title: "Use Redis Streams",
+            body: "Replay is required.",
+            confidence: 0.9,
+            supersedes_memory_id: null,
+          },
+        ]);
+        return 1;
+      },
+    });
+
+    expect(
+      await service.promotionAutoCheck({ session_id: storedSession.id }),
+    ).toEqual({ candidate_count: 1 });
+    expect(extractCalls).toBe(1);
+  });
+
+  test("never throws when the threshold is reached but extraction fails", async () => {
+    const repo = await makeRepo();
+    const storedSession = createSession(db, {
+      repo_path: repo,
+      worktree_path: repo,
+    });
+    const service = createDesktopServices({
+      db,
+      manager: sessionOperations(),
+      ingestSessionEvents: () => AUTO_EXTRACT_MIN_EVENTS,
+      extractKnowledge: async () => {
+        throw new Error("'claude' is not on PATH");
+      },
+    });
+
+    expect(
+      await service.promotionAutoCheck({ session_id: storedSession.id }),
+    ).toEqual({ candidate_count: 0 });
+  });
+
+  test("shares the extraction guard with the manual Extract Knowledge button", async () => {
+    const repo = await makeRepo();
+    const storedSession = createSession(db, {
+      repo_path: repo,
+      worktree_path: repo,
+    });
+    let extractCalls = 0;
+    let releaseFirstCall: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      releaseFirstCall = resolve;
+    });
+    const service = createDesktopServices({
+      db,
+      manager: sessionOperations(),
+      ingestSessionEvents: () => AUTO_EXTRACT_MIN_EVENTS,
+      extractKnowledge: async (sessionId) => {
+        extractCalls += 1;
+        await gate;
+        saveCandidates(db, sessionId, [
+          {
+            kind: "decision",
+            title: "Use Redis Streams",
+            body: "Replay is required.",
+            confidence: 0.9,
+            supersedes_memory_id: null,
+          },
+        ]);
+        return 1;
+      },
+    });
+
+    const auto = service.promotionAutoCheck({ session_id: storedSession.id });
+    await Bun.sleep(0);
+    const manual = service.promotionExtract({ session_id: storedSession.id });
+    releaseFirstCall?.();
+
+    const [autoResult, manualResult] = await Promise.all([auto, manual]);
+
+    expect(extractCalls).toBe(1);
+    expect(autoResult).toEqual({ candidate_count: 1 });
+    expect(manualResult).toEqual({ candidate_count: 1 });
   });
 });
 

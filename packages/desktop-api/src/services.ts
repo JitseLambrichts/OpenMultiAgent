@@ -47,6 +47,7 @@ import {
   listCandidates,
   previewPromotion,
   promoteSession,
+  shouldAutoExtract,
 } from "@oma/docs";
 import { ingestRun } from "@oma/ingest";
 
@@ -216,6 +217,9 @@ export interface DesktopServices {
   promotionExtract(input: {
     session_id: string;
   }): Promise<{ candidate_count: number }>;
+  promotionAutoCheck(input: {
+    session_id: string;
+  }): Promise<{ candidate_count: number }>;
   promotionPreview(input: {
     session_id: string;
   }): Promise<{ diff: string; candidate_count: number }>;
@@ -270,6 +274,7 @@ export interface DesktopServiceDependencies {
   checkTmux?: typeof tmux.tmuxAvailable;
   findTmuxExecutable?: () => Promise<string>;
   extractKnowledge?: (sessionId: string) => Promise<number>;
+  ingestSessionEvents?: (sessionId: string) => number;
   onShutdown?: () => void | Promise<void>;
 }
 
@@ -324,6 +329,14 @@ export function createDesktopServices(
       }
       return (await extractSession(db, session.id, adapterFor(agent))).length;
     });
+
+  const ingestSessionEvents =
+    dependencies.ingestSessionEvents ??
+    ((sessionId: string) =>
+      listAgentRuns(db, sessionId)
+        .map((run) => ingestRun(db, run))
+        .filter((report) => report !== null)
+        .reduce((sum, report) => sum + report.inserted, 0));
 
   const activeExtractions = new Map<string, Promise<void>>();
 
@@ -481,6 +494,22 @@ export function createDesktopServices(
       guarded({ session_id }, async () => {
         const session = resolveSession(db, session_id);
         await runExtractionOnce(session.id);
+        return {
+          candidate_count: listCandidates(db, session.id, "pending").length,
+        };
+      }),
+    promotionAutoCheck: async ({ session_id }) =>
+      guarded({ session_id }, async () => {
+        const session = resolveSession(db, session_id);
+        const inserted = ingestSessionEvents(session.id);
+        if (shouldAutoExtract(db, session.id, inserted)) {
+          try {
+            await runExtractionOnce(session.id);
+          } catch {
+            // Best-effort, same rationale as sessionEnd: the manual Extract
+            // Knowledge button remains the retry path if this fails.
+          }
+        }
         return {
           candidate_count: listCandidates(db, session.id, "pending").length,
         };

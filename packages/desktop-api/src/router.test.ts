@@ -54,6 +54,7 @@ function services(overrides: Partial<DesktopServices> = {}): DesktopServices {
     memorySearch: async () => [],
     docsList: async () => [],
     promotionExtract: async () => ({ candidate_count: 0 }),
+    promotionAutoCheck: async () => ({ candidate_count: 0 }),
     promotionPreview: async () => ({ diff: "", candidate_count: 0 }),
     promotionApply: async () => ({ promoted: 0, files: [] }),
     terminalAttachment: async () => ({

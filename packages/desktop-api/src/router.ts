@@ -193,6 +193,10 @@ async function invoke(
       return services.promotionExtract({
         session_id: requiredString(params, "session_id"),
       });
+    case "promotion.auto_check":
+      return services.promotionAutoCheck({
+        session_id: requiredString(params, "session_id"),
+      });
     case "promotion.preview":
       return services.promotionPreview({
         session_id: requiredString(params, "session_id"),
