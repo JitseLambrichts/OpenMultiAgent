@@ -156,6 +156,16 @@ export function listCandidates(
         .all(sessionId);
 }
 
+export function countPendingCandidates(db: Database): number {
+  return (
+    db
+      .query<{ count: number }, []>(
+        `SELECT count(*) AS count FROM promotion_candidate WHERE status = 'pending'`,
+      )
+      .get()?.count ?? 0
+  );
+}
+
 export function saveCandidates(
   db: Database,
   sessionId: string,

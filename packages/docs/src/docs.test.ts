@@ -20,12 +20,16 @@ import {
   searchMemory,
 } from "@oma/core";
 import {
+  AUTO_EXTRACT_MIN_EVENTS,
+  AUTO_EXTRACT_MIN_INTERVAL_MS,
+  countPendingCandidates,
   extractSession,
   listCandidates,
   parseCandidateResponse,
   previewPromotion,
   promoteSession,
   saveCandidates,
+  shouldAutoExtract,
 } from "./index.ts";
 
 let db: Database;
@@ -244,5 +248,108 @@ describe("promotion", () => {
 
     expect(() => promoteSession(db, session.id)).toThrow(/another repository/);
     expect(searchMemory(db, "Foreign", { repo_path: "/another-repo" })).toHaveLength(1);
+  });
+});
+
+describe("shouldAutoExtract", () => {
+  test("is due once inserted events reach the minimum threshold", () => {
+    expect(shouldAutoExtract(db, "session-1", AUTO_EXTRACT_MIN_EVENTS)).toBe(
+      true,
+    );
+  });
+
+  test("is not due below the threshold with no prior candidate batch", () => {
+    expect(
+      shouldAutoExtract(db, "session-1", AUTO_EXTRACT_MIN_EVENTS - 1),
+    ).toBe(false);
+  });
+
+  test("is not due with zero newly inserted events even if a prior batch is old", () => {
+    const repo = mkdtempSync(join(tmpdir(), "oma-docs-"));
+    tempDirs.push(repo);
+    const session = createSession(db, {
+      repo_path: repo,
+      worktree_path: repo,
+    });
+    saveCandidates(db, session.id, [
+      {
+        kind: "decision",
+        title: "Use Redis Streams",
+        body: "Replay is required.",
+        confidence: 0.9,
+        supersedes_memory_id: null,
+      },
+    ]);
+
+    expect(shouldAutoExtract(db, session.id, 0)).toBe(false);
+  });
+
+  test("is due once the minimum interval has passed since the last candidate batch", () => {
+    const repo = mkdtempSync(join(tmpdir(), "oma-docs-"));
+    tempDirs.push(repo);
+    const session = createSession(db, {
+      repo_path: repo,
+      worktree_path: repo,
+    });
+    saveCandidates(db, session.id, [
+      {
+        kind: "decision",
+        title: "Use Redis Streams",
+        body: "Replay is required.",
+        confidence: 0.9,
+        supersedes_memory_id: null,
+      },
+    ]);
+    const past = Date.now() + AUTO_EXTRACT_MIN_INTERVAL_MS + 1_000;
+
+    expect(shouldAutoExtract(db, session.id, 1, past)).toBe(true);
+    expect(shouldAutoExtract(db, session.id, 1, Date.now())).toBe(false);
+  });
+});
+
+describe("countPendingCandidates", () => {
+  test("sums pending candidates across every session", () => {
+    const repoA = mkdtempSync(join(tmpdir(), "oma-docs-"));
+    const repoB = mkdtempSync(join(tmpdir(), "oma-docs-"));
+    tempDirs.push(repoA, repoB);
+    const sessionA = createSession(db, {
+      repo_path: repoA,
+      worktree_path: repoA,
+    });
+    const sessionB = createSession(db, {
+      repo_path: repoB,
+      worktree_path: repoB,
+    });
+    expect(countPendingCandidates(db)).toBe(0);
+
+    saveCandidates(db, sessionA.id, [
+      {
+        kind: "decision",
+        title: "A",
+        body: "a",
+        confidence: 0.9,
+        supersedes_memory_id: null,
+      },
+    ]);
+    saveCandidates(db, sessionB.id, [
+      {
+        kind: "risk",
+        title: "B1",
+        body: "b1",
+        confidence: 0.8,
+        supersedes_memory_id: null,
+      },
+      {
+        kind: "howto",
+        title: "B2",
+        body: "b2",
+        confidence: 0.7,
+        supersedes_memory_id: null,
+      },
+    ]);
+    expect(countPendingCandidates(db)).toBe(3);
+
+    promoteSession(db, sessionA.id);
+    expect(countPendingCandidates(db)).toBe(2);
   });
 });
