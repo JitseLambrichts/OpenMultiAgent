@@ -187,6 +187,8 @@ protocol DesktopAPI: Sendable {
     func extractKnowledge(sessionID: String) async throws -> ExtractResultDTO
     func previewPromotion(sessionID: String) async throws -> PromotionPreviewDTO
     func applyPromotion(sessionID: String) async throws -> PromotionApplyDTO
+    func promotionAutoCheck(sessionID: String) async throws -> ExtractResultDTO
+    func pendingPromotionCount() async throws -> PendingPromotionCountDTO
     func terminalAttachment(sessionID: String) async throws -> TerminalAttachmentDTO
     func listCustomAgents() async throws -> [CustomAgentDTO]
     func addCustomAgent(name: String, binary: String, launchArgs: [String], symbol: String) async throws -> CustomAgentDTO
@@ -214,6 +216,8 @@ extension DesktopAPI {
     func extractKnowledge(sessionID: String) async throws -> ExtractResultDTO { throw notWired }
     func previewPromotion(sessionID: String) async throws -> PromotionPreviewDTO { throw notWired }
     func applyPromotion(sessionID: String) async throws -> PromotionApplyDTO { throw notWired }
+    func promotionAutoCheck(sessionID: String) async throws -> ExtractResultDTO { throw notWired }
+    func pendingPromotionCount() async throws -> PendingPromotionCountDTO { throw notWired }
     func terminalAttachment(sessionID: String) async throws -> TerminalAttachmentDTO { throw notWired }
     func listCustomAgents() async throws -> [CustomAgentDTO] { throw notWired }
     func addCustomAgent(name: String, binary: String, launchArgs: [String], symbol: String) async throws -> CustomAgentDTO { throw notWired }
@@ -403,6 +407,14 @@ actor SidecarClient: DesktopAPI {
 
     func applyPromotion(sessionID: String) async throws -> PromotionApplyDTO {
         try await request(method: "promotion.apply", params: ["session_id": .string(sessionID)])
+    }
+
+    func promotionAutoCheck(sessionID: String) async throws -> ExtractResultDTO {
+        try await request(method: "promotion.auto_check", params: ["session_id": .string(sessionID)])
+    }
+
+    func pendingPromotionCount() async throws -> PendingPromotionCountDTO {
+        try await request(method: "promotion.pending_count")
     }
 
     func terminalAttachment(sessionID: String) async throws -> TerminalAttachmentDTO {

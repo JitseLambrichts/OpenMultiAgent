@@ -472,3 +472,7 @@ struct PromotionApplyDTO: Decodable, Equatable, Sendable {
     let promoted: Int
     let files: [String]
 }
+
+struct PendingPromotionCountDTO: Decodable, Equatable, Sendable {
+    let count: Int
+}

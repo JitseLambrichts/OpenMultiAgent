@@ -69,6 +69,14 @@ struct DTOContractTests {
         #expect(preview.result?.diff.contains("+++ .oma/docs/decisions.md") == true)
     }
 
+    @Test func decodesPromotionAutoCheckAndPendingCountContracts() throws {
+        let autoCheck: RPCResponse<ExtractResultDTO> = try fixture("promotion-auto-check")
+        let pendingCount: RPCResponse<PendingPromotionCountDTO> = try fixture("promotion-pending-count")
+
+        #expect(autoCheck.result?.candidateCount == 2)
+        #expect(pendingCount.result?.count == 3)
+    }
+
     @Test func rpcErrorPreservesRecoveryCode() throws {
         let envelope: RPCResponse<EmptyResult> = try fixture("rpc-error")
 

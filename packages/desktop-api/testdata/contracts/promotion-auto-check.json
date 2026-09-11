@@ -1,0 +1,7 @@
+{
+  "jsonrpc": "2.0",
+  "id": 11,
+  "result": {
+    "candidate_count": 2
+  }
+}
