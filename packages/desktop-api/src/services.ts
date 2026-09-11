@@ -440,6 +440,8 @@ export function createDesktopServices(
       ),
     sessionEnd: async ({ session_id }) => {
       const session = resolveSession(db, session_id);
+      ingestSessionEvents(session.id);
+      await guarded({ session_id: session.id }, () => manager.end(session.id));
       try {
         await runExtractionOnce(session.id);
       } catch {
@@ -447,7 +449,6 @@ export function createDesktopServices(
         // be able to end even if no agent is on PATH or extraction fails.
         // The manual Extract Knowledge button remains the retry path.
       }
-      await guarded({ session_id: session.id }, () => manager.end(session.id));
       return { ended_session_id: session.id };
     },
     sessionRemove: async ({ session_id, force, keep_worktree }) => {

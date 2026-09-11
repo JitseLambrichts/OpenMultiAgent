@@ -121,6 +121,32 @@ struct SessionWorkspaceModelTests {
 
         #expect(await client.autoCheckCalls == callsAtEnd)
     }
+
+    /// Regression test for the finding that a background auto-check could
+    /// silently replace the candidates behind an open review sheet: while
+    /// `route` is set (the sheet is up, showing a preview the user hasn't
+    /// acted on or dismissed yet), the loop must skip `promotionAutoCheck`
+    /// entirely rather than re-extracting underneath it.
+    @Test func autoCheckSkipsWhileARouteIsOpen() async {
+        let client = WorkspaceClientStub(
+            preview: PromotionPreviewDTO(diff: "+++ .oma/docs/decisions.md", candidateCount: 2),
+            autoCheckCandidateCount: 1
+        )
+        let model = SessionWorkspaceModel(
+            session: .sample(id: "s", status: "active"),
+            client: client,
+            autoCheckInterval: .milliseconds(10)
+        )
+
+        model.startAutoCheckLoop()
+        await model.openPreview()
+        #expect(model.route == .promotionPreview)
+
+        try? await Task.sleep(for: .milliseconds(60))
+        await model.stopAutoCheckLoop()
+
+        #expect(await client.autoCheckCalls == 0)
+    }
 }
 
 private actor WorkspaceClientStub: DesktopAPI {

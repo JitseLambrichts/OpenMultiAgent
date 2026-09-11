@@ -218,7 +218,7 @@ describe("promotion extraction", () => {
     ).toEqual({ candidate_count: 1 });
   });
 
-  test("auto-extracts before ending a session, and still ends it when extraction fails", async () => {
+  test("ends a session before auto-extracting, and still ends it when extraction fails", async () => {
     const repo = await makeRepo();
     const storedSession = createSession(db, {
       repo_path: repo,
@@ -241,7 +241,7 @@ describe("promotion extraction", () => {
     const result = await service.sessionEnd({ session_id: storedSession.id });
 
     expect(result).toEqual({ ended_session_id: storedSession.id });
-    expect(calls).toEqual(["extract", "end"]);
+    expect(calls).toEqual(["end", "extract"]);
   });
 
   test("guards a session against overlapping extraction calls", async () => {

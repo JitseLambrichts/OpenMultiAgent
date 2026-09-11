@@ -243,6 +243,7 @@ final class SessionWorkspaceModel {
     }
 
     private func performAutoCheck() async {
+        guard route == nil else { return }
         guard let result = try? await client.promotionAutoCheck(sessionID: session.id) else { return }
         candidateCount = result.candidateCount
     }
