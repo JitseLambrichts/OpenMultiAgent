@@ -134,7 +134,7 @@ export class SessionManager {
         name: staging,
         cwd: session.worktree_path,
         command: shellQuote(launch.command),
-        env: launch.env,
+        env: { PATH: process.env.PATH ?? "/usr/bin:/bin", ...launch.env },
       });
       await Bun.sleep(200);
       if (!(await tmux.hasSession(staging))) {
@@ -222,12 +222,7 @@ export class SessionManager {
         transcript_path: launch.transcriptPath,
       });
 
-      await tmux.newSession({
-        name: tmuxSessionName(session.id),
-        cwd: worktreePath,
-        command: shellQuote(launch.command),
-        env: launch.env,
-      });
+      await this.startTmuxSession(session.id, worktreePath, launch);
 
       // Codex only reveals its transcript once it has written `session_meta`,
       // so the path is filled in on a short poll rather than at launch.
@@ -250,7 +245,7 @@ export class SessionManager {
         } else void discovery;
       }
 
-      return this.view(session.id);
+      return this.liveView(session.id);
     } catch (error) {
       // Never leave a half-created session behind in the DB.
       await this.cleanup(session.id, { force: true });
@@ -311,6 +306,35 @@ export class SessionManager {
       runs: listAgentRuns(this.db, session.id),
       tmuxAlive: false,
     };
+  }
+
+  private async liveView(sessionId: string): Promise<SessionView> {
+    const session = resolveSession(this.db, sessionId);
+    return {
+      session,
+      runs: listAgentRuns(this.db, session.id),
+      tmuxAlive: await tmux.hasSession(tmuxSessionName(session.id)),
+    };
+  }
+
+  private async startTmuxSession(
+    sessionId: string,
+    cwd: string,
+    launch: { command: string[]; env?: Record<string, string> },
+  ): Promise<void> {
+    const name = tmuxSessionName(sessionId);
+    await tmux.newSession({
+      name,
+      cwd,
+      command: shellQuote(launch.command),
+      env: { PATH: process.env.PATH ?? "/usr/bin:/bin", ...launch.env },
+    });
+    await Bun.sleep(200);
+    if (!(await tmux.hasSession(name))) {
+      throw new Error(
+        `'${launch.command[0] ?? "agent"}' exited during startup`,
+      );
+    }
   }
 
   async list(): Promise<SessionView[]> {
@@ -412,7 +436,7 @@ export class SessionManager {
           );
           void discovery;
         }
-        return this.view(session.id);
+        return this.liveView(session.id);
       }),
     );
   }
@@ -454,15 +478,10 @@ export class SessionManager {
                 worktreePath: session.worktree_path,
               }),
         });
-        await tmux.newSession({
-          name: tmuxSessionName(session.id),
-          cwd: session.worktree_path,
-          command: shellQuote(launch.command),
-          env: launch.env,
-        });
+        await this.startTmuxSession(session.id, session.worktree_path, launch);
         reopenAgentRun(this.db, run.id);
         activateSession(this.db, session.id);
-        return this.view(session.id);
+        return this.liveView(session.id);
       }),
     );
   }
@@ -554,7 +573,7 @@ export class SessionManager {
           );
           void discovery;
         }
-        return this.view(session.id);
+        return this.liveView(session.id);
       }),
     );
   }

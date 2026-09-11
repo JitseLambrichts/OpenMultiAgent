@@ -157,6 +157,7 @@ struct DTOContractTests {
         let path = try #require(filtered["PATH"]).split(separator: ":").map(String.init)
         #expect(path.prefix(4) == ["/usr/bin", "/bin", "/opt/homebrew/bin", "/Users/me/.nvm/versions/node/v24/bin"])
         #expect(path.contains("/Users/me/.bun/bin"))
+        #expect(path.contains("/Users/me/.opencode/bin"))
     }
 }
 

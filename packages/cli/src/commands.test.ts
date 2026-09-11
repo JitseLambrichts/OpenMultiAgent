@@ -18,6 +18,6 @@ describe("oma command surface", () => {
     expect(stdout).toContain("oma fork <id>");
     expect(stdout).toContain("oma extract <id>");
     expect(stdout).toContain("oma promote <id> [--apply]");
-    expect(stdout).toContain("oma end <id> [--extract]");
+    expect(stdout).toContain("oma end <id> [--no-extract]");
   });
 });

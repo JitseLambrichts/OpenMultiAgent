@@ -554,7 +554,7 @@ actor SidecarClient: DesktopAPI {
         (filtered["PATH"] ?? "").split(separator: ":").forEach { add(String($0)) }
         (loginShellPath ?? "").split(separator: ":").forEach { add(String($0)) }
         ["/opt/homebrew/bin", "/usr/local/bin", "\(home)/.bun/bin", "\(home)/.local/bin",
-         "/usr/bin", "/bin", "/usr/sbin", "/sbin"].forEach(add)
+         "\(home)/.opencode/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"].forEach(add)
         filtered["PATH"] = entries.joined(separator: ":")
         return filtered
     }

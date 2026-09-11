@@ -89,7 +89,7 @@ export function toDesktopError(
       detail: message,
     });
   }
-  return new DesktopError(-32005, "Operation failed", {
+  return new DesktopError(-32005, message || "Operation failed", {
     ...context,
     detail: message,
   });
@@ -442,22 +442,25 @@ export function createDesktopServices(
         }
       });
     },
-    promotionExtract: async ({ session_id }) => ({
-      candidate_count: await extractKnowledge(
-        resolveSession(db, session_id).id,
-      ),
-    }),
-    promotionPreview: async ({ session_id }) => {
-      const session = resolveSession(db, session_id);
-      return {
-        diff: previewPromotion(db, session.id),
-        candidate_count: listCandidates(db, session.id, "pending").length,
-      };
-    },
-    promotionApply: async ({ session_id }) => {
-      const session = resolveSession(db, session_id);
-      return promoteSession(db, session.id);
-    },
+    promotionExtract: async ({ session_id }) =>
+      guarded({ session_id }, async () => ({
+        candidate_count: await extractKnowledge(
+          resolveSession(db, session_id).id,
+        ),
+      })),
+    promotionPreview: async ({ session_id }) =>
+      guarded({ session_id }, async () => {
+        const session = resolveSession(db, session_id);
+        return {
+          diff: previewPromotion(db, session.id),
+          candidate_count: listCandidates(db, session.id, "pending").length,
+        };
+      }),
+    promotionApply: async ({ session_id }) =>
+      guarded({ session_id }, async () => {
+        const session = resolveSession(db, session_id);
+        return promoteSession(db, session.id);
+      }),
     terminalAttachment: async ({ session_id }) => {
       const session = resolveSession(db, session_id);
       await tmux

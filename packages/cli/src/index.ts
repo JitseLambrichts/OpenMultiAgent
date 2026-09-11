@@ -18,7 +18,12 @@ import {
   type McpServerSpec,
 } from "@oma/core";
 import { ingestAll, ingestRun } from "@oma/ingest";
-import { extractSession, previewPromotion, promoteSession } from "@oma/docs";
+import {
+  extractSession,
+  previewPromotion,
+  promoteSession,
+  shouldAutoExtract,
+} from "@oma/docs";
 import {
   formatSearchHits,
   formatSessions,
@@ -39,9 +44,9 @@ Usage:
   oma fork <id> [--prompt P]
   oma extract <id> [--agent claude|codex|gemini]
   oma promote <id> [--apply]
-  oma end <id> [--extract]
+  oma end <id> [--no-extract]
   oma rm <id> [--force] [--keep-worktree]
-  oma sync [<id>]
+  oma sync [<id>] [--no-auto-extract]
   oma search <query> [--repo PATH] [--limit N] [--memory-only]
   oma remember <title> --kind <kind> --body <text> [--repo PATH] [--global]
   oma mcp
@@ -262,41 +267,49 @@ async function cmdPromote(db: Database, argv: string[]): Promise<void> {
   );
 }
 
+async function attemptExtraction(
+  db: Database,
+  sessionId: string,
+): Promise<void> {
+  const runs = listAgentRuns(db, sessionId);
+  const agent = runs.at(-1)?.agent;
+  if (!agent) return;
+  try {
+    const candidates = await extractSession(db, sessionId, adapterFor(agent));
+    console.log(`Extracted ${candidates.length} review candidate(s).`);
+    console.log(previewPromotion(db, sessionId));
+    console.log(
+      `\nReview the diff, then apply it with: oma promote ${shortId(sessionId)} --apply`,
+    );
+  } catch (error) {
+    console.warn(
+      `Knowledge extraction failed; retry with 'oma extract ${shortId(sessionId)}': ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
 async function cmdEnd(db: Database, argv: string[]): Promise<void> {
   const { values, positionals } = parseArgs({
     args: argv,
     allowPositionals: true,
-    options: { extract: { type: "boolean" } },
+    options: {
+      extract: { type: "boolean" },
+      "no-extract": { type: "boolean" },
+    },
   });
   const id = positionals[0];
   if (!id) fail("end needs a session id");
   const session = resolveSession(db, id);
-  const runs = listAgentRuns(db, session.id);
   const manager = new SessionManager(db, { adapterFor });
   // Capture whatever the agent wrote before the session goes away.
   syncReports(db, session.id);
   await manager.end(session.id);
   console.log(`Ended session ${shortId(session.id)}`);
 
-  // Ending is local-only by default. Extraction invokes the selected agent's
-  // headless model and therefore requires an explicit opt-in.
-  if (!values.extract) return;
-  const agent = runs.at(-1)?.agent;
-  if (!agent) return;
-  try {
-    const candidates = await extractSession(db, session.id, adapterFor(agent));
-    console.log(`Extracted ${candidates.length} review candidate(s).`);
-    console.log(previewPromotion(db, session.id));
-    console.log(
-      `\nReview the diff, then apply it with: oma promote ${shortId(session.id)} --apply`,
-    );
-  } catch (error) {
-    // Ending the tmux session is durable even when a model is temporarily
-    // unavailable. Extraction can be retried explicitly without data loss.
-    console.warn(
-      `Knowledge extraction failed; retry with 'oma extract ${shortId(session.id)}': ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
+  // Auto-extract by default so useful knowledge lands in pending review.
+  // Opt out with --no-extract. Never auto-applies: promotion stays explicit.
+  if (values["no-extract"]) return;
+  await attemptExtraction(db, session.id);
 }
 
 async function cmdRm(db: Database, argv: string[]): Promise<void> {
@@ -313,7 +326,7 @@ async function cmdRm(db: Database, argv: string[]): Promise<void> {
 
   const manager = new SessionManager(db, { adapterFor });
   // Ingest first: removing a session must not throw away what it learned.
-  await cmdSync(db, [id]);
+  await cmdSync(db, [id, "--no-auto-extract"]);
   const full = resolveSession(db, id).id;
   await manager.remove(id, {
     force: values.force,
@@ -325,7 +338,12 @@ async function cmdRm(db: Database, argv: string[]): Promise<void> {
 }
 
 async function cmdSync(db: Database, argv: string[]): Promise<void> {
-  const id = argv[0];
+  const { values, positionals } = parseArgs({
+    args: argv,
+    allowPositionals: true,
+    options: { "no-auto-extract": { type: "boolean" } },
+  });
+  const id = positionals[0];
 
   const reports = syncReports(db, id);
 
@@ -335,6 +353,19 @@ async function cmdSync(db: Database, argv: string[]): Promise<void> {
     `Ingested ${inserted} new events from ${reports.length} run(s)` +
       (skipped > 0 ? ` (${skipped} unreadable line(s) skipped)` : ""),
   );
+
+  // Background auto-extract: only for a single session, never auto-applies.
+  if (values["no-auto-extract"] || !id) return;
+  try {
+    const sessionId = resolveSession(db, id).id;
+    if (shouldAutoExtract(db, sessionId, inserted)) {
+      await attemptExtraction(db, sessionId);
+    }
+  } catch (error) {
+    console.warn(
+      `Auto-extraction skipped; retry with 'oma extract ${id}': ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 }
 
 function syncReports(db: Database, id?: string) {

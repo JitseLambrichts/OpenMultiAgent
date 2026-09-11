@@ -32,6 +32,11 @@ export function renderCustomArgs(
     return [...expanded, system];
   }
   if (!hasPrompt && prompt) return [...expanded, prompt];
+  // `opencode run` (and the same pattern on other CLIs) exits immediately
+  // without a message, which kills the tmux pane. Fall back to the TUI.
+  if (expanded.length === 1 && expanded[0] === "run" && !prompt && !system) {
+    return [];
+  }
   return expanded;
 }
 
@@ -65,7 +70,13 @@ export function createGenericAdapter(def: CustomAgentDef): AgentAdapter {
     },
 
     headlessCommand(opts: HeadlessOptions): string[] {
-      return [def.binary, opts.prompt];
+      const expanded = renderCustomArgs(def, {
+        sessionId: "",
+        cwd: opts.cwd,
+        prompt: opts.prompt,
+        systemPrompt: "",
+      });
+      return [def.binary, ...expanded];
     },
   };
 }

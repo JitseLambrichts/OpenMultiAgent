@@ -105,6 +105,7 @@ describe("SessionManager.create", () => {
     const view = await manager().create({ repoPath: repo, agent: "claude" });
 
     expect(view.session.status).toBe("active");
+    expect(view.tmuxAlive).toBe(true);
     expect(await tmux.hasSession(tmuxSessionName(view.session.id))).toBe(true);
     expect(view.runs).toHaveLength(1);
     expect(view.runs[0]!.native_session_id).toBe(`native-${view.session.id}`);
@@ -139,6 +140,24 @@ describe("SessionManager.create", () => {
     expect(a.session.worktree_path).not.toBe(b.session.worktree_path);
     expect(await tmux.hasSession(tmuxSessionName(a.session.id))).toBe(true);
     expect(await tmux.hasSession(tmuxSessionName(b.session.id))).toBe(true);
+  });
+
+  test("fails create when the agent exits during startup", async () => {
+    const adapter = fakeAdapter({
+      buildLaunch: (ctx) => ({
+        command: ["true"],
+        nativeSessionId: `native-${ctx.sessionId}`,
+        transcriptPath: join(ctx.cwd, "transcript.jsonl"),
+        writtenFiles: [],
+      }),
+    });
+
+    await expect(
+      manager(adapter).create({ repoPath: repo, agent: "claude" }),
+    ).rejects.toThrow(/exited during startup/);
+    expect(
+      db.query<{ n: number }, []>("SELECT COUNT(*) AS n FROM session").get()?.n,
+    ).toBe(0);
   });
 
   test("refuses a directory that is not a git repository", async () => {

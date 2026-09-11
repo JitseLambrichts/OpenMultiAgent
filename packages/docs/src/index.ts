@@ -9,11 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import type {
-  AgentAdapter,
-  ExecResult,
-  MemoryKind,
-} from "@oma/core";
+import type { AgentAdapter, ExecResult, MemoryKind } from "@oma/core";
 import {
   createMemory,
   exec,
@@ -80,7 +76,8 @@ function unwrapResponse(value: unknown): unknown {
       current = parseJson(current);
       continue;
     }
-    if (!current || typeof current !== "object" || Array.isArray(current)) break;
+    if (!current || typeof current !== "object" || Array.isArray(current))
+      break;
     const record = current as Record<string, unknown>;
     if (Array.isArray(record.candidates)) return record;
     const nested = record.result ?? record.response ?? record.text;
@@ -99,7 +96,8 @@ export function parseCandidateResponse(output: string): CandidateInput[] {
   if (!Array.isArray(rawCandidates)) {
     throw new Error("extractor response must contain a candidates array");
   }
-  if (rawCandidates.length > 50) throw new Error("extractor returned too many candidates");
+  if (rawCandidates.length > 50)
+    throw new Error("extractor returned too many candidates");
 
   return rawCandidates.map((raw, index) => {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
@@ -120,7 +118,9 @@ export function parseCandidateResponse(output: string): CandidateInput[] {
       !Number.isFinite(confidence) ||
       confidence < 0 ||
       confidence > 1 ||
-      (supersedes !== undefined && supersedes !== null && typeof supersedes !== "string")
+      (supersedes !== undefined &&
+        supersedes !== null &&
+        typeof supersedes !== "string")
     ) {
       throw new Error(`invalid candidate ${index}`);
     }
@@ -237,13 +237,43 @@ export function buildExtractionPrompt(db: Database, sessionId: string): string {
     `Allowed kinds: ${MEMORY_KINDS.join(", ")}.`,
     "Every candidate must contain kind, title, body, confidence (0..1), and supersedes_memory_id (string or null).",
     "Use supersedes_memory_id only when a new fact directly corrects a listed live memory.",
-    "Required schema: {\"candidates\":[{\"kind\":\"decision|invariant|risk|ownership|howto\",\"title\":\"...\",\"body\":\"include rationale and constraints\",\"confidence\":0.0,\"supersedes_memory_id\":null}]}",
+    'Required schema: {"candidates":[{"kind":"decision|invariant|risk|ownership|howto","title":"...","body":"include rationale and constraints","confidence":0.0,"supersedes_memory_id":null}]}',
     `Session task: ${session.title ?? "untitled"}`,
     `Repository: ${session.repo_path}`,
     `Live memory: ${JSON.stringify(memories)}`,
     "Transcript:",
     events || "(no normalized events)",
   ].join("\n\n");
+}
+
+export const AUTO_EXTRACT_MIN_EVENTS = 50;
+export const AUTO_EXTRACT_MIN_INTERVAL_MS = 15 * 60 * 1000;
+
+export function lastCandidateAt(
+  db: Database,
+  sessionId: string,
+): string | null {
+  const row = db
+    .query<{ created_at: string }, [string]>(
+      `SELECT created_at FROM promotion_candidate
+        WHERE session_id = ?
+        ORDER BY created_at DESC LIMIT 1`,
+    )
+    .get(sessionId);
+  return row?.created_at ?? null;
+}
+
+export function shouldAutoExtract(
+  db: Database,
+  sessionId: string,
+  insertedEvents: number,
+  now: number = Date.now(),
+): boolean {
+  if (insertedEvents >= AUTO_EXTRACT_MIN_EVENTS) return true;
+  if (insertedEvents <= 0) return false;
+  const last = lastCandidateAt(db, sessionId);
+  if (!last) return false;
+  return now - Date.parse(last) >= AUTO_EXTRACT_MIN_INTERVAL_MS;
 }
 
 export async function extractSession(
@@ -476,7 +506,10 @@ export function promoteSession(
             `candidate '${candidate.title}' supersedes unknown memory ${candidate.supersedes_memory_id}`,
           );
         }
-        if (previous.scope !== "repo" || previous.repo_path !== session.repo_path) {
+        if (
+          previous.scope !== "repo" ||
+          previous.repo_path !== session.repo_path
+        ) {
           throw new Error(
             `candidate '${candidate.title}' cannot supersede memory from another repository`,
           );

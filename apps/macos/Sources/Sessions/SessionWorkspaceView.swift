@@ -19,6 +19,11 @@ struct SessionWorkspaceView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+            if let notice = model.notice {
+                InlineNotice(notice)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+            }
             Divider()
             content
         }

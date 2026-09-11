@@ -81,6 +81,23 @@ describe("generic adapter", () => {
     expect(launch.command).toEqual(["opencode", "run", "BRIEF", "--", "do it"]);
   });
 
+  test("starts the TUI when run would have no message", () => {
+    for (const launchArgs of [["run"], ["run", "{{prompt}}"]]) {
+      const adapter = createGenericAdapter({
+        id: "opencode",
+        name: "Opencode",
+        binary: "opencode",
+        launchArgs,
+        symbol: "terminal",
+      });
+      const launch = adapter.buildLaunch({
+        sessionId: "oma-1",
+        cwd: "/tmp/x",
+      });
+      expect(launch.command).toEqual(["opencode"]);
+    }
+  });
+
   test("resume and fork are rejected with a clear error", () => {
     const adapter = createGenericAdapter({
       id: "opencode",

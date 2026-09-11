@@ -165,7 +165,7 @@ final class SessionWorkspaceModel {
             candidateCount = result.candidateCount
             if result.candidateCount == 0 {
                 promotion = .idle
-                notice = "Geen nieuwe kennis gevonden in dit transcript."
+                notice = "Geen nieuwe kennis gevonden in dit transcript. Custom agents (zoals opencode) schrijven geen transcript weg, dus er valt niets te extraheren."
                 return
             }
             await openPreview()

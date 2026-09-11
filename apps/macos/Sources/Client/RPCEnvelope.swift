@@ -57,7 +57,10 @@ struct RPCErrorDTO: Decodable, LocalizedError, Equatable, Sendable {
         }
     }
 
-    var errorDescription: String? { message }
+    var errorDescription: String? {
+        if let detail, !detail.isEmpty, detail != message { return "\(message): \(detail)" }
+        return message
+    }
 
     var recoveryAction: RecoveryAction {
         switch recovery {

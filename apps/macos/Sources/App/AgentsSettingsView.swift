@@ -142,7 +142,7 @@ struct AgentsSettingsView: View {
                 .tint(OMAColor.accent)
                 .controlSize(.small)
             }
-            Text("Start elk terminalprogramma als agent, zoals opencode of cursor. De prompt wordt als laatste argument meegegeven.")
+            Text("Start elk terminalprogramma als agent, zoals opencode of cursor. Laat argumenten leeg voor de interactieve TUI; een one-shot zoals run sluit de terminal meteen.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -261,7 +261,7 @@ struct CustomAgentEditorSheet: View {
             if presets {
                 HStack(spacing: 8) {
                     Text("Snel:").font(.callout).foregroundStyle(.secondary)
-                    Button("Opencode") { values = preset(name: "Opencode", binary: "opencode", arguments: "run", symbol: "terminal.fill") }
+                    Button("Opencode") { values = preset(name: "Opencode", binary: "opencode", arguments: "", symbol: "terminal.fill") }
                         .controlSize(.small)
                     Button("Cursor") { values = preset(name: "Cursor", binary: "cursor-agent", arguments: "", symbol: "cursorarrow") }
                         .controlSize(.small)
@@ -273,7 +273,7 @@ struct CustomAgentEditorSheet: View {
                 TextField("Naam", text: $values.name, prompt: Text("Bijvoorbeeld: Opencode"))
                 TextField("Commando", text: $values.binary, prompt: Text("Bijvoorbeeld: opencode"))
                     .font(.body.monospaced())
-                TextField("Argumenten (optioneel)", text: $values.arguments, prompt: Text("Bijvoorbeeld: run"))
+                TextField("Argumenten (optioneel)", text: $values.arguments, prompt: Text("Leeg laten voor de TUI"))
                     .font(.body.monospaced())
             }
             .formStyle(.grouped)
@@ -281,7 +281,7 @@ struct CustomAgentEditorSheet: View {
                 Text("Icoon").font(.callout).foregroundStyle(.secondary)
                 AgentSymbolPicker(symbol: $values.symbol)
             }
-            Text("Naam en commando zijn verplicht. Argumenten worden vóór de prompt gezet; de prompt komt altijd als laatste argument.")
+            Text("Naam en commando zijn verplicht. Laat argumenten leeg om de interactieve TUI te starten. Extra argumenten komen vóór een optionele startprompt.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             if let saveError {
