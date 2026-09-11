@@ -325,6 +325,34 @@ export function createDesktopServices(
       return (await extractSession(db, session.id, adapterFor(agent))).length;
     });
 
+  const activeExtractions = new Map<string, Promise<void>>();
+
+  /**
+   * `extractKnowledge` shells out to an LLM and is not safe to run twice
+   * concurrently for the same session: a second run finishing after the
+   * first can silently discard or duplicate the first run's candidates via
+   * `saveCandidates`'s delete-then-reinsert. The manual button, session-end
+   * auto-extract, and the periodic auto-check all funnel through this guard
+   * so only one of them ever wins per session; the rest await the winner's
+   * in-flight extraction (rather than no-op immediately) so that whatever
+   * they read afterward - e.g. the pending candidate count - reflects the
+   * completed extraction rather than racing ahead of it.
+   */
+  async function runExtractionOnce(sessionId: string): Promise<void> {
+    const inFlight = activeExtractions.get(sessionId);
+    if (inFlight) {
+      await inFlight;
+      return;
+    }
+    const extraction = (async () => {
+      await extractKnowledge(sessionId);
+    })().finally(() => {
+      activeExtractions.delete(sessionId);
+    });
+    activeExtractions.set(sessionId, extraction);
+    await extraction;
+  }
+
   return {
     hello: async () => ({
       protocol_version: 1,
@@ -397,6 +425,13 @@ export function createDesktopServices(
       ),
     sessionEnd: async ({ session_id }) => {
       const session = resolveSession(db, session_id);
+      try {
+        await runExtractionOnce(session.id);
+      } catch {
+        // Best-effort, mirroring the CLI's `oma end`: a session must always
+        // be able to end even if no agent is on PATH or extraction fails.
+        // The manual Extract Knowledge button remains the retry path.
+      }
       await guarded({ session_id: session.id }, () => manager.end(session.id));
       return { ended_session_id: session.id };
     },
@@ -443,11 +478,13 @@ export function createDesktopServices(
       });
     },
     promotionExtract: async ({ session_id }) =>
-      guarded({ session_id }, async () => ({
-        candidate_count: await extractKnowledge(
-          resolveSession(db, session_id).id,
-        ),
-      })),
+      guarded({ session_id }, async () => {
+        const session = resolveSession(db, session_id);
+        await runExtractionOnce(session.id);
+        return {
+          candidate_count: listCandidates(db, session.id, "pending").length,
+        };
+      }),
     promotionPreview: async ({ session_id }) =>
       guarded({ session_id }, async () => {
         const session = resolveSession(db, session_id);

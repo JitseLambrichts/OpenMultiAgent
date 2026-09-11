@@ -15,6 +15,7 @@ import {
   DesktopError,
   type SessionOperations,
 } from "./services.ts";
+import { saveCandidates } from "@oma/docs";
 
 let db: Database;
 const tempDirs: string[] = [];
@@ -185,6 +186,104 @@ describe("desktop lifecycle error mapping", () => {
         data: { recovery: "install_binary", agent: "codex" },
       });
     }
+  });
+});
+
+describe("promotion extraction", () => {
+  test("extracts knowledge and reports the pending candidate count", async () => {
+    const repo = await makeRepo();
+    const storedSession = createSession(db, {
+      repo_path: repo,
+      worktree_path: repo,
+    });
+    const service = createDesktopServices({
+      db,
+      manager: sessionOperations(),
+      extractKnowledge: async (sessionId) => {
+        saveCandidates(db, sessionId, [
+          {
+            kind: "decision",
+            title: "Use Redis Streams",
+            body: "Replay is required.",
+            confidence: 0.9,
+            supersedes_memory_id: null,
+          },
+        ]);
+        return 1;
+      },
+    });
+
+    expect(
+      await service.promotionExtract({ session_id: storedSession.id }),
+    ).toEqual({ candidate_count: 1 });
+  });
+
+  test("auto-extracts before ending a session, and still ends it when extraction fails", async () => {
+    const repo = await makeRepo();
+    const storedSession = createSession(db, {
+      repo_path: repo,
+      worktree_path: repo,
+    });
+    const calls: string[] = [];
+    const operations = sessionOperations();
+    operations.end = async () => {
+      calls.push("end");
+    };
+    const service = createDesktopServices({
+      db,
+      manager: operations,
+      extractKnowledge: async () => {
+        calls.push("extract");
+        throw new Error("'claude' is not on PATH");
+      },
+    });
+
+    const result = await service.sessionEnd({ session_id: storedSession.id });
+
+    expect(result).toEqual({ ended_session_id: storedSession.id });
+    expect(calls).toEqual(["extract", "end"]);
+  });
+
+  test("guards a session against overlapping extraction calls", async () => {
+    const repo = await makeRepo();
+    const storedSession = createSession(db, {
+      repo_path: repo,
+      worktree_path: repo,
+    });
+    let extractCalls = 0;
+    let releaseFirstCall: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      releaseFirstCall = resolve;
+    });
+    const service = createDesktopServices({
+      db,
+      manager: sessionOperations(),
+      extractKnowledge: async (sessionId) => {
+        extractCalls += 1;
+        await gate;
+        saveCandidates(db, sessionId, [
+          {
+            kind: "decision",
+            title: "Use Redis Streams",
+            body: "Replay is required.",
+            confidence: 0.9,
+            supersedes_memory_id: null,
+          },
+        ]);
+        return 1;
+      },
+    });
+
+    const first = service.promotionExtract({ session_id: storedSession.id });
+    await Bun.sleep(0);
+    const second = service.promotionExtract({ session_id: storedSession.id });
+    releaseFirstCall?.();
+
+    const [firstResult, secondResult] = await Promise.all([first, second]);
+
+    expect(extractCalls).toBe(1);
+    expect(firstResult).toEqual({ candidate_count: 1 });
+    expect(secondResult).toEqual({ candidate_count: 1 });
   });
 });
 
