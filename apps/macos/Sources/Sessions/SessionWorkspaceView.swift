@@ -81,8 +81,12 @@ struct SessionWorkspaceView: View {
         }
         .task {
             await model.loadStatus()
+            model.startAutoCheckLoop()
             terminals.requestLayout(storedLayout)
             await terminals.openReportingError(sessionID: model.session.id)
+        }
+        .onDisappear {
+            Task { await model.stopAutoCheckLoop() }
         }
         .onChange(of: terminals.layout) { _, layout in storedLayout = layout }
         .onChange(of: app.pendingCommand) { _, _ in

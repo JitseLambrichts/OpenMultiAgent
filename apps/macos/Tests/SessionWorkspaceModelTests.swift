@@ -74,6 +74,53 @@ struct SessionWorkspaceModelTests {
         #expect(model.hits.count == 1)
         #expect(model.isSearching == false)
     }
+
+    @Test func autoCheckLoopUpdatesCandidateCountForAnActiveSession() async {
+        let client = WorkspaceClientStub(autoCheckCandidateCount: 1)
+        let model = SessionWorkspaceModel(
+            session: .sample(id: "s", status: "active"),
+            client: client,
+            autoCheckInterval: .milliseconds(10)
+        )
+
+        model.startAutoCheckLoop()
+        try? await Task.sleep(for: .milliseconds(60))
+        await model.stopAutoCheckLoop()
+
+        #expect(model.hasReviewableCandidates)
+        #expect(await client.autoCheckCalls > 0)
+    }
+
+    @Test func autoCheckLoopNeverStartsForAnEndedSession() async {
+        let client = WorkspaceClientStub(autoCheckCandidateCount: 1)
+        let model = SessionWorkspaceModel(
+            session: .sample(id: "s", status: "ended"),
+            client: client,
+            autoCheckInterval: .milliseconds(10)
+        )
+
+        model.startAutoCheckLoop()
+        try? await Task.sleep(for: .milliseconds(30))
+
+        #expect(await client.autoCheckCalls == 0)
+    }
+
+    @Test func endingASessionStopsTheAutoCheckLoop() async {
+        let client = WorkspaceClientStub(autoCheckCandidateCount: 1)
+        let model = SessionWorkspaceModel(
+            session: .sample(id: "s", status: "active"),
+            client: client,
+            autoCheckInterval: .milliseconds(10)
+        )
+        model.startAutoCheckLoop()
+        try? await Task.sleep(for: .milliseconds(25))
+
+        _ = await model.endSession()
+        let callsAtEnd = await client.autoCheckCalls
+        try? await Task.sleep(for: .milliseconds(50))
+
+        #expect(await client.autoCheckCalls == callsAtEnd)
+    }
 }
 
 private actor WorkspaceClientStub: DesktopAPI {
@@ -81,19 +128,23 @@ private actor WorkspaceClientStub: DesktopAPI {
     let extractCount: Int
     let extractError: RPCErrorDTO?
     let preview: PromotionPreviewDTO?
+    let autoCheckCandidateCount: Int
     var applyCalls = 0
     var extractCalls = 0
+    var autoCheckCalls = 0
 
     init(
         pages: [String?: TranscriptPageDTO] = [:],
         extractCount: Int = 0,
         extractError: RPCErrorDTO? = nil,
-        preview: PromotionPreviewDTO? = nil
+        preview: PromotionPreviewDTO? = nil,
+        autoCheckCandidateCount: Int = 0
     ) {
         self.pages = pages
         self.extractCount = extractCount
         self.extractError = extractError
         self.preview = preview
+        self.autoCheckCandidateCount = autoCheckCandidateCount
     }
 
     func hello() async throws -> HelloDTO { HelloDTO(protocolVersion: 1, appVersion: "test", agents: []) }
@@ -122,6 +173,11 @@ private actor WorkspaceClientStub: DesktopAPI {
                                     confidence: 1, createdAt: Date(timeIntervalSince1970: 1), sourceSessionID: nil, score: -1))]
     }
     func listMemory(repoPath: String?, limit: Int) async throws -> [MemoryDTO] { [] }
+    func promotionAutoCheck(sessionID: String) async throws -> ExtractResultDTO {
+        autoCheckCalls += 1
+        return ExtractResultDTO(candidateCount: autoCheckCandidateCount)
+    }
+    func endSession(id: String) async throws {}
 }
 
 private extension TranscriptEventDTO {

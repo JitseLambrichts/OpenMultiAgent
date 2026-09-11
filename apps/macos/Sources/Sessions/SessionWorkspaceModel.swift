@@ -47,6 +47,8 @@ enum WorkspaceRoute: Equatable, Sendable {
 final class SessionWorkspaceModel {
     @ObservationIgnored let client: any DesktopAPI
     @ObservationIgnored let transcriptPageSize: Int
+    @ObservationIgnored let autoCheckInterval: Duration
+    @ObservationIgnored private var autoCheckTask: Task<Void, Never>?
 
     private(set) var session: SessionViewDTO
     private(set) var status: SessionStatusDTO?
@@ -65,10 +67,11 @@ final class SessionWorkspaceModel {
     private(set) var notice: String?
     private(set) var isEnding = false
 
-    init(session: SessionViewDTO, client: any DesktopAPI, transcriptPageSize: Int = 50) {
+    init(session: SessionViewDTO, client: any DesktopAPI, transcriptPageSize: Int = 50, autoCheckInterval: Duration = .seconds(300)) {
         self.session = session
         self.client = client
         self.transcriptPageSize = transcriptPageSize
+        self.autoCheckInterval = autoCheckInterval
     }
 
     // MARK: Derived
@@ -216,12 +219,41 @@ final class SessionWorkspaceModel {
         if case .failed = promotion { promotion = .idle }
     }
 
+    /// Keeps this session's own candidate count current while its workspace
+    /// is open, without requiring the user to end the session first. A
+    /// no-op for ended sessions or if the loop is already running.
+    func startAutoCheckLoop() {
+        guard session.session.isActive, autoCheckTask == nil else { return }
+        autoCheckTask = Task { [weak self] in
+            guard let self else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: self.autoCheckInterval)
+                if Task.isCancelled { break }
+                await self.performAutoCheck()
+            }
+        }
+    }
+
+    /// Cancels and awaits the loop so a caller ending the session never
+    /// races its own extraction against this one for the same session.
+    func stopAutoCheckLoop() async {
+        autoCheckTask?.cancel()
+        await autoCheckTask?.value
+        autoCheckTask = nil
+    }
+
+    private func performAutoCheck() async {
+        guard let result = try? await client.promotionAutoCheck(sessionID: session.id) else { return }
+        candidateCount = result.candidateCount
+    }
+
     // MARK: Lifecycle
 
     func endSession() async -> Bool {
         guard session.session.isActive, !isEnding else { return false }
         isEnding = true
         defer { isEnding = false }
+        await stopAutoCheckLoop()
         do {
             try await client.endSession(id: session.id)
             await loadStatus()
