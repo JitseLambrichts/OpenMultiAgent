@@ -26,3 +26,6 @@ COMPLETE_PLAN.md
 PLAN.md
 PLAN.MD
 /docs/superpowers/
+
+# git worktrees
+/.worktrees/
