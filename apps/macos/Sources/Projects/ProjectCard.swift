@@ -11,13 +11,6 @@ struct ProjectCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "shippingbox.fill")
-                    .font(.title2)
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(OMAColor.accent)
-                    .frame(width: 38, height: 38)
-                    .background(OMAColor.accent.opacity(0.13), in: RoundedRectangle(cornerRadius: 9))
-
                 VStack(alignment: .leading, spacing: 4) {
                     Text(project.displayName)
                         .font(.headline)
@@ -29,6 +22,12 @@ struct ProjectCard: View {
                         .truncationMode(.middle)
                 }
                 Spacer(minLength: 0)
+                Image(systemName: "shippingbox.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(OMAColor.accent)
+                    .frame(width: 34, height: 34)
+                    .background(OMAColor.elevated, in: Circle())
+                    .accessibilityHidden(true)
             }
 
             HStack(spacing: 12) {
@@ -41,11 +40,10 @@ struct ProjectCard: View {
 
             HStack(spacing: 8) {
                 Button("Open", action: onOpen)
-                    .buttonStyle(.borderedProminent)
-                    .tint(OMAColor.accent)
+                    .buttonStyle(.omaPrimary)
                     .accessibilityLabel("Open \(project.displayName)")
                 Button("Nieuwe sessie", systemImage: "plus", action: onNewSession)
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.omaSecondary)
                     .accessibilityLabel("Nieuwe sessie in \(project.displayName)")
                 Spacer()
                 Button("Verwijder", systemImage: "trash", action: onRemove)
@@ -55,11 +53,11 @@ struct ProjectCard: View {
                     .help("Verwijder project uit het dashboard")
                     .accessibilityLabel("Verwijder \(project.displayName)")
             }
-            .opacity(isHovering ? 1 : 0.78)
+            .opacity(isHovering ? 1 : 0.85)
         }
-        .padding(18)
+        .padding(20)
         .frame(maxWidth: .infinity, minHeight: 184, alignment: .topLeading)
-        .contentShape(RoundedRectangle(cornerRadius: 12))
+        .contentShape(RoundedRectangle(cornerRadius: 20))
         .omaCard(interactive: isHovering)
         .onHover { isHovering = $0 }
         .contextMenu {

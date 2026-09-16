@@ -33,11 +33,12 @@ struct MemorySearchView: View {
                     }
                     content
                 }
-                .padding(28)
+                .padding(.horizontal, 28)
+                .padding(.top, scopeRepoPath == nil ? 36 : 8)
+                .padding(.bottom, 28)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
             }
         }
-        .navigationTitle("Geheugen")
         .task { await model.loadRecent() }
         .onAppear { consumeSearchCommand() }
         .onChange(of: app?.pendingCommand) { _, _ in consumeSearchCommand() }
@@ -46,39 +47,22 @@ struct MemorySearchView: View {
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Geheugen")
-                    .font(.largeTitle.weight(.semibold))
-                Text("Beslissingen, invarianten en how-tos uit al je projecten.")
-                    .foregroundStyle(.secondary)
-            }
+            PageTitle(title: "Geheugen", subtitle: "Beslissingen, invarianten en how-tos uit al je projecten.")
             Spacer()
         }
     }
 
     private var searchBar: some View {
         HStack(spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
-                TextField("Zoek beslissingen, invarianten, how-tos…", text: $query)
-                    .textFieldStyle(.plain)
-                    .focused($queryFocused)
-                    .onChange(of: query) { _, value in model.updateQuery(value) }
-                    .accessibilityLabel("Zoek in geheugen")
-                if model.isSearching {
-                    Image(systemName: "progress.indicator")
-                        .symbolEffect(.variableColor.iterative, isActive: true)
-                        .foregroundStyle(.secondary)
-                        .accessibilityLabel("Zoeken")
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            OMASearchField(
+                prompt: "Zoek beslissingen, invarianten, how-tos…",
+                text: $query,
+                isBusy: model.isSearching,
+                focus: $queryFocused,
+                accessibilityLabel: "Zoek in geheugen"
+            )
+            .onChange(of: query) { _, value in model.updateQuery(value) }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(OMAColor.surface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay { RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(OMAColor.separator) }
             .layoutPriority(1)
 
             if projects.count > 1 || model.repoPath == nil {
@@ -94,6 +78,7 @@ struct MemorySearchView: View {
                 .labelsHidden()
                 .frame(width: 200)
                 .help("Beperk tot één project")
+                .accessibilityLabel("Project")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -169,7 +154,7 @@ struct MemoryRow: View {
                     .truncationMode(.middle)
             }
         }
-        .padding(14)
+        .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .omaCard()
         .accessibilityElement(children: .combine)
@@ -189,7 +174,7 @@ struct SearchHitRow: View {
                 Text(memory.title).font(.headline)
                 Text(memory.body).font(.callout).foregroundStyle(.secondary).lineLimit(4)
             }
-            .padding(14)
+            .padding(18)
             .frame(maxWidth: .infinity, alignment: .leading)
             .omaCard()
             .accessibilityElement(children: .combine)
@@ -208,7 +193,7 @@ struct SearchHitRow: View {
                     .font(.callout)
                     .lineLimit(6)
             }
-            .padding(14)
+            .padding(18)
             .frame(maxWidth: .infinity, alignment: .leading)
             .omaCard()
             .accessibilityElement(children: .combine)

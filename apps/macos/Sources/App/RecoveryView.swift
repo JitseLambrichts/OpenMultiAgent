@@ -15,11 +15,7 @@ struct RecoveryView: View {
         ZStack {
             OMAColor.canvas.ignoresSafeArea()
             VStack(spacing: 20) {
-                Image(systemName: "bolt.horizontal.circle")
-                    .font(.system(size: 44))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(OMAColor.attention)
-                    .accessibilityHidden(true)
+                AccentDisc(symbol: "bolt.horizontal", size: 64, tint: OMAColor.attention)
 
                 VStack(spacing: 6) {
                     Text("De OpenMultiAgent-service is niet bereikbaar")
@@ -33,11 +29,11 @@ struct RecoveryView: View {
 
                 HStack(spacing: 10) {
                     Button("Verbind opnieuw", systemImage: "arrow.clockwise", action: onReconnect)
-                        .buttonStyle(.borderedProminent)
-                        .tint(OMAColor.accent)
+                        .buttonStyle(.omaPrimary)
                         .keyboardShortcut(.defaultAction)
                     if configuration?.source == .development {
                         Button("Kies OMA-checkout…", systemImage: "folder", action: chooseCheckout)
+                            .buttonStyle(.omaSecondary)
                             .help("Kies de map met de OpenMultiAgent-broncode")
                     }
                 }

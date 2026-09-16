@@ -14,14 +14,13 @@ struct LivingDocsView: View {
             OMAColor.canvas.ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    HStack(alignment: .firstTextBaseline) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Living Docs")
-                                .font(.largeTitle.weight(.semibold))
-                            Text("Markdown onder .oma/docs, per project, gegenereerd uit gepromoveerde kennis.")
-                                .foregroundStyle(.secondary)
-                        }
+                    HStack(alignment: .top) {
+                        PageTitle(title: "Living Docs", subtitle: "Markdown onder .oma/docs, per project, gegenereerd uit gepromoveerde kennis.")
                         Spacer()
+                        Button("Vernieuw", systemImage: "arrow.clockwise") { Task { await load() } }
+                            .buttonStyle(.omaIcon)
+                            .help("Vernieuw documentatie")
+                            .symbolEffect(.rotate, isActive: isLoading)
                     }
                     if let notice {
                         InlineNotice(notice, actionTitle: "Opnieuw") { Task { await load() } }
@@ -38,15 +37,9 @@ struct LivingDocsView: View {
                         }
                     }
                 }
-                .padding(28)
-            }
-        }
-        .navigationTitle("Living Docs")
-        .toolbar {
-            ToolbarItem {
-                Button("Vernieuw", systemImage: "arrow.clockwise") { Task { await load() } }
-                    .help("Vernieuw documentatie")
-                    .symbolEffect(.rotate, isActive: isLoading)
+                .padding(.horizontal, 28)
+                .padding(.top, 36)
+                .padding(.bottom, 28)
             }
         }
         .task { await load() }
@@ -74,7 +67,7 @@ struct LivingDocsView: View {
                 }
             }
         }
-        .padding(18)
+        .padding(20)
         .omaCard()
     }
 
@@ -117,8 +110,7 @@ struct LivingDocRow: View {
             Button("Open", systemImage: "arrow.up.forward.square") {
                 NSWorkspace.shared.open(URL(fileURLWithPath: repoPath).appending(path: doc.path))
             }
-            .labelStyle(.iconOnly)
-            .buttonStyle(.borderless)
+            .buttonStyle(OMAIconButtonStyle(size: 30))
             .help("Open \(doc.path) in de standaardeditor")
             .accessibilityLabel("Open \(doc.title)")
         }

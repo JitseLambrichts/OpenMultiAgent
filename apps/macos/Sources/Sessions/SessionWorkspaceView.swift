@@ -21,15 +21,12 @@ struct SessionWorkspaceView: View {
             header
             if let notice = model.notice {
                 InlineNotice(notice)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
+                    .padding(.horizontal, 28)
+                    .padding(.bottom, 12)
             }
-            Divider()
             content
         }
         .background(OMAColor.canvas)
-        .navigationTitle(model.session.session.displayTitle)
-        .toolbar { toolbarContent }
         .inspector(isPresented: Binding(get: { app.isInspectorVisible }, set: { app.isInspectorVisible = $0 })) {
             SessionInspector(session: model.session, status: model.status, symbolForAgent: { app.symbol(forAgentID: $0) })
                 .inspectorColumnWidth(min: 260, ideal: 300, max: 380)
@@ -106,47 +103,101 @@ struct SessionWorkspaceView: View {
     // MARK: Header
 
     private var header: some View {
-        HStack(spacing: 14) {
-            let agent = model.session.currentAgent
-            Image(systemName: agent.map { app.symbol(for: $0) } ?? "terminal")
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(agent?.tint ?? .secondary)
-                .font(.title3)
-                .frame(width: 34, height: 34)
-                .background(OMAColor.elevated, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 10) {
-                    Text(agent?.title ?? "Geen agent").font(.headline)
-                    if let branch = model.session.session.branch {
-                        Text(branch).font(.caption.monospaced()).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 14) {
+                let agent = model.session.currentAgent
+                Button("Terug naar project", systemImage: "chevron.left") { app.closeSession() }
+                    .buttonStyle(.omaIcon)
+                    .help("Terug naar de projectcockpit")
+                Image(systemName: agent.map { app.symbol(for: $0) } ?? "terminal")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(agent?.tint ?? .secondary)
+                    .frame(width: 40, height: 40)
+                    .background(OMAColor.elevated, in: Circle())
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 10) {
+                        Text(model.session.session.displayTitle)
+                            .font(.system(size: 20, weight: .bold))
+                            .lineLimit(1)
+                            .accessibilityAddTraits(.isHeader)
+                        liveStatus
                     }
-                }
-                HStack(spacing: 10) {
-                    Label(model.runtime, systemImage: "timer")
-                    if let status = model.status {
-                        Label("\(status.changedFiles.count) bestanden", systemImage: "doc.badge.ellipsis")
+                    HStack(spacing: 10) {
+                        Text(agent?.title ?? "Geen agent")
+                        if let branch = model.session.session.branch {
+                            Text(branch).font(.caption.monospaced())
+                        }
+                        Label(model.runtime, systemImage: "timer")
+                        if let status = model.status {
+                            Label("\(status.changedFiles.count) bestanden", systemImage: "doc.badge.ellipsis")
+                        }
                     }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                Spacer()
+                actions
             }
-            Spacer()
-            liveStatus
-            Picker("Tabblad", selection: $model.tab) {
-                ForEach(WorkspaceTab.allCases) { tab in
-                    Label(tab.title, systemImage: tab.symbol).tag(tab)
+
+            HStack(spacing: 10) {
+                OMAPillPicker(
+                    options: WorkspaceTab.allCases,
+                    selection: $model.tab,
+                    accessibilityLabel: "Tabblad",
+                    title: { $0.title },
+                    symbol: { $0.symbol }
+                )
+                .help("Wissel tussen terminal, wijzigingen, geheugen en transcript")
+                Spacer()
+                if model.tab == .terminal {
+                    OMAPillPicker(
+                        options: TerminalLayout.allCases,
+                        selection: Binding(get: { terminals.layout }, set: { terminals.requestLayout($0) }),
+                        iconOnly: true,
+                        accessibilityLabel: "Terminalindeling",
+                        title: { $0.title },
+                        symbol: { $0.symbol }
+                    )
+                    .help("Terminalindeling (⌃1 – ⌃4)")
+                    Button("Open in raster", systemImage: "plus.rectangle.on.rectangle") {
+                        pickerCellID = terminals.cells.first(where: { !$0.isOccupied })?.id ?? UUID()
+                    }
+                    .buttonStyle(.omaIcon)
+                    .help("Open een andere sessie van dit project in het raster")
+                    .disabled(!terminals.canOpenMore)
                 }
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .frame(width: 380)
-            .help("Wissel tussen terminal, wijzigingen, geheugen en transcript")
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(OMAColor.surface)
+        .padding(.horizontal, 28)
+        .padding(.top, 36)
+        .padding(.bottom, 16)
         .accessibilityElement(children: .contain)
+    }
+
+    private var actions: some View {
+        HStack(spacing: 10) {
+            Button("Inspector", systemImage: "sidebar.trailing") { app.isInspectorVisible.toggle() }
+                .buttonStyle(.omaIcon)
+                .help("Toon of verberg de inspector (⌥⌘I)")
+            OMAIconMenu(symbol: "ellipsis", title: "Meer acties") {
+                Button("Vernieuw status", systemImage: "arrow.clockwise") { Task { await model.loadStatus() } }
+                if model.session.session.isActive {
+                    Button("Beëindig sessie…", systemImage: "stop.circle") { showsEndConfirmation = true }
+                }
+            }
+            if model.hasReviewableCandidates {
+                Button("Promote Knowledge", systemImage: "checkmark.seal") { Task { await model.openPreview() } }
+                    .buttonStyle(.omaPrimary)
+                    .help("Bekijk en pas de geëxtraheerde kennis toe")
+            } else if !model.session.session.isActive {
+                Button("Extract Knowledge", systemImage: "sparkles") { Task { await model.extractKnowledge() } }
+                    .buttonStyle(.omaSecondary)
+                    .help("Extraheer beslissingen en invarianten uit het transcript")
+                    .disabled(!model.canExtract)
+                    .symbolEffect(.pulse, isActive: model.promotion == .extracting)
+            }
+        }
     }
 
     private var liveStatus: some View {
@@ -175,8 +226,7 @@ struct SessionWorkspaceView: View {
                     Text(error)
                 } actions: {
                     Button("Probeer opnieuw") { Task { await terminals.openReportingError(sessionID: model.session.id) } }
-                        .buttonStyle(.borderedProminent)
-                        .tint(OMAColor.accent)
+                        .buttonStyle(.omaPrimary)
                 }
             } else {
                 TerminalGridView(
@@ -193,56 +243,6 @@ struct SessionWorkspaceView: View {
                              projects: app.projects.projects, app: app)
         case .transcript:
             TranscriptView(model: model)
-        }
-    }
-
-    // MARK: Toolbar
-
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .navigation) {
-            Button("Terug naar project", systemImage: "chevron.left") { app.closeSession() }
-                .help("Terug naar de projectcockpit")
-        }
-        ToolbarItemGroup {
-            if model.tab == .terminal {
-                Picker("Indeling", selection: Binding(get: { terminals.layout }, set: { terminals.requestLayout($0) })) {
-                    ForEach(TerminalLayout.allCases) { layout in
-                        Label(layout.title, systemImage: layout.symbol).tag(layout)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .help("Terminalindeling (⌃1 – ⌃4)")
-                .accessibilityLabel("Terminalindeling")
-                Button("Open in raster", systemImage: "plus.rectangle.on.rectangle") {
-                    pickerCellID = terminals.cells.first(where: { !$0.isOccupied })?.id ?? UUID()
-                }
-                .help("Open een andere sessie van dit project in het raster")
-                .disabled(!terminals.canOpenMore)
-            }
-            Button("Inspector", systemImage: "sidebar.trailing") { app.isInspectorVisible.toggle() }
-                .help("Toon of verberg de inspector (⌥⌘I)")
-            Menu("Meer", systemImage: "ellipsis.circle") {
-                Button("Vernieuw status", systemImage: "arrow.clockwise") { Task { await model.loadStatus() } }
-                if model.session.session.isActive {
-                    Button("Beëindig sessie…", systemImage: "stop.circle") { showsEndConfirmation = true }
-                }
-            }
-            .help("Meer acties")
-        }
-        ToolbarItem(placement: .primaryAction) {
-            if model.hasReviewableCandidates {
-                Button("Promote Knowledge", systemImage: "checkmark.seal") { Task { await model.openPreview() } }
-                    .help("Bekijk en pas de geëxtraheerde kennis toe")
-                    .buttonStyle(.borderedProminent)
-                    .tint(OMAColor.accent)
-            } else if !model.session.session.isActive {
-                Button("Extract Knowledge", systemImage: "sparkles") { Task { await model.extractKnowledge() } }
-                    .help("Extraheer beslissingen en invarianten uit het transcript")
-                    .disabled(!model.canExtract)
-                    .symbolEffect(.pulse, isActive: model.promotion == .extracting)
-            }
         }
     }
 }
@@ -265,10 +265,7 @@ struct SessionPickerSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Kies een sessie")
-                .font(.title2.weight(.semibold))
-            Text("Alleen sessies van dit project. Een sessie kan maar in één cel staan.")
-                .foregroundStyle(.secondary)
+            PageTitle(title: "Kies een sessie", subtitle: "Alleen sessies van dit project. Een sessie kan maar in één cel staan.")
             if let notice {
                 InlineNotice(notice)
             }
@@ -292,7 +289,9 @@ struct SessionPickerSheet: View {
             }
             HStack {
                 Spacer()
-                Button("Annuleer") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("Annuleer") { dismiss() }
+                    .buttonStyle(.omaSecondary)
+                    .keyboardShortcut(.cancelAction)
             }
         }
         .padding(24)

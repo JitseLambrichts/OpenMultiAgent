@@ -7,6 +7,10 @@ import type {
   ResolveContext,
 } from "@oma/core";
 
+function isOpencodeBinary(binary: string): boolean {
+  return (binary.split("/").at(-1) ?? binary) === "opencode";
+}
+
 function expandArg(arg: string, vars: Record<string, string>): string {
   return arg
     .replaceAll("{{prompt}}", vars.prompt ?? "")
@@ -70,6 +74,19 @@ export function createGenericAdapter(def: CustomAgentDef): AgentAdapter {
     },
 
     headlessCommand(opts: HeadlessOptions): string[] {
+      if (isOpencodeBinary(def.binary)) {
+        // Interactive OpenCode is `opencode` (TUI). A bare positional is the
+        // project path, so appending the extraction prompt made OpenCode
+        // `lstat` a 80k-character filename and exit ENAMETOOLONG.
+        return [
+          def.binary,
+          "run",
+          ...(opts.json ? ["--format", "json"] : []),
+          "--dangerously-skip-permissions",
+          "--",
+          opts.prompt,
+        ];
+      }
       const expanded = renderCustomArgs(def, {
         sessionId: "",
         cwd: opts.cwd,

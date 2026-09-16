@@ -31,12 +31,11 @@ struct ProjectCockpitView: View {
                     sessionSection("Recente sessies", symbol: "clock", sessions: model.recentSessions,
                                    empty: "Afgeronde sessies verschijnen hier met hun geëxtraheerde kennis.")
                 }
-                .padding(28)
+                .padding(.horizontal, 28)
+                .padding(.top, 36)
+                .padding(.bottom, 28)
             }
         }
-        .navigationTitle(model.project.displayName)
-        .navigationSubtitle(model.project.repoPath)
-        .toolbar { toolbarContent }
         .inspector(isPresented: Binding(get: { app.isInspectorVisible }, set: { app.isInspectorVisible = $0 })) {
             ProjectInspector(project: model.project, session: model.selectedSession,
                              status: model.selectedSessionID.flatMap { model.statuses[$0] },
@@ -63,59 +62,57 @@ struct ProjectCockpitView: View {
         .omaPanelAnimation(model.sessions.count, reduceMotion: reduceMotion)
     }
 
-    // MARK: Toolbar
+    // MARK: Actions
 
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .navigation) {
-            Button("Terug naar projecten", systemImage: "chevron.left") { app.closeProject() }
-                .help("Terug naar projecten")
-        }
-        ToolbarItemGroup {
+    private var actions: some View {
+        HStack(spacing: 10) {
             Button("Vernieuw", systemImage: "arrow.clockwise") { Task { await model.load() } }
+                .buttonStyle(.omaIcon)
                 .help("Vernieuw sessies, wijzigingen en kennis")
                 .symbolEffect(.rotate, isActive: model.isLoading)
             Button("Inspector", systemImage: "sidebar.trailing") { app.isInspectorVisible.toggle() }
+                .buttonStyle(.omaIcon)
                 .help("Toon of verberg de inspector (⌥⌘I)")
-        }
-        ToolbarItem(placement: .primaryAction) {
             Button("Nieuwe sessie", systemImage: "plus") { app.request(.newSession) }
+                .buttonStyle(.omaPrimary)
                 .help("Start een nieuwe agentsessie (⌘N)")
-                .buttonStyle(.borderedProminent)
-                .tint(OMAColor.accent)
         }
     }
 
     // MARK: Sections
 
     private var header: some View {
-        HStack(alignment: .center, spacing: 16) {
-            Image(systemName: "shippingbox.fill")
-                .font(.title)
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(OMAColor.accent)
-                .frame(width: 52, height: 52)
-                .background(OMAColor.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .accessibilityHidden(true)
+        HStack(alignment: .top, spacing: 16) {
+            Button("Terug naar projecten", systemImage: "chevron.left") { app.closeProject() }
+                .buttonStyle(.omaIcon)
+                .help("Terug naar projecten")
+            AccentDisc(symbol: "shippingbox.fill", size: 40)
             VStack(alignment: .leading, spacing: 6) {
                 Text(model.project.displayName)
-                    .font(.largeTitle.weight(.semibold))
+                    .font(.system(size: 26, weight: .bold))
+                    .accessibilityAddTraits(.isHeader)
                 HStack(spacing: 12) {
                     Label("\(model.activeSessions.count) actief", systemImage: "bolt")
                     Label("\(model.changedFileCount) gewijzigd", systemImage: "doc.badge.ellipsis")
                     if !model.branches.isEmpty {
                         Label(model.branches.joined(separator: ", "), systemImage: "arrow.triangle.branch")
-                            .font(.callout.monospaced())
+                            .font(.subheadline.monospaced())
                             .lineLimit(1)
                             .truncationMode(.middle)
                     }
                 }
-                .font(.callout)
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
+                Text(model.project.repoPath)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
             }
+            .accessibilityElement(children: .combine)
             Spacer()
+            actions
         }
-        .accessibilityElement(children: .combine)
     }
 
     private func sessionSection(_ title: String, symbol: String, sessions: [SessionViewDTO], empty: String) -> some View {
@@ -129,7 +126,7 @@ struct ProjectCockpitView: View {
                 Text(empty)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, 20)
                     .omaCard()
             } else {
                 ForEach(sessions) { view in
@@ -160,6 +157,7 @@ struct ProjectCockpitView: View {
                 Button("Alles", systemImage: "arrow.up.forward") { app.selection = .memory }
                     .labelStyle(.titleOnly)
                     .buttonStyle(.borderless)
+                    .foregroundStyle(OMAColor.accent)
                     .help("Open het volledige geheugen")
             }
             if model.recentDecisions.isEmpty {
@@ -182,7 +180,7 @@ struct ProjectCockpitView: View {
                 }
             }
         }
-        .padding(18)
+        .padding(20)
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .omaCard()
     }
@@ -216,7 +214,7 @@ struct ProjectCockpitView: View {
                 }
             }
         }
-        .padding(18)
+        .padding(20)
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .omaCard()
     }
@@ -227,6 +225,7 @@ struct ProjectCockpitView: View {
                 Button("Alles", systemImage: "arrow.up.forward") { app.selection = .docs }
                     .labelStyle(.titleOnly)
                     .buttonStyle(.borderless)
+                    .foregroundStyle(OMAColor.accent)
                     .help("Open alle Living Docs")
             }
             if model.docs.isEmpty {
@@ -239,7 +238,7 @@ struct ProjectCockpitView: View {
                 }
             }
         }
-        .padding(18)
+        .padding(20)
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .omaCard()
     }
@@ -335,6 +334,6 @@ struct ProjectInspector: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(OMAColor.canvas)
+        .background(OMAColor.surface)
     }
 }

@@ -43,27 +43,83 @@ type CommandRunner = (
   options?: { cwd?: string; env?: Record<string, string> },
 ) => Promise<ExecResult>;
 
-function parseJson(value: string): unknown {
-  const trimmed = value
+function stripFences(value: string): string {
+  return value
     .trim()
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/\s*```$/, "");
+}
+
+function eventPayload(parsed: Record<string, unknown>): unknown {
+  if (Array.isArray(parsed.candidates)) return parsed;
+  const part = parsed.part;
+  if (part && typeof part === "object" && !Array.isArray(part)) {
+    const text = (part as Record<string, unknown>).text;
+    if (typeof text === "string") return text;
+  }
+  const item = parsed.item;
+  if (item && typeof item === "object" && !Array.isArray(item)) {
+    const text = (item as Record<string, unknown>).text;
+    if (typeof text === "string") return text;
+  }
+  return parsed.result ?? parsed.response ?? parsed.text;
+}
+
+function eventError(parsed: Record<string, unknown>): string | undefined {
+  if (parsed.type !== "error") return undefined;
+  const error = parsed.error;
+  if (typeof error === "string" && error.trim()) return error;
+  if (error && typeof error === "object" && !Array.isArray(error)) {
+    const data = (error as Record<string, unknown>).data;
+    if (data && typeof data === "object" && !Array.isArray(data)) {
+      const message = (data as Record<string, unknown>).message;
+      if (typeof message === "string" && message.trim()) return message;
+    }
+    const message = (error as Record<string, unknown>).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return "agent reported an error";
+}
+
+/** JSONL streams (OpenCode `--format json`) carry assistant text on `part.text`. */
+function parseJsonl(value: string): unknown {
+  const chunks: string[] = [];
+  let lastError: string | undefined;
+  for (const line of value.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue;
+      const record = parsed as Record<string, unknown>;
+      lastError = eventError(record) ?? lastError;
+      const nested = eventPayload(record);
+      if (
+        nested &&
+        typeof nested === "object" &&
+        !Array.isArray(nested) &&
+        Array.isArray((nested as Record<string, unknown>).candidates)
+      ) {
+        return nested;
+      }
+      if (typeof nested === "string" && nested.trim()) chunks.push(nested);
+    } catch {
+      // Diagnostics and truncated lines sit between JSON events.
+    }
+  }
+  if (chunks.length) return parseJson(chunks.join("\n"), false);
+  if (lastError) throw new Error(`extractor error: ${lastError}`);
+  return undefined;
+}
+
+function parseJson(value: string, allowJsonl = true): unknown {
+  const trimmed = stripFences(value);
   try {
     return JSON.parse(trimmed);
   } catch {
-    const lines = trimmed.split("\n").filter(Boolean);
-    for (const line of lines.reverse()) {
-      try {
-        const parsed = JSON.parse(line) as Record<string, unknown>;
-        const nested =
-          parsed.result ??
-          parsed.response ??
-          parsed.text ??
-          (parsed.item as Record<string, unknown> | undefined)?.text;
-        if (typeof nested === "string") return parseJson(nested);
-      } catch {
-        // A streaming agent may emit non-JSON diagnostics between JSON events.
-      }
+    if (allowJsonl) {
+      const fromStream = parseJsonl(trimmed);
+      if (fromStream !== undefined) return fromStream;
     }
     throw new Error("extractor did not return valid JSON");
   }
@@ -79,9 +135,11 @@ function unwrapResponse(value: unknown): unknown {
     if (!current || typeof current !== "object" || Array.isArray(current))
       break;
     const record = current as Record<string, unknown>;
+    const error = eventError(record);
+    if (error) throw new Error(`extractor error: ${error}`);
     if (Array.isArray(record.candidates)) return record;
-    const nested = record.result ?? record.response ?? record.text;
-    if (nested === undefined) break;
+    const nested = eventPayload(record);
+    if (nested === undefined || nested === record) break;
     current = nested;
   }
   return current;

@@ -44,17 +44,10 @@ struct NewSessionSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text("Nieuwe sessie")
-                    .font(.title2.weight(.semibold))
-                if let selectedProject, projects.count == 1 {
-                    Text(selectedProject.displayName)
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text("Start een agent in een project, optioneel in een eigen worktree.")
-                        .foregroundStyle(.secondary)
-                }
-            }
+            PageTitle(
+                title: "Nieuwe sessie",
+                subtitle: projects.count == 1 ? selectedProject?.displayName : "Start een agent in een project, optioneel in een eigen worktree."
+            )
 
             Form {
                 if projects.count > 1 {
@@ -92,6 +85,7 @@ struct NewSessionSheet: View {
                 }
                 Spacer()
                 Button("Annuleer") { dismiss() }
+                    .buttonStyle(.omaSecondary)
                     .keyboardShortcut(.cancelAction)
                 Button {
                     submit()
@@ -107,8 +101,7 @@ struct NewSessionSheet: View {
                     }
                 }
                 .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
-                .tint(OMAColor.accent)
+                .buttonStyle(.omaPrimary)
                 .disabled(!canSubmit)
             }
         }

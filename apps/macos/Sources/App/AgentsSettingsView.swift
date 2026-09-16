@@ -138,8 +138,7 @@ struct AgentsSettingsView: View {
                     draft = CustomAgentFormValues()
                     isAdding = true
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(OMAColor.accent)
+                .buttonStyle(.omaPrimary)
                 .controlSize(.small)
             }
             Text("Start elk terminalprogramma als agent, zoals opencode of cursor. Laat argumenten leeg voor de interactieve TUI; een one-shot zoals run sluit de terminal meteen.")
@@ -306,8 +305,7 @@ struct CustomAgentEditorSheet: View {
                     }
                 }
                 .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
-                .tint(OMAColor.accent)
+                .buttonStyle(.omaPrimary)
                 .disabled(values.error != nil || isSaving)
             }
         }

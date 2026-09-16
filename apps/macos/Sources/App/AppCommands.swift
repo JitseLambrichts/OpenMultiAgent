@@ -4,7 +4,6 @@ import SwiftUI
 /// here exactly once; views react to `AppModel.pendingCommand`.
 struct AppCommands: Commands {
     let model: AppModel
-    @AppStorage(AppearanceSetting.storageKey) private var appearance: AppearanceSetting = .dark
     @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
@@ -33,12 +32,6 @@ struct AppCommands: Commands {
                 model.isInspectorVisible.toggle()
             }
             .keyboardShortcut("i", modifiers: [.command, .option])
-            Divider()
-            Picker("Weergave", selection: $appearance) {
-                ForEach(AppearanceSetting.allCases) { setting in
-                    Text(setting.title).tag(setting)
-                }
-            }
         }
     }
 }

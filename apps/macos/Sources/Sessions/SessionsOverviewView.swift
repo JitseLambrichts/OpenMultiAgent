@@ -87,12 +87,7 @@ struct SessionsOverviewView: View {
             OMAColor.canvas.ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Sessies")
-                            .font(.largeTitle.weight(.semibold))
-                        Text("Alle agentsessies over je projecten heen.")
-                            .foregroundStyle(.secondary)
-                    }
+                    header
                     if let notice = model.notice {
                         InlineNotice(notice, actionTitle: "Opnieuw") { Task { await model.load() } }
                     }
@@ -101,21 +96,9 @@ struct SessionsOverviewView: View {
                     section("Recent", symbol: "clock", sessions: model.recent,
                             empty: "Afgeronde sessies verschijnen hier.")
                 }
-                .padding(28)
-            }
-        }
-        .navigationTitle("Sessies")
-        .toolbar {
-            ToolbarItem {
-                Button("Vernieuw", systemImage: "arrow.clockwise") { Task { await model.load() } }
-                    .help("Vernieuw sessies")
-                    .symbolEffect(.rotate, isActive: model.isLoading)
-            }
-            ToolbarItem(placement: .primaryAction) {
-                Button("Nieuwe sessie", systemImage: "plus") { app.request(.newSession) }
-                    .help("Start een nieuwe agentsessie (⌘N)")
-                    .buttonStyle(.borderedProminent)
-                    .tint(OMAColor.accent)
+                .padding(.horizontal, 28)
+                .padding(.top, 36)
+                .padding(.bottom, 28)
             }
         }
         .alert(item: Binding(get: { model.alert }, set: { if $0 == nil { model.dismissAlert() } })) { alert in
@@ -127,6 +110,22 @@ struct SessionsOverviewView: View {
         .onChange(of: app.reconciliationTick) { _, _ in Task { await model.load() } }
     }
 
+    private var header: some View {
+        HStack(alignment: .top) {
+            PageTitle(title: "Sessies", subtitle: "Alle agentsessies over je projecten heen.")
+            Spacer()
+            HStack(spacing: 10) {
+                Button("Vernieuw", systemImage: "arrow.clockwise") { Task { await model.load() } }
+                    .buttonStyle(.omaIcon)
+                    .help("Vernieuw sessies")
+                    .symbolEffect(.rotate, isActive: model.isLoading)
+                Button("Nieuwe sessie", systemImage: "plus") { app.request(.newSession) }
+                    .buttonStyle(.omaPrimary)
+                    .help("Start een nieuwe agentsessie (⌘N)")
+            }
+        }
+    }
+
     private func section(_ title: String, symbol: String, sessions: [SessionViewDTO], empty: String) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             PanelHeader(title, symbol: symbol) {
@@ -136,7 +135,7 @@ struct SessionsOverviewView: View {
                 Text(empty)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, 20)
                     .omaCard()
             } else {
                 ForEach(sessions) { view in

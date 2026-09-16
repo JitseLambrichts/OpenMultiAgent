@@ -28,24 +28,6 @@ struct ProjectsDashboard: View {
                 }
             }
         }
-        .navigationTitle("Projecten")
-        .searchable(text: $model.searchQuery, prompt: "Zoek projecten")
-        .toolbar {
-            ToolbarItemGroup {
-                Button("Vernieuw", systemImage: "arrow.clockwise") {
-                    Task { await model.load() }
-                }
-                .help("Vernieuw projecten")
-                .accessibilityLabel("Vernieuw projecten")
-
-                Button("Voeg project toe", systemImage: "folder.badge.plus") {
-                    chooseProject()
-                }
-                .help("Voeg een Git-repository toe (⌘O)")
-                .buttonStyle(.borderedProminent)
-                .tint(OMAColor.accent)
-            }
-        }
         .task {
             guard model.state == .idle else { return }
             await model.load()
@@ -54,7 +36,7 @@ struct ProjectsDashboard: View {
 
     private var projectGrid: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 24) {
                 dashboardHeader
 
                 if let notice = model.notice {
@@ -79,23 +61,47 @@ struct ProjectsDashboard: View {
                     .accessibilityLabel("Projecten")
                 }
             }
-            .padding(28)
+            .padding(.horizontal, 28)
+            .padding(.top, 36)
+            .padding(.bottom, 28)
         }
     }
 
     private var dashboardHeader: some View {
-        HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Command Center")
-                    .font(.largeTitle.weight(.semibold))
-                Text("Je projecten en actieve agentwerkruimtes op één rustige plek.")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 22) {
+            HStack(spacing: 12) {
+                OMASearchField(prompt: "Zoek projecten", text: $model.searchQuery, accessibilityLabel: "Zoek projecten")
+                    .frame(maxWidth: 520)
+
+                Button("Vernieuw", systemImage: "arrow.clockwise") {
+                    Task { await model.load() }
+                }
+                .buttonStyle(.omaIcon)
+                .help("Vernieuw projecten")
+                .accessibilityLabel("Vernieuw projecten")
+
+                Spacer(minLength: 0)
+
+                Button("Voeg project toe", systemImage: "folder.badge.plus") {
+                    chooseProject()
+                }
+                .buttonStyle(.omaPrimary)
+                .help("Voeg een Git-repository toe (⌘O)")
             }
-            Spacer()
-            Text("\(model.projects.count) projecten")
-                .font(.subheadline.monospacedDigit())
-                .foregroundStyle(.secondary)
+
+            HStack(alignment: .firstTextBaseline) {
+                PageTitle(
+                    title: "Welkom terug 👋",
+                    subtitle: "Je projecten en actieve agentwerkruimtes op één rustige plek."
+                )
+                Spacer()
+                Text("\(model.projects.count) projecten")
+                    .font(.subheadline.weight(.medium).monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(OMAColor.surface, in: Capsule())
+            }
         }
     }
 
@@ -108,8 +114,7 @@ struct ProjectsDashboard: View {
             Button("Voeg project toe", systemImage: "folder.badge.plus") {
                 chooseProject()
             }
-            .buttonStyle(.borderedProminent)
-            .tint(OMAColor.accent)
+            .buttonStyle(.omaPrimary)
         }
     }
 
@@ -122,31 +127,17 @@ struct ProjectsDashboard: View {
             Button("Probeer opnieuw") {
                 Task { await model.load() }
             }
-            .buttonStyle(.borderedProminent)
-            .tint(OMAColor.accent)
+            .buttonStyle(.omaPrimary)
         }
     }
 
     private func noticeBanner(_ notice: ProjectsNotice) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(OMAColor.attention)
-            Text(notice.message)
-                .font(.callout)
-            Spacer()
-            Button(notice.action == .retry ? "Opnieuw" : "Kies map") {
-                if notice.action == .retry {
-                    Task { await model.load() }
-                } else {
-                    chooseProject()
-                }
+        InlineNotice(notice.message, actionTitle: notice.action == .retry ? "Opnieuw" : "Kies map") {
+            if notice.action == .retry {
+                Task { await model.load() }
+            } else {
+                chooseProject()
             }
-        }
-        .padding(12)
-        .background(OMAColor.attention.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
-        .overlay {
-            RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(OMAColor.attention.opacity(0.22))
         }
     }
 

@@ -16,6 +16,7 @@ struct TranscriptView: View {
                     Text("Events verschijnen zodra het transcript van deze sessie is ingelezen.")
                 } actions: {
                     Button("Vernieuw") { Task { await model.loadNewestTranscript() } }
+                        .buttonStyle(.omaSecondary)
                 }
             } else {
                 ScrollViewReader { proxy in
@@ -32,7 +33,7 @@ struct TranscriptView: View {
                                         Label("Laad oudere events", systemImage: "arrow.up")
                                     }
                                 }
-                                .buttonStyle(.bordered)
+                                .buttonStyle(.omaSecondary)
                                 .disabled(!model.canLoadOlderTranscript)
                                 Spacer()
                             }
@@ -111,9 +112,9 @@ struct TranscriptEventRow: View {
                     .foregroundStyle(.tertiary)
             }
         }
-        .padding(12)
+        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(OMAColor.surface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(OMAColor.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .accessibilityElement(children: .combine)
     }
 }

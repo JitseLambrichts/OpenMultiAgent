@@ -11,19 +11,17 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        NavigationSplitView {
-            List(SidebarDestination.allCases, selection: sidebarSelection) { destination in
-                Label(destination.title, systemImage: destination.symbol)
-                    .tag(destination)
-                    .badge(destination == .memory ? model.pendingPromotionCount : 0)
-            }
-            .navigationTitle("OpenMultiAgent")
-            .navigationSplitViewColumnWidth(min: 190, ideal: 220, max: 260)
-        } detail: {
+        HStack(spacing: 0) {
+            SidebarView(
+                selection: sidebarSelection,
+                pendingPromotionCount: model.pendingPromotionCount
+            )
             detail
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .omaPanelAnimation(model.selection, reduceMotion: reduceMotion)
         }
-        .navigationSplitViewStyle(.balanced)
+        .background(OMAColor.canvas)
+        .ignoresSafeArea()
         .tint(OMAColor.accent)
         .task {
             await model.connect()
@@ -66,10 +64,10 @@ struct RootView: View {
         }
     }
 
-    private var sidebarSelection: Binding<SidebarDestination?> {
+    private var sidebarSelection: Binding<SidebarDestination> {
         Binding(
             get: { model.selection },
-            set: { model.selection = $0 ?? .projects }
+            set: { model.selection = $0 }
         )
     }
 
@@ -159,6 +157,91 @@ struct RootView: View {
                 }
             }
         }
+    }
+}
+
+/// Custom navigation column: wordmark, a small "Navigatie" caption and one
+/// row per destination. The selected row is a lime disc plus a soft pill.
+struct SidebarView: View {
+    @Binding var selection: SidebarDestination
+    let pendingPromotionCount: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            wordmark
+                .padding(.top, 44)
+                .padding(.bottom, 32)
+
+            Text("Navigatie")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .padding(.leading, 12)
+                .padding(.bottom, 10)
+
+            VStack(spacing: 4) {
+                ForEach(SidebarDestination.allCases) { destination in
+                    row(destination)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 20)
+        .frame(width: 228)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .background(OMAColor.canvas)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Navigatie")
+    }
+
+    private var wordmark: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "sparkle")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(OMAColor.accent)
+                .accessibilityHidden(true)
+            Text("OpenMultiAgent")
+                .font(.system(size: 19, weight: .bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .padding(.leading, 6)
+    }
+
+    private func row(_ destination: SidebarDestination) -> some View {
+        let isSelected = destination == selection
+        let badge = destination == .memory ? pendingPromotionCount : 0
+        return Button {
+            selection = destination
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: destination.symbol)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(isSelected ? OMAColor.onAccent : Color.secondary)
+                    .frame(width: 40, height: 40)
+                    .background(isSelected ? OMAColor.accent : .clear, in: Circle())
+                Text(destination.title)
+                    .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
+                    .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+                Spacer(minLength: 0)
+                if badge > 0 {
+                    Text("\(badge)")
+                        .font(.caption2.weight(.bold).monospacedDigit())
+                        .foregroundStyle(OMAColor.onAccent)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(OMAColor.attention, in: Capsule())
+                        .padding(.trailing, 12)
+                        .accessibilityLabel("\(badge) te beoordelen")
+                }
+            }
+            .padding(.trailing, 4)
+            .background(isSelected ? OMAColor.surface : .clear, in: Capsule())
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .help(destination.title)
+        .accessibilityLabel(destination.title)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 }
 

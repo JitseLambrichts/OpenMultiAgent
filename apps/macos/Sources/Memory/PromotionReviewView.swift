@@ -11,13 +11,7 @@ struct PromotionReviewView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text("Review Knowledge")
-                    .font(.title2.weight(.semibold))
-                    .accessibilityAddTraits(.isHeader)
-                Text(subtitle)
-                    .foregroundStyle(.secondary)
-            }
+            PageTitle(title: "Review Knowledge", subtitle: subtitle)
 
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -26,17 +20,16 @@ struct PromotionReviewView: View {
                 statusLine
                 Spacer()
                 Button("Sluit", action: onClose)
+                    .buttonStyle(.omaSecondary)
                     .keyboardShortcut(.cancelAction)
                 switch state {
                 case .preview:
                     Button("Pas toe", systemImage: "checkmark.seal", action: onApply)
                         .keyboardShortcut(.defaultAction)
-                        .buttonStyle(.borderedProminent)
-                        .tint(OMAColor.accent)
+                        .buttonStyle(.omaPrimary)
                 case .failed:
                     Button("Probeer opnieuw", systemImage: "arrow.clockwise", action: onRetry)
-                        .buttonStyle(.borderedProminent)
-                        .tint(OMAColor.accent)
+                        .buttonStyle(.omaPrimary)
                 default:
                     EmptyView()
                 }
@@ -122,8 +115,7 @@ struct DiffText: View {
             .padding(.vertical, 8)
             .textSelection(.enabled)
         }
-        .background(OMAColor.surface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay { RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(OMAColor.separator) }
+        .background(OMAColor.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .transaction { $0.animation = nil }
     }
 

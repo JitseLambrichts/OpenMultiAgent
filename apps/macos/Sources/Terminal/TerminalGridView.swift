@@ -28,7 +28,8 @@ struct TerminalGridView: View {
                 }
             }
         }
-        .padding(8)
+        .padding(.horizontal, 28)
+        .padding(.bottom, 20)
         .background(OMAColor.canvas)
         .transaction { $0.animation = nil }
     }
@@ -58,8 +59,7 @@ struct TerminalGridView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .background(OMAColor.surface, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay { RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(OMAColor.separator) }
+            .background(OMAColor.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .accessibilityLabel("Open een sessie in deze lege terminal")
         }
     }
@@ -75,8 +75,7 @@ struct TerminalGridView: View {
             }
         }
         .background(OMAColor.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay { RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(OMAColor.separator) }
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Terminal voor sessie \(sessionID)")
@@ -122,8 +121,8 @@ struct TerminalGridView: View {
         }
         .labelStyle(.iconOnly)
         .buttonStyle(.borderless)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
         .background(OMAColor.elevated)
     }
 
@@ -148,8 +147,7 @@ struct TerminalGridView: View {
             Button("Verbind opnieuw", systemImage: "arrow.clockwise") {
                 Task { await model.reconnect(sessionID: sessionID) }
             }
-            .buttonStyle(.borderedProminent)
-            .tint(OMAColor.accent)
+            .buttonStyle(.omaPrimary)
         }
         .padding(20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

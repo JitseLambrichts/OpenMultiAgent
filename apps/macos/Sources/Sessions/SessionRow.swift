@@ -48,10 +48,10 @@ struct SessionRow: View {
             Button(action: actions.open) {
                 HStack(spacing: 12) {
                     Image(systemName: resolvedSymbol)
-                        .symbolRenderingMode(.hierarchical)
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(agent?.tint ?? .secondary)
-                        .frame(width: 30, height: 30)
-                        .background(OMAColor.elevated, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .frame(width: 38, height: 38)
+                        .background(OMAColor.raised, in: Circle())
                         .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 4) {
@@ -82,7 +82,7 @@ struct SessionRow: View {
                         .foregroundStyle(.tertiary)
                         .accessibilityHidden(true)
                 }
-                .padding(12)
+                .padding(14)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -100,7 +100,7 @@ struct SessionRow: View {
                     .padding(.trailing, 12)
             }
         }
-        .background(OMAColor.elevated.opacity(0.66), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(OMAColor.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .onHover { isHovering = $0 }
         .contextMenu {
             Button("Open", action: actions.open)

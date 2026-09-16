@@ -27,15 +27,12 @@ struct SwitchAgentSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text("Wissel van agent")
-                    .font(.title2.weight(.semibold))
-                Text(agent == .terminal
+            PageTitle(
+                title: "Wissel van agent",
+                subtitle: agent == .terminal
                     ? "De terminal start een kale shell in dezelfde map, zonder Handoff Brief."
-                    : "De nieuwe agent start in dezelfde worktree met een Handoff Brief en toegang tot het gedeelde geheugen.")
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+                    : "De nieuwe agent start in dezelfde worktree met een Handoff Brief en toegang tot het gedeelde geheugen."
+            )
 
             Form {
                 LabeledContent("Huidige agent", value: session.currentAgent?.title ?? "Onbekend")
@@ -54,6 +51,7 @@ struct SwitchAgentSheet: View {
             HStack {
                 Spacer()
                 Button("Annuleer") { dismiss() }
+                    .buttonStyle(.omaSecondary)
                     .keyboardShortcut(.cancelAction)
                 Button("Wissel agent") {
                     isSubmitting = true
@@ -64,8 +62,7 @@ struct SwitchAgentSheet: View {
                     }
                 }
                 .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
-                .tint(OMAColor.accent)
+                .buttonStyle(.omaPrimary)
                 .disabled(isSubmitting || agent == session.currentAgent)
             }
         }

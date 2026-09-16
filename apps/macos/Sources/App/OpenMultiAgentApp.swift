@@ -47,17 +47,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 struct OpenMultiAgentApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @State private var model = AppModel()
-    @AppStorage(AppearanceSetting.storageKey) private var appearance: AppearanceSetting = .dark
 
     var body: some Scene {
         WindowGroup(id: "main") {
             RootView(model: model)
-                .preferredColorScheme(appearance.colorScheme)
+                .preferredColorScheme(.dark)
                 .frame(minWidth: 1040, minHeight: 680)
                 .onAppear { delegate.shutdown = { await model.shutdownSidecar() } }
         }
         .defaultSize(width: 1280, height: 820)
-        .windowStyle(.automatic)
+        .windowStyle(.hiddenTitleBar)
         .commands { AppCommands(model: model) }
 
         Settings {
@@ -68,25 +67,9 @@ struct OpenMultiAgentApp: App {
 
 struct SettingsView: View {
     let app: AppModel
-    @AppStorage(AppearanceSetting.storageKey) private var appearance: AppearanceSetting = .dark
 
     var body: some View {
         TabView {
-            Tab("Algemeen", systemImage: "gearshape") {
-                Form {
-                    Picker("Weergave", selection: $appearance) {
-                        ForEach(AppearanceSetting.allCases) { setting in
-                            Text(setting.title).tag(setting)
-                        }
-                    }
-                    .pickerStyle(.radioGroup)
-                    Text("Donker is de standaard voor deze ontwikkeltool. Systeem volgt de macOS-instelling.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .formStyle(.grouped)
-                .padding()
-            }
             Tab("Agents", systemImage: "terminal") {
                 ScrollView {
                     AgentsSettingsView(app: app)
@@ -94,6 +77,7 @@ struct SettingsView: View {
                 }
             }
         }
+        .preferredColorScheme(.dark)
         .frame(width: 560, height: 520)
     }
 }

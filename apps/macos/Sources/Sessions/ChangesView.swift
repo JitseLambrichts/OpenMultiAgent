@@ -30,7 +30,7 @@ struct ChangesView: View {
                             }
                         }
                     }
-                    .padding(18)
+                    .padding(20)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
                     .omaCard()
 
@@ -42,7 +42,7 @@ struct ChangesView: View {
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .padding(18)
+                    .padding(20)
                     .omaCard()
                 } else if isLoading {
                     ProgressView("Wijzigingen laden…")
@@ -52,7 +52,8 @@ struct ChangesView: View {
                                            description: Text("Vernieuw om de worktree-status op te halen."))
                 }
             }
-            .padding(24)
+            .padding(.horizontal, 28)
+            .padding(.vertical, 12)
         }
         .transaction { $0.animation = nil }
     }

@@ -76,6 +76,6 @@ struct SessionInspector: View {
             SessionInspectorSections(session: session, status: status, symbolForAgent: symbolForAgent)
         }
         .scrollContentBackground(.hidden)
-        .background(OMAColor.canvas)
+        .background(OMAColor.surface)
     }
 }

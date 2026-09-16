@@ -82,6 +82,53 @@ describe("parseCandidateResponse", () => {
       ),
     ).toThrow(/invalid candidate/);
   });
+
+  test("unwraps OpenCode JSONL text events", () => {
+    const payload = JSON.stringify({
+      candidates: [
+        {
+          kind: "decision",
+          title: "Use Redis Streams",
+          body: "Replay is required.",
+          confidence: 0.9,
+        },
+      ],
+    });
+    const stream = [
+      JSON.stringify({
+        type: "step_start",
+        part: { type: "step-start" },
+      }),
+      JSON.stringify({
+        type: "text",
+        part: { type: "text", text: `\`\`\`json\n${payload}\n\`\`\`` },
+      }),
+      JSON.stringify({
+        type: "step_finish",
+        part: { type: "step-finish", reason: "stop" },
+      }),
+    ].join("\n");
+    expect(parseCandidateResponse(stream)).toEqual([
+      {
+        kind: "decision",
+        title: "Use Redis Streams",
+        body: "Replay is required.",
+        confidence: 0.9,
+        supersedes_memory_id: null,
+      },
+    ]);
+  });
+
+  test("surfaces OpenCode JSONL error events", () => {
+    expect(() =>
+      parseCandidateResponse(
+        JSON.stringify({
+          type: "error",
+          error: { name: "APIError", data: { message: "Rate limit exceeded" } },
+        }),
+      ),
+    ).toThrow(/Rate limit exceeded/);
+  });
 });
 
 describe("extractSession", () => {

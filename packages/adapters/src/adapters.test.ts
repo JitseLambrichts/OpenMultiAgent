@@ -98,6 +98,65 @@ describe("generic adapter", () => {
     }
   });
 
+  test("headless OpenCode uses run so the prompt is not a project path", () => {
+    for (const launchArgs of [[], ["run"], ["run", "{{prompt}}"]]) {
+      const adapter = createGenericAdapter({
+        id: "opencode",
+        name: "Opencode",
+        binary: "opencode",
+        launchArgs,
+        symbol: "terminal",
+      });
+      expect(
+        adapter.headlessCommand({
+          cwd: "/tmp/x",
+          prompt: "Extract only durable knowledge",
+          json: true,
+        }),
+      ).toEqual([
+        "opencode",
+        "run",
+        "--format",
+        "json",
+        "--dangerously-skip-permissions",
+        "--",
+        "Extract only durable knowledge",
+      ]);
+    }
+  });
+
+  test("headless OpenCode matches the binary basename, not launchArgs", () => {
+    const adapter = createGenericAdapter({
+      id: "ocode",
+      name: "OpenCode",
+      binary: "/usr/local/bin/opencode",
+      launchArgs: [],
+      symbol: "terminal",
+    });
+    expect(
+      adapter.headlessCommand({ cwd: "/tmp/x", prompt: "hi", json: false }),
+    ).toEqual([
+      "/usr/local/bin/opencode",
+      "run",
+      "--dangerously-skip-permissions",
+      "--",
+      "hi",
+    ]);
+  });
+
+  test("headless custom agents still append the prompt", () => {
+    const adapter = createGenericAdapter({
+      id: "grok",
+      name: "Grok",
+      binary: "grok",
+      launchArgs: [],
+      symbol: "sparkle",
+    });
+    expect(
+      adapter.headlessCommand({ cwd: "/tmp/x", prompt: "Extract knowledge" }),
+    ).toEqual(["grok", "Extract knowledge"]);
+  });
+
   test("resume and fork are rejected with a clear error", () => {
     const adapter = createGenericAdapter({
       id: "opencode",
