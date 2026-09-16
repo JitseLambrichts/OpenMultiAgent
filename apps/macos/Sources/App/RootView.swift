@@ -14,6 +14,7 @@ struct RootView: View {
         HStack(spacing: 0) {
             SidebarView(
                 selection: sidebarSelection,
+                isCollapsed: sidebarCollapsed,
                 pendingPromotionCount: model.pendingPromotionCount
             )
             detail
@@ -68,6 +69,13 @@ struct RootView: View {
         Binding(
             get: { model.selection },
             set: { model.selection = $0 }
+        )
+    }
+
+    private var sidebarCollapsed: Binding<Bool> {
+        Binding(
+            get: { windowState.isSidebarCollapsed },
+            set: { windowState.isSidebarCollapsed = $0 }
         )
     }
 
@@ -162,21 +170,25 @@ struct RootView: View {
 
 /// Custom navigation column: wordmark, a small "Navigatie" caption and one
 /// row per destination. The selected row is a lime disc plus a soft pill.
+/// Collapsible: when `isCollapsed` is true only the icons remain visible.
 struct SidebarView: View {
     @Binding var selection: SidebarDestination
+    @Binding var isCollapsed: Bool
     let pendingPromotionCount: Int
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: isCollapsed ? .center : .leading, spacing: 0) {
             wordmark
                 .padding(.top, 44)
                 .padding(.bottom, 32)
 
-            Text("Navigatie")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .padding(.leading, 12)
-                .padding(.bottom, 10)
+            if !isCollapsed {
+                Text("Navigatie")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.leading, 12)
+                    .padding(.bottom, 10)
+            }
 
             VStack(spacing: 4) {
                 ForEach(SidebarDestination.allCases) { destination in
@@ -184,11 +196,14 @@ struct SidebarView: View {
                 }
             }
             Spacer(minLength: 0)
+            collapseToggle
+                .padding(.bottom, 12)
         }
-        .padding(.horizontal, 20)
-        .frame(width: 228)
+        .padding(.horizontal, isCollapsed ? 8 : 20)
+        .frame(width: isCollapsed ? 68 : 228)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(OMAColor.canvas)
+        .animation(.easeInOut(duration: 0.18), value: isCollapsed)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Navigatie")
     }
@@ -199,12 +214,45 @@ struct SidebarView: View {
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(OMAColor.accent)
                 .accessibilityHidden(true)
-            Text("OpenMultiAgent")
-                .font(.system(size: 19, weight: .bold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+            if !isCollapsed {
+                Text("OpenMultiAgent")
+                    .font(.system(size: 19, weight: .bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
         }
-        .padding(.leading, 6)
+        .padding(.leading, isCollapsed ? 0 : 6)
+    }
+
+    private var collapseToggle: some View {
+        Button {
+            isCollapsed.toggle()
+        } label: {
+            if isCollapsed {
+                Image(systemName: "sidebar.right")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.secondary)
+                    .frame(width: 40, height: 40)
+                    .contentShape(Circle())
+            } else {
+                HStack(spacing: 12) {
+                    Image(systemName: "sidebar.left")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.secondary)
+                        .frame(width: 40, height: 40)
+                    Text("Inklappen")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.secondary)
+                    Spacer(minLength: 0)
+                }
+                .padding(.trailing, 4)
+                .contentShape(Capsule())
+            }
+        }
+        .buttonStyle(.plain)
+        .help(isCollapsed ? "Navigatie uitklappen" : "Navigatie inklappen")
+        .accessibilityLabel(isCollapsed ? "Navigatie uitklappen" : "Navigatie inklappen")
+        .keyboardShortcut("s", modifiers: [.command, .option])
     }
 
     private func row(_ destination: SidebarDestination) -> some View {
@@ -213,35 +261,55 @@ struct SidebarView: View {
         return Button {
             selection = destination
         } label: {
-            HStack(spacing: 12) {
-                Image(systemName: destination.symbol)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(isSelected ? OMAColor.onAccent : Color.secondary)
-                    .frame(width: 40, height: 40)
-                    .background(isSelected ? OMAColor.accent : .clear, in: Circle())
-                Text(destination.title)
-                    .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
-                    .foregroundStyle(isSelected ? Color.primary : Color.secondary)
-                Spacer(minLength: 0)
-                if badge > 0 {
-                    Text("\(badge)")
-                        .font(.caption2.weight(.bold).monospacedDigit())
-                        .foregroundStyle(OMAColor.onAccent)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(OMAColor.attention, in: Capsule())
-                        .padding(.trailing, 12)
-                        .accessibilityLabel("\(badge) te beoordelen")
+            if isCollapsed {
+                icon(destination, isSelected: isSelected)
+                    .overlay(alignment: .topTrailing) {
+                        if badge > 0 {
+                            Text("\(badge)")
+                                .font(.caption2.weight(.bold).monospacedDigit())
+                                .foregroundStyle(OMAColor.onAccent)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(OMAColor.attention, in: Capsule())
+                                .offset(x: 6, y: -6)
+                                .accessibilityLabel("\(badge) te beoordelen")
+                        }
+                    }
+            } else {
+                HStack(spacing: 12) {
+                    icon(destination, isSelected: isSelected)
+                    Text(destination.title)
+                        .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
+                        .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+                    Spacer(minLength: 0)
+                    if badge > 0 {
+                        Text("\(badge)")
+                            .font(.caption2.weight(.bold).monospacedDigit())
+                            .foregroundStyle(OMAColor.onAccent)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(OMAColor.attention, in: Capsule())
+                            .padding(.trailing, 12)
+                            .accessibilityLabel("\(badge) te beoordelen")
+                    }
                 }
+                .padding(.trailing, 4)
+                .background(isSelected ? OMAColor.surface : .clear, in: Capsule())
+                .contentShape(Capsule())
             }
-            .padding(.trailing, 4)
-            .background(isSelected ? OMAColor.surface : .clear, in: Capsule())
-            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .help(destination.title)
         .accessibilityLabel(destination.title)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+
+    private func icon(_ destination: SidebarDestination, isSelected: Bool) -> some View {
+        Image(systemName: destination.symbol)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(isSelected ? OMAColor.onAccent : Color.secondary)
+            .frame(width: 40, height: 40)
+            .background(isSelected ? OMAColor.accent : .clear, in: Circle())
     }
 }
 

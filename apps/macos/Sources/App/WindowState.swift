@@ -9,6 +9,7 @@ struct WindowState: Equatable, RawRepresentable, Sendable {
     var sessionID: String?
     var isInspectorVisible = false
     var terminalLayout: TerminalLayout = .single
+    var isSidebarCollapsed = false
 
     /// Separate Codable payload: a type that is both Codable and
     /// RawRepresentable would encode through `rawValue` and recurse forever.
@@ -18,6 +19,7 @@ struct WindowState: Equatable, RawRepresentable, Sendable {
         var sessionID: String?
         var isInspectorVisible: Bool
         var terminalLayout: TerminalLayout
+        var isSidebarCollapsed: Bool?
     }
 
     init() {}
@@ -27,13 +29,15 @@ struct WindowState: Equatable, RawRepresentable, Sendable {
         projectID: String? = nil,
         sessionID: String? = nil,
         isInspectorVisible: Bool = false,
-        terminalLayout: TerminalLayout = .single
+        terminalLayout: TerminalLayout = .single,
+        isSidebarCollapsed: Bool = false
     ) {
         self.destination = destination
         self.projectID = projectID
         self.sessionID = sessionID
         self.isInspectorVisible = isInspectorVisible
         self.terminalLayout = terminalLayout
+        self.isSidebarCollapsed = isSidebarCollapsed
     }
 
     init?(rawValue: String) {
@@ -48,6 +52,7 @@ struct WindowState: Equatable, RawRepresentable, Sendable {
         sessionID = payload.sessionID
         isInspectorVisible = payload.isInspectorVisible
         terminalLayout = payload.terminalLayout
+        isSidebarCollapsed = payload.isSidebarCollapsed ?? false
     }
 
     var rawValue: String {
@@ -56,7 +61,8 @@ struct WindowState: Equatable, RawRepresentable, Sendable {
             projectID: projectID,
             sessionID: sessionID,
             isInspectorVisible: isInspectorVisible,
-            terminalLayout: terminalLayout
+            terminalLayout: terminalLayout,
+            isSidebarCollapsed: isSidebarCollapsed
         )
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
@@ -76,6 +82,7 @@ struct WindowState: Equatable, RawRepresentable, Sendable {
             && lhs.sessionID == rhs.sessionID
             && lhs.isInspectorVisible == rhs.isInspectorVisible
             && lhs.terminalLayout == rhs.terminalLayout
+            && lhs.isSidebarCollapsed == rhs.isSidebarCollapsed
     }
 
     /// Picks the stored project only if it still exists.
