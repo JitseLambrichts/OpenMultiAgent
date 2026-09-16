@@ -194,6 +194,8 @@ protocol DesktopAPI: Sendable {
     func addCustomAgent(name: String, binary: String, launchArgs: [String], symbol: String) async throws -> CustomAgentDTO
     func updateCustomAgent(id: String, name: String, binary: String, launchArgs: [String], symbol: String) async throws -> CustomAgentDTO
     func removeCustomAgent(id: String) async throws
+    func listAgentSystemPrompts() async throws -> [AgentSystemPromptDTO]
+    func setAgentSystemPrompt(agent: String, systemPrompt: String) async throws
 }
 
 /// Defaults keep focused test stubs small: a stub only implements the calls the
@@ -223,6 +225,8 @@ extension DesktopAPI {
     func addCustomAgent(name: String, binary: String, launchArgs: [String], symbol: String) async throws -> CustomAgentDTO { throw notWired }
     func updateCustomAgent(id: String, name: String, binary: String, launchArgs: [String], symbol: String) async throws -> CustomAgentDTO { throw notWired }
     func removeCustomAgent(id: String) async throws { throw notWired }
+    func listAgentSystemPrompts() async throws -> [AgentSystemPromptDTO] { throw notWired }
+    func setAgentSystemPrompt(agent: String, systemPrompt: String) async throws { throw notWired }
 }
 
 actor SidecarClient: DesktopAPI {
@@ -448,6 +452,22 @@ actor SidecarClient: DesktopAPI {
         let _: RemovedAgentDTO = try await request(
             method: "agent.remove",
             params: ["id": .string(id)]
+        )
+    }
+
+    func listAgentSystemPrompts() async throws -> [AgentSystemPromptDTO] {
+        // The backend returns null for missing prompts on get; list only
+        // returns configured ones, so decoding tolerates an empty array.
+        try await request(method: "agent.system_prompt.list")
+    }
+
+    func setAgentSystemPrompt(agent: String, systemPrompt: String) async throws {
+        let _: AgentSystemPromptDTO = try await request(
+            method: "agent.system_prompt.set",
+            params: [
+                "agent": .string(agent),
+                "system_prompt": .string(systemPrompt),
+            ]
         )
     }
 

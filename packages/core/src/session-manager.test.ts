@@ -625,4 +625,38 @@ describe("SessionManager.switchAgent and resume", () => {
       true,
     );
   });
+
+  test("passes the configured system prompt on create and before the handoff on switch", async () => {
+    const contexts: LaunchContext[] = [];
+    const launchFor = (file: string) => (ctx: LaunchContext) => {
+      contexts.push(ctx);
+      return {
+        command: ["sleep", "30"],
+        nativeSessionId: `native-${ctx.sessionId}-${file}`,
+        transcriptPath: join(ctx.cwd, file),
+        writtenFiles: [],
+      };
+    };
+    const claude = fakeAdapter({ buildLaunch: launchFor("claude.jsonl") });
+    const codex = fakeAdapter({
+      name: "codex",
+      buildLaunch: launchFor("codex.jsonl"),
+    });
+    const mgr = new SessionManager(db, {
+      adapterFor: (agent) => (agent === "codex" ? codex : claude),
+      startLock: (fn) => fn(),
+      systemPromptFor: () => "You are a careful reviewer.",
+    });
+    const original = await mgr.create({
+      repoPath: repo,
+      agent: "claude",
+      title: "Prompt wiring",
+    });
+    expect(contexts.at(-1)?.systemPrompt).toBe("You are a careful reviewer.");
+
+    await mgr.switchAgent(original.session.id, "codex");
+    const systemPrompt = contexts.at(-1)?.systemPrompt ?? "";
+    expect(systemPrompt).toContain("You are a careful reviewer.");
+    expect(systemPrompt).toContain("Prompt wiring");
+  });
 });

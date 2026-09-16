@@ -233,6 +233,26 @@ async function invoke(
       return services.customAgentRemove({
         id: requiredString(params, "id"),
       });
+    case "agent.system_prompt.list":
+      return services.agentSystemPromptList();
+    case "agent.system_prompt.get":
+      return services.agentSystemPromptGet({
+        agent: requiredString(params, "agent"),
+      });
+    case "agent.system_prompt.set": {
+      const systemPrompt = params["system_prompt"];
+      if (systemPrompt !== undefined && typeof systemPrompt !== "string") {
+        throw new DesktopError(
+          RPC_ERROR.INVALID_PARAMS,
+          "system_prompt must be a string",
+        );
+      }
+      return services.agentSystemPromptSet({
+        agent: requiredString(params, "agent"),
+        system_prompt:
+          typeof systemPrompt === "string" ? systemPrompt : undefined,
+      });
+    }
     default:
       throw new DesktopError(
         RPC_ERROR.METHOD_NOT_FOUND,
