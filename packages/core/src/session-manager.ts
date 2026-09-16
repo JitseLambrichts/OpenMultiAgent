@@ -8,7 +8,10 @@ import {
   createWorktree,
   currentBranch,
   diffStat,
+  hasMergeBlockingChanges,
+  hasUncommittedChanges,
   isGitRepo,
+  mergeWorktree,
   removeWorktree,
   repoRoot,
 } from "./git.ts";
@@ -601,11 +604,44 @@ export class SessionManager {
   }
 
   /** Ends the session but keeps its history: the memory outlives the session. */
-  async end(sessionId: string): Promise<void> {
+  async end(
+    sessionId: string,
+    opts: { merge?: boolean } = {},
+  ): Promise<void> {
     const session = resolveSession(this.db, sessionId);
     await this.snapshotArtifacts(session);
+    if (opts.merge) {
+      await this.mergeBeforeEnd(session);
+    }
     await tmux.killSession(tmuxSessionName(session.id));
     endSession(this.db, session.id);
+  }
+
+  /**
+   * Merges the session branch into the main checkout before the tmux session
+   * is killed. Throws without side effects (session stays active) when the
+   * worktree is dirty or the merge conflicts, so the user can resolve it.
+   * On success the worktree is removed, mirroring the post-merge cleanup.
+   */
+  private async mergeBeforeEnd(session: Session): Promise<void> {
+    if (session.worktree_path === session.repo_path || !session.branch) return;
+    if (!existsSync(session.worktree_path)) {
+      throw new Error(
+        `session worktree no longer exists: ${session.worktree_path}`,
+      );
+    }
+    if (await hasUncommittedChanges(session.worktree_path)) {
+      throw new Error(
+        "worktree has uncommitted changes, commit first before merging",
+      );
+    }
+    if (await hasMergeBlockingChanges(session.repo_path)) {
+      throw new Error(
+        "main checkout has uncommitted changes, commit first before merging",
+      );
+    }
+    await mergeWorktree(session.repo_path, session.branch);
+    await removeWorktree(session.repo_path, session.worktree_path);
   }
 
   async remove(

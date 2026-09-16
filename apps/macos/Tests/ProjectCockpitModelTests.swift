@@ -62,7 +62,7 @@ struct ProjectCockpitModelTests {
     }
 
     @Test func endingAnActiveSessionAsksForConfirmationFirst() async {
-        let active = SessionViewDTO.sample(id: "active", status: "active")
+        let active = SessionViewDTO.sample(id: "active", status: "active", worktree: "/repo")
         let client = CockpitClientStub(detail: ProjectDetailDTO(project: .cockpitSample, sessions: [active]))
         let model = ProjectCockpitModel(project: .cockpitSample, client: client)
         await model.load()
@@ -76,6 +76,26 @@ struct ProjectCockpitModelTests {
 
         #expect(model.alert == nil)
         #expect(await client.endedSessionIDs == ["active"])
+        #expect(await client.endMergeFlags == [false])
+    }
+
+    @Test func endingAWorktreeSessionOffersMergeFirst() async {
+        let active = SessionViewDTO.sample(id: "active", status: "active")
+        let client = CockpitClientStub(detail: ProjectDetailDTO(project: .cockpitSample, sessions: [active]))
+        let model = ProjectCockpitModel(project: .cockpitSample, client: client)
+        await model.load()
+
+        model.requestEnd(sessionID: "active")
+
+        #expect(model.alert?.primaryAction == .mergeAndEnd)
+        #expect(model.alert?.secondaryAction == .endSession)
+        #expect(await client.endedSessionIDs.isEmpty)
+
+        await model.perform(.mergeAndEnd, for: "active")
+
+        #expect(model.alert == nil)
+        #expect(await client.endedSessionIDs == ["active"])
+        #expect(await client.endMergeFlags == [true])
     }
 
     @Test func removeRequestRetainsCoreDirtyWorktreeError() async {
@@ -113,6 +133,7 @@ private actor CockpitClientStub: DesktopAPI {
     var failure: (any Error)?
     var lastCreateRequest: NewSessionRequest?
     var endedSessionIDs: [String] = []
+    var endMergeFlags: [Bool] = []
     var removeCalls: [RemoveCall] = []
 
     init(
@@ -153,7 +174,10 @@ private actor CockpitClientStub: DesktopAPI {
         lastCreateRequest = request
         return try #require(created)
     }
-    func endSession(id: String) async throws { endedSessionIDs.append(id) }
+    func endSession(id: String, merge: Bool) async throws {
+        endedSessionIDs.append(id)
+        endMergeFlags.append(merge)
+    }
     func removeSession(id: String, force: Bool, keepWorktree: Bool) async throws {
         removeCalls.append(RemoveCall(id: id, force: force, keepWorktree: keepWorktree))
         if let removeError { throw removeError }

@@ -170,6 +170,80 @@ describe("desktop lifecycle error mapping", () => {
     }
   });
 
+  test("maps a merge with uncommitted changes to a commit-first conflict", async () => {
+    const repo = await makeRepo();
+    const storedSession = createSession(db, {
+      repo_path: repo,
+      worktree_path: join(repo, ".worktrees", "m4"),
+    });
+    const operations = sessionOperations();
+    let mergeFlag: boolean | undefined;
+    operations.end = async (_id, opts) => {
+      mergeFlag = opts?.merge;
+      throw new Error(
+        "worktree has uncommitted changes, commit first before merging",
+      );
+    };
+    const service = createDesktopServices({ db, manager: operations });
+
+    try {
+      await service.sessionEnd({ session_id: storedSession.id, merge: true });
+      throw new Error("expected a DesktopError");
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: -32003,
+        data: {
+          recovery: "commit_first",
+          session_id: storedSession.id,
+        },
+      });
+    }
+    expect(mergeFlag).toBe(true);
+  });
+
+  test("maps a conflicting merge to a resolve-conflicts error", async () => {
+    const repo = await makeRepo();
+    const storedSession = createSession(db, {
+      repo_path: repo,
+      worktree_path: join(repo, ".worktrees", "m4"),
+      branch: "oma/m4",
+    });
+    const operations = sessionOperations();
+    operations.end = async () => {
+      throw new Error(
+        "merge conflict merging 'oma/m4' into 'main', merge aborted: CONFLICT",
+      );
+    };
+    const service = createDesktopServices({ db, manager: operations });
+
+    try {
+      await service.sessionEnd({ session_id: storedSession.id, merge: true });
+      throw new Error("expected a DesktopError");
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: -32005,
+        data: {
+          recovery: "resolve_conflicts",
+          session_id: storedSession.id,
+        },
+      });
+    }
+  });
+
+  test("reports whether the session was merged on end", async () => {
+    const repo = await makeRepo();
+    const storedSession = createSession(db, {
+      repo_path: repo,
+      worktree_path: repo,
+    });
+    const service = createDesktopServices({ db, manager: sessionOperations() });
+
+    expect(await service.sessionEnd({ session_id: storedSession.id })).toEqual({
+      ended_session_id: storedSession.id,
+      merged: false,
+    });
+  });
+
   test("maps a missing agent binary to an unavailable error", async () => {
     const operations = sessionOperations();
     operations.create = async () => {
@@ -240,7 +314,10 @@ describe("promotion extraction", () => {
 
     const result = await service.sessionEnd({ session_id: storedSession.id });
 
-    expect(result).toEqual({ ended_session_id: storedSession.id });
+    expect(result).toEqual({
+      ended_session_id: storedSession.id,
+      merged: false,
+    });
     expect(calls).toEqual(["end", "extract"]);
   });
 

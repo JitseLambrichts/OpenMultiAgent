@@ -348,6 +348,78 @@ describe("SessionManager.end and remove", () => {
     ]);
   });
 
+  test("end with merge merges the branch and cleans up the worktree", async () => {
+    const mgr = manager();
+    const view = await mgr.create({
+      repoPath: repo,
+      agent: "claude",
+      worktree: true,
+    });
+    const worktree = view.session.worktree_path;
+    writeFileSync(join(worktree, "feature.txt"), "shipped\n");
+    await exec(["git", "add", "."], { cwd: worktree });
+    await exec(["git", "commit", "-m", "add feature"], { cwd: worktree });
+
+    await mgr.end(view.session.id, { merge: true });
+
+    expect(await tmux.hasSession(tmuxSessionName(view.session.id))).toBe(false);
+    expect(mgr.view(view.session.id).session.status).toBe("ended");
+    expect(existsSync(worktree)).toBe(false);
+    expect(existsSync(join(repo, "feature.txt"))).toBe(true);
+  });
+
+  test("end with merge refuses a dirty worktree and keeps the session alive", async () => {
+    const mgr = manager();
+    const view = await mgr.create({
+      repoPath: repo,
+      agent: "claude",
+      worktree: true,
+    });
+    writeFileSync(join(view.session.worktree_path, "dirty.txt"), "uncommitted\n");
+
+    await expect(mgr.end(view.session.id, { merge: true })).rejects.toThrow(
+      /uncommitted changes, commit first/,
+    );
+    expect(mgr.view(view.session.id).session.status).toBe("active");
+    expect(await tmux.hasSession(tmuxSessionName(view.session.id))).toBe(true);
+  });
+
+  test("end with merge aborts on conflict and keeps the session alive", async () => {
+    const mgr = manager();
+    const view = await mgr.create({
+      repoPath: repo,
+      agent: "claude",
+      worktree: true,
+    });
+    const worktree = view.session.worktree_path;
+    writeFileSync(join(worktree, "README.md"), "# worktree\n");
+    await exec(["git", "add", "."], { cwd: worktree });
+    await exec(["git", "commit", "-m", "worktree change"], { cwd: worktree });
+    writeFileSync(join(repo, "README.md"), "# main\n");
+    await exec(["git", "add", "."], { cwd: repo });
+    await exec(["git", "commit", "-m", "main change"], { cwd: repo });
+
+    await expect(mgr.end(view.session.id, { merge: true })).rejects.toThrow(
+      /merge conflict/,
+    );
+    expect(mgr.view(view.session.id).session.status).toBe("active");
+    expect(await tmux.hasSession(tmuxSessionName(view.session.id))).toBe(true);
+  });
+
+  test("end without merge leaves a worktree session untouched", async () => {
+    const mgr = manager();
+    const view = await mgr.create({
+      repoPath: repo,
+      agent: "claude",
+      worktree: true,
+    });
+
+    await mgr.end(view.session.id);
+
+    expect(mgr.view(view.session.id).session.status).toBe("ended");
+    expect(existsSync(view.session.worktree_path)).toBe(true);
+  });
+
   test("rm removes the worktree and the session record", async () => {
     const mgr = manager();
     const view = await mgr.create({

@@ -64,6 +64,8 @@ export class DesktopError extends Error {
 }
 
 const DIRTY_WORKTREE = /modified or untracked files|use --force/i;
+const COMMIT_FIRST = /uncommitted changes, commit first/i;
+const MERGE_CONFLICT = /merge conflict|Automatic merge failed/i;
 const MISSING_BINARY = /is not on PATH/i;
 
 /**
@@ -77,6 +79,20 @@ export function toDesktopError(
 ): DesktopError {
   if (error instanceof DesktopError) return error;
   const message = error instanceof Error ? error.message : String(error);
+  if (COMMIT_FIRST.test(message)) {
+    return new DesktopError(-32003, "Commit changes before merging", {
+      ...context,
+      recovery: "commit_first",
+      detail: message,
+    });
+  }
+  if (MERGE_CONFLICT.test(message)) {
+    return new DesktopError(-32005, "The merge has conflicts", {
+      ...context,
+      recovery: "resolve_conflicts",
+      detail: message,
+    });
+  }
   if (DIRTY_WORKTREE.test(message)) {
     return new DesktopError(-32003, "The worktree has uncommitted changes", {
       ...context,
@@ -197,7 +213,8 @@ export interface DesktopServices {
   }): Promise<DesktopSessionView>;
   sessionEnd(input: {
     session_id: string;
-  }): Promise<{ ended_session_id: string }>;
+    merge?: boolean;
+  }): Promise<{ ended_session_id: string; merged: boolean }>;
   sessionRemove(input: {
     session_id: string;
     force?: boolean;
@@ -261,7 +278,7 @@ export interface SessionOperations {
     agent: AgentName,
     opts?: { prompt?: string },
   ): Promise<SessionView>;
-  end(sessionId: string): Promise<void>;
+  end(sessionId: string, opts?: { merge?: boolean }): Promise<void>;
   remove(
     sessionId: string,
     opts?: { force?: boolean; keepWorktree?: boolean },
@@ -438,10 +455,12 @@ export function createDesktopServices(
       guarded({ session_id, agent }, async () =>
         sessionView(await manager.switchAgent(session_id, agent, { prompt })),
       ),
-    sessionEnd: async ({ session_id }) => {
+    sessionEnd: async ({ session_id, merge }) => {
       const session = resolveSession(db, session_id);
       ingestSessionEvents(session.id);
-      await guarded({ session_id: session.id }, () => manager.end(session.id));
+      await guarded({ session_id: session.id }, () =>
+        manager.end(session.id, { merge }),
+      );
       try {
         await runExtractionOnce(session.id);
       } catch {
@@ -449,7 +468,7 @@ export function createDesktopServices(
         // be able to end even if no agent is on PATH or extraction fails.
         // The manual Extract Knowledge button remains the retry path.
       }
-      return { ended_session_id: session.id };
+      return { ended_session_id: session.id, merged: merge === true };
     },
     sessionRemove: async ({ session_id, force, keep_worktree }) => {
       const session = resolveSession(db, session_id);

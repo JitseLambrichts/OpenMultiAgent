@@ -3,6 +3,7 @@ import Observation
 
 enum CockpitAlertAction: Equatable, Sendable {
     case endSession
+    case mergeAndEnd
     case removeSession
     case keepWorktreeAndRetry
     case forceRemove
@@ -44,17 +45,38 @@ struct CockpitAlert: Equatable, Identifiable, Sendable {
             isDestructive: true
         )
     }
+
+    /// Merge-then-end for worktree sessions: the primary action merges first.
+    static func mergeEndConfirmation(for view: SessionViewDTO) -> CockpitAlert {
+        CockpitAlert(
+            id: "merge-end-\(view.id)",
+            sessionID: view.id,
+            title: "Sessie “\(view.session.displayTitle)” beëindigen?",
+            message: "Deze sessie werkt in een eigen worktree (\(view.session.branch ?? "onbekende branch")). “Merge + beëindig” voegt de branch eerst samen en ruimt daarna de worktree op. Bij niet-gecommitte wijzigingen of conflicten blijft de sessie actief.",
+            primaryAction: .mergeAndEnd,
+            secondaryAction: .endSession,
+            isDestructive: true
+        )
+    }
 }
 
 extension CockpitAlertAction {
     var title: String {
         switch self {
         case .endSession: "Beëindig"
+        case .mergeAndEnd: "Merge + beëindig"
         case .removeSession: "Verwijder"
         case .keepWorktreeAndRetry: "Behoud worktree"
         case .forceRemove: "Forceer verwijdering"
         }
     }
+}
+
+/// Localised end/merge failure surfaced through the cockpit notice.
+struct CockpitEndError: LocalizedError, Equatable {
+    let text: String
+    var errorDescription: String? { text }
+    static func message(_ text: String) -> CockpitEndError { CockpitEndError(text: text) }
 }
 
 /// Changed files of one active session, for the cockpit panel.
@@ -197,8 +219,13 @@ final class ProjectCockpitModel {
     }
 
     /// Ending an active session asks first; an already-ended session is a no-op.
+    /// Worktree sessions offer merge-then-end as the primary action.
     func requestEnd(sessionID: String) {
         guard let view = session(withID: sessionID), view.session.isActive else { return }
+        if view.session.usesWorktree {
+            alert = .mergeEndConfirmation(for: view)
+            return
+        }
         alert = CockpitAlert(
             id: "end-\(sessionID)",
             sessionID: sessionID,
@@ -210,9 +237,20 @@ final class ProjectCockpitModel {
         )
     }
 
-    func end(sessionID: String) async {
+    func end(sessionID: String, merge: Bool = false) async {
         await perform(sessionID: sessionID) {
-            try await self.client.endSession(id: sessionID)
+            do {
+                try await self.client.endSession(id: sessionID, merge: merge)
+            } catch let error as RPCErrorDTO {
+                switch error.recoveryAction {
+                case .commitFirst:
+                    throw CockpitEndError.message("De worktree heeft niet-gecommitte wijzigingen. Commit eerst en probeer het mergen opnieuw.")
+                case .resolveConflicts:
+                    throw CockpitEndError.message("De merge heeft conflicten. Los ze op in de worktree (merge is afgebroken) en probeer het opnieuw.")
+                default:
+                    throw error
+                }
+            }
             self.statuses.removeValue(forKey: sessionID)
             await self.load()
         }
@@ -243,7 +281,9 @@ final class ProjectCockpitModel {
         alert = nil
         switch action {
         case .endSession:
-            await end(sessionID: sessionID)
+            await end(sessionID: sessionID, merge: false)
+        case .mergeAndEnd:
+            await end(sessionID: sessionID, merge: true)
         case .removeSession:
             await remove(sessionID: sessionID, force: false, keepWorktree: false)
         case .keepWorktreeAndRetry:

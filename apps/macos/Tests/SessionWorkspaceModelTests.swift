@@ -122,6 +122,33 @@ struct SessionWorkspaceModelTests {
         #expect(await client.autoCheckCalls == callsAtEnd)
     }
 
+    @Test func endingWithMergePassesTheFlag() async {
+        let client = WorkspaceClientStub()
+        let model = SessionWorkspaceModel(
+            session: .sample(id: "s", status: "active"),
+            client: client
+        )
+
+        let ended = await model.endSession(merge: true)
+
+        #expect(ended)
+        #expect(await client.endMergeFlags == [true])
+    }
+
+    @Test func mergeConflictKeepsTheSessionAndShowsGuidance() async {
+        let client = WorkspaceClientStub()
+        await client.setEndError(RPCErrorDTO(code: -32005, message: "The merge has conflicts", recovery: "resolve_conflicts"))
+        let model = SessionWorkspaceModel(
+            session: .sample(id: "s", status: "active"),
+            client: client
+        )
+
+        let ended = await model.endSession(merge: true)
+
+        #expect(!ended)
+        #expect(model.notice?.contains("conflicten") == true)
+    }
+
     /// Regression test for the finding that a background auto-check could
     /// silently replace the candidates behind an open review sheet: while
     /// `route` is set (the sheet is up, showing a preview the user hasn't
@@ -158,20 +185,26 @@ private actor WorkspaceClientStub: DesktopAPI {
     var applyCalls = 0
     var extractCalls = 0
     var autoCheckCalls = 0
+    var endMergeFlags: [Bool] = []
+    var endError: RPCErrorDTO?
 
     init(
         pages: [String?: TranscriptPageDTO] = [:],
         extractCount: Int = 0,
         extractError: RPCErrorDTO? = nil,
         preview: PromotionPreviewDTO? = nil,
-        autoCheckCandidateCount: Int = 0
+        autoCheckCandidateCount: Int = 0,
+        endError: RPCErrorDTO? = nil
     ) {
         self.pages = pages
         self.extractCount = extractCount
         self.extractError = extractError
         self.preview = preview
         self.autoCheckCandidateCount = autoCheckCandidateCount
+        self.endError = endError
     }
+
+    func setEndError(_ error: RPCErrorDTO?) { endError = error }
 
     func hello() async throws -> HelloDTO { HelloDTO(protocolVersion: 1, appVersion: "test", agents: []) }
     func health() async throws -> HealthDTO { HealthDTO(ok: true, tmuxAvailable: true) }
@@ -203,7 +236,10 @@ private actor WorkspaceClientStub: DesktopAPI {
         autoCheckCalls += 1
         return ExtractResultDTO(candidateCount: autoCheckCandidateCount)
     }
-    func endSession(id: String) async throws {}
+    func endSession(id: String, merge: Bool) async throws {
+        endMergeFlags.append(merge)
+        if let endError { throw endError }
+    }
 }
 
 private extension TranscriptEventDTO {

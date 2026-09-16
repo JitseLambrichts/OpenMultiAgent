@@ -67,14 +67,31 @@ struct SessionWorkspaceView: View {
             Text("De sessies blijven draaien; alleen de lokale terminalkoppelingen worden gesloten.")
         }
         .alert("Sessie beëindigen?", isPresented: $showsEndConfirmation) {
-            Button("Beëindig", role: .destructive) {
-                Task {
-                    if await model.endSession() { app.reconcile() }
+            if model.session.session.usesWorktree {
+                Button("Merge + beëindig") {
+                    Task {
+                        if await model.endSession(merge: true) { app.reconcile() }
+                    }
+                }
+                Button("Alleen beëindigen", role: .destructive) {
+                    Task {
+                        if await model.endSession(merge: false) { app.reconcile() }
+                    }
+                }
+            } else {
+                Button("Beëindig", role: .destructive) {
+                    Task {
+                        if await model.endSession() { app.reconcile() }
+                    }
                 }
             }
             Button("Annuleer", role: .cancel) {}
         } message: {
-            Text("De tmux-sessie stopt en de agent wordt afgesloten. Transcript, worktree en geheugen blijven bewaard.")
+            if model.session.session.usesWorktree {
+                Text("Deze sessie werkt in een eigen worktree (\(model.session.session.branch ?? "onbekende branch")). “Merge + beëindig” voegt de branch eerst samen met de hoofdcheckout en ruimt daarna de worktree op. Bij niet-gecommitte wijzigingen of conflicten blijft de sessie actief.")
+            } else {
+                Text("De tmux-sessie stopt en de agent wordt afgesloten. Transcript, worktree en geheugen blijven bewaard.")
+            }
         }
         .task {
             await model.loadStatus()

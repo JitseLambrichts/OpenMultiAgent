@@ -277,9 +277,11 @@ extension SessionStatusDTO {
 
 struct EndedSessionDTO: Decodable, Equatable, Sendable {
     let endedSessionID: String
+    let merged: Bool?
 
     private enum CodingKeys: String, CodingKey {
         case endedSessionID = "ended_session_id"
+        case merged
     }
 }
 

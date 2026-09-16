@@ -161,6 +161,7 @@ async function invoke(
     case "session.end":
       return services.sessionEnd({
         session_id: requiredString(params, "session_id"),
+        merge: optionalBoolean(params, "merge"),
       });
     case "session.remove":
       return services.sessionRemove({

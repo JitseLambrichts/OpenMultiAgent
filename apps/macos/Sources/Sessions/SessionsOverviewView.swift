@@ -56,7 +56,7 @@ final class SessionsOverviewModel {
     func perform(_ action: CockpitAlertAction, for sessionID: String) async {
         alert = nil
         switch action {
-        case .endSession:
+        case .endSession, .mergeAndEnd:
             break
         case .removeSession:
             await remove(sessionID: sessionID, force: false, keepWorktree: false)

@@ -178,7 +178,7 @@ protocol DesktopAPI: Sendable {
     func createSession(_ request: NewSessionRequest) async throws -> SessionViewDTO
     func resumeSession(id: String) async throws -> SessionViewDTO
     func switchSession(id: String, agent: AgentKind, prompt: String?) async throws -> SessionViewDTO
-    func endSession(id: String) async throws
+    func endSession(id: String, merge: Bool) async throws
     func removeSession(id: String, force: Bool, keepWorktree: Bool) async throws
     func transcript(sessionID: String, before: String?, limit: Int) async throws -> TranscriptPageDTO
     func listMemory(repoPath: String?, limit: Int) async throws -> [MemoryDTO]
@@ -207,7 +207,7 @@ extension DesktopAPI {
     func createSession(_ request: NewSessionRequest) async throws -> SessionViewDTO { throw notWired }
     func resumeSession(id: String) async throws -> SessionViewDTO { throw notWired }
     func switchSession(id: String, agent: AgentKind, prompt: String?) async throws -> SessionViewDTO { throw notWired }
-    func endSession(id: String) async throws { throw notWired }
+    func endSession(id: String, merge: Bool) async throws { throw notWired }
     func removeSession(id: String, force: Bool, keepWorktree: Bool) async throws { throw notWired }
     func transcript(sessionID: String, before: String?, limit: Int) async throws -> TranscriptPageDTO { throw notWired }
     func listMemory(repoPath: String?, limit: Int) async throws -> [MemoryDTO] { throw notWired }
@@ -351,10 +351,13 @@ actor SidecarClient: DesktopAPI {
         return try await request(method: "session.switch", params: params)
     }
 
-    func endSession(id: String) async throws {
+    func endSession(id: String, merge: Bool = false) async throws {
         let _: EndedSessionDTO = try await request(
             method: "session.end",
-            params: ["session_id": .string(id)]
+            params: [
+                "session_id": .string(id),
+                "merge": .bool(merge),
+            ]
         )
     }
 

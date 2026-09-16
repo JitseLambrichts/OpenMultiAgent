@@ -250,19 +250,33 @@ final class SessionWorkspaceModel {
 
     // MARK: Lifecycle
 
-    func endSession() async -> Bool {
+    func endSession(merge: Bool = false) async -> Bool {
         guard session.session.isActive, !isEnding else { return false }
         isEnding = true
         defer { isEnding = false }
         await stopAutoCheckLoop()
         do {
-            try await client.endSession(id: session.id)
+            try await client.endSession(id: session.id, merge: merge)
             await loadStatus()
             return true
         } catch {
-            notice = message(for: error)
+            notice = endMessage(for: error)
             return false
         }
+    }
+
+    private func endMessage(for error: any Error) -> String {
+        if let rpc = error as? RPCErrorDTO {
+            switch rpc.recoveryAction {
+            case .commitFirst:
+                return "De worktree heeft niet-gecommitte wijzigingen. Commit eerst in de worktree en probeer het mergen opnieuw."
+            case .resolveConflicts:
+                return "De merge heeft conflicten. Los ze op in de worktree (merge is afgebroken) en probeer het opnieuw."
+            default:
+                return message(for: error)
+            }
+        }
+        return message(for: error)
     }
 
     private func message(for error: any Error) -> String {

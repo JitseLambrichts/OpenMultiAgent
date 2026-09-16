@@ -16,6 +16,8 @@ enum RecoveryAction: Equatable, Sendable {
     case installTmux
     case installBinary
     case keepWorktreeOrForce
+    case commitFirst
+    case resolveConflicts
     case none
 }
 
@@ -67,6 +69,8 @@ struct RPCErrorDTO: Decodable, LocalizedError, Equatable, Sendable {
         case "install_tmux": return .installTmux
         case "install_binary": return .installBinary
         case "keep_worktree_or_force": return .keepWorktreeOrForce
+        case "commit_first": return .commitFirst
+        case "resolve_conflicts": return .resolveConflicts
         default: break
         }
         switch code {
