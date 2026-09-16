@@ -583,4 +583,41 @@ describe("custom agents", () => {
       else process.env.OMA_HOME = previous;
     }
   });
+
+  test("round-trips per-agent system prompts", async () => {
+    const home = mkdtempSync(join(tmpdir(), "oma-prompts-home-"));
+    tempDirs.push(home);
+    const previous = process.env.OMA_HOME;
+    process.env.OMA_HOME = home;
+    try {
+      const service = createDesktopServices({
+        db,
+        manager: sessionOperations(),
+      });
+
+      expect(await service.agentSystemPromptList()).toEqual([]);
+      const saved = await service.agentSystemPromptSet({
+        agent: "Claude",
+        system_prompt: "  You are concise.  ",
+      });
+      expect(saved).toEqual({
+        agent: "claude",
+        system_prompt: "You are concise.",
+      });
+      expect(await service.agentSystemPromptGet({ agent: "claude" })).toEqual(
+        saved,
+      );
+      expect(await service.agentSystemPromptList()).toEqual([saved]);
+
+      const cleared = await service.agentSystemPromptSet({
+        agent: "claude",
+        system_prompt: "   ",
+      });
+      expect(cleared).toEqual({ agent: "claude", system_prompt: "" });
+      expect(await service.agentSystemPromptList()).toEqual([]);
+    } finally {
+      if (previous === undefined) delete process.env.OMA_HOME;
+      else process.env.OMA_HOME = previous;
+    }
+  });
 });

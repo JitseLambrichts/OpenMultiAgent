@@ -5,14 +5,16 @@ struct CustomAgentFormValues: Equatable, Sendable {
     var binary = ""
     var arguments = ""
     var symbol = "terminal"
+    var systemPrompt = ""
 
     init() {}
 
-    init(agent: CustomAgentDTO) {
+    init(agent: CustomAgentDTO, systemPrompt: String = "") {
         name = agent.name
         binary = agent.binary
         arguments = agent.launchArgs.joined(separator: " ")
         symbol = agent.symbol
+        self.systemPrompt = systemPrompt
     }
 
     var launchArgs: [String] {
@@ -37,6 +39,7 @@ struct CustomAgentFormValues: Equatable, Sendable {
 @Observable
 final class AgentsSettingsModel {
     var agents: [CustomAgentDTO] = []
+    var systemPrompts: [String: String] = [:]
     var isLoading = false
     var notice: String?
 
@@ -44,23 +47,43 @@ final class AgentsSettingsModel {
         isLoading = true
         defer { isLoading = false }
         do {
-            agents = try await client.listCustomAgents().sorted {
+            let fetchedAgents = try await client.listCustomAgents()
+            agents = fetchedAgents.sorted {
                 $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
             }
-            notice = nil
+            do {
+                let fetchedPrompts = try await client.listAgentSystemPrompts()
+                systemPrompts = Dictionary(
+                    uniqueKeysWithValues: fetchedPrompts.map { ($0.agent, $0.systemPrompt) }
+                )
+                notice = nil
+            } catch {
+                // Oudere sidecars kennen de prompt-route nog niet; toon dan
+                // tenminste de agents in plaats van alles te verbergen.
+                systemPrompts = [:]
+                notice = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            }
         } catch {
             notice = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }
     }
 
+    func prompt(for agentID: String) -> String {
+        systemPrompts[agentID] ?? ""
+    }
+
     func add(client: any DesktopAPI, values: CustomAgentFormValues) async -> String? {
         do {
-            _ = try await client.addCustomAgent(
+            let created = try await client.addCustomAgent(
                 name: values.name.trimmingCharacters(in: .whitespacesAndNewlines),
                 binary: values.binary.trimmingCharacters(in: .whitespacesAndNewlines),
                 launchArgs: values.launchArgs,
                 symbol: values.symbol
             )
+            let prompt = values.systemPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !prompt.isEmpty {
+                try await client.setAgentSystemPrompt(agent: created.id, systemPrompt: prompt)
+            }
             await load(client: client)
             return nil
         } catch {
@@ -79,6 +102,25 @@ final class AgentsSettingsModel {
                 launchArgs: values.launchArgs,
                 symbol: values.symbol
             )
+            try await client.setAgentSystemPrompt(
+                agent: id,
+                systemPrompt: values.systemPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+            await load(client: client)
+            return nil
+        } catch {
+            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            notice = message
+            return message
+        }
+    }
+
+    func saveSystemPrompt(client: any DesktopAPI, agentID: String, prompt: String) async -> String? {
+        do {
+            try await client.setAgentSystemPrompt(
+                agent: agentID,
+                systemPrompt: prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
             await load(client: client)
             return nil
         } catch {
@@ -91,6 +133,9 @@ final class AgentsSettingsModel {
     func remove(client: any DesktopAPI, agent: CustomAgentDTO) async {
         do {
             try await client.removeCustomAgent(id: agent.id)
+            // Prompt opruimen is best-effort: een missende route mag het
+            // verwijderen nooit blokkeren.
+            try? await client.setAgentSystemPrompt(agent: agent.id, systemPrompt: "")
             await load(client: client)
         } catch {
             notice = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
@@ -104,6 +149,7 @@ struct AgentsSettingsView: View {
     @State private var isAdding = false
     @State private var editing: CustomAgentDTO?
     @State private var draft = CustomAgentFormValues()
+    @State private var expandedPrompts: Set<String> = []
 
     private var client: any DesktopAPI { app.client }
 
@@ -112,23 +158,47 @@ struct AgentsSettingsView: View {
             PanelHeader("Standaardagents", symbol: "sparkles") {
                 StatusBadge(text: "Ingebouwd", symbol: "lock.fill", color: OMAColor.quiet)
             }
+            Text("Geef elke agent een eigen system prompt. Die gaat bij elke nieuwe sessie mee; bij wisselen komt hij vóór de Handoff Brief.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
             VStack(spacing: 8) {
                 ForEach(AgentKind.builtins) { agent in
-                    HStack(spacing: 12) {
-                        Image(systemName: agent.symbol)
-                            .symbolRenderingMode(.hierarchical)
-                            .foregroundStyle(agent.tint)
-                            .frame(width: 22)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(agent.title).font(.body.weight(.medium))
-                            Text(binaryName(for: agent))
-                                .font(.caption.monospaced())
-                                .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 0) {
+                        HStack(spacing: 12) {
+                            Image(systemName: agent.symbol)
+                                .symbolRenderingMode(.hierarchical)
+                                .foregroundStyle(agent.tint)
+                                .frame(width: 22)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(agent.title).font(.body.weight(.medium))
+                                Text(binaryName(for: agent))
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if !model.prompt(for: agent.rawValue).isEmpty {
+                                StatusBadge(text: "Eigen prompt", symbol: "text.quote", color: OMAColor.accent)
+                            } else {
+                                StatusBadge(text: "Klaar", symbol: "checkmark.circle", color: OMAColor.positive)
+                            }
+                            Button(expandedPrompts.contains(agent.rawValue) ? "Verberg" : "Prompt") {
+                                toggle(agent.rawValue)
+                            }
+                            .controlSize(.small)
                         }
-                        Spacer()
-                        StatusBadge(text: "Klaar", symbol: "checkmark.circle", color: OMAColor.positive)
+                        .padding(12)
+                        if expandedPrompts.contains(agent.rawValue) {
+                            AgentSystemPromptEditor(
+                                prompt: model.prompt(for: agent.rawValue),
+                                hint: "Voor \(agent.title). Leeg laten voor het standaardgedrag.",
+                                onSave: { prompt in
+                                    await model.saveSystemPrompt(client: client, agentID: agent.rawValue, prompt: prompt)
+                                }
+                            )
+                            .padding(.horizontal, 12)
+                            .padding(.bottom, 12)
+                        }
                     }
-                    .padding(12)
                     .omaCard()
                 }
             }
@@ -166,34 +236,54 @@ struct AgentsSettingsView: View {
                 VStack(spacing: 8) {
                     ForEach(model.agents) { agent in
                         let kind = AgentKind(rawValue: agent.id)
-                        HStack(spacing: 12) {
-                            Image(systemName: agent.symbol)
-                                .symbolRenderingMode(.hierarchical)
-                                .foregroundStyle(kind.tint)
-                                .frame(width: 22)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(agent.name).font(.body.weight(.medium))
-                                Text(commandPreview(for: agent))
-                                    .font(.caption.monospaced())
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
-                            }
-                            Spacer()
-                            Button("Wijzig") {
-                                draft = CustomAgentFormValues(agent: agent)
-                                editing = agent
-                            }
-                            .controlSize(.small)
-                            Button("Verwijder", role: .destructive) {
-                                Task {
-                                    await model.remove(client: client, agent: agent)
-                                    await app.refreshCustomAgents()
+                        VStack(alignment: .leading, spacing: 0) {
+                            HStack(spacing: 12) {
+                                Image(systemName: agent.symbol)
+                                    .symbolRenderingMode(.hierarchical)
+                                    .foregroundStyle(kind.tint)
+                                    .frame(width: 22)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(agent.name).font(.body.weight(.medium))
+                                    Text(commandPreview(for: agent))
+                                        .font(.caption.monospaced())
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
                                 }
+                                Spacer()
+                                if !model.prompt(for: agent.id).isEmpty {
+                                    StatusBadge(text: "Eigen prompt", symbol: "text.quote", color: OMAColor.accent)
+                                }
+                                Button(expandedPrompts.contains(agent.id) ? "Verberg" : "Prompt") {
+                                    toggle(agent.id)
+                                }
+                                .controlSize(.small)
+                                Button("Wijzig") {
+                                    draft = CustomAgentFormValues(agent: agent, systemPrompt: model.prompt(for: agent.id))
+                                    editing = agent
+                                }
+                                .controlSize(.small)
+                                Button("Verwijder", role: .destructive) {
+                                    Task {
+                                        await model.remove(client: client, agent: agent)
+                                        await app.refreshCustomAgents()
+                                    }
+                                }
+                                .controlSize(.small)
                             }
-                            .controlSize(.small)
+                            .padding(12)
+                            if expandedPrompts.contains(agent.id) {
+                                AgentSystemPromptEditor(
+                                    prompt: model.prompt(for: agent.id),
+                                    hint: "Gebruik {{system}} in Argumenten om de plek te kiezen; zonder placeholder wordt de prompt vooraan toegevoegd.",
+                                    onSave: { prompt in
+                                        await model.saveSystemPrompt(client: client, agentID: agent.id, prompt: prompt)
+                                    }
+                                )
+                                .padding(.horizontal, 12)
+                                .padding(.bottom, 12)
+                            }
                         }
-                        .padding(12)
                         .omaCard()
                     }
                 }
@@ -228,6 +318,14 @@ struct AgentsSettingsView: View {
         }
     }
 
+    private func toggle(_ id: String) {
+        if expandedPrompts.contains(id) {
+            expandedPrompts.remove(id)
+        } else {
+            expandedPrompts.insert(id)
+        }
+    }
+
     private func binaryName(for agent: AgentKind) -> String {
         switch agent.rawValue {
         case "claude": "claude"
@@ -239,6 +337,90 @@ struct AgentsSettingsView: View {
 
     private func commandPreview(for agent: CustomAgentDTO) -> String {
         ([agent.binary] + agent.launchArgs).joined(separator: " ")
+    }
+}
+
+struct AgentSystemPromptEditor: View {
+    let prompt: String
+    let hint: String
+    /// Returns the failure message, or nil when saving succeeded.
+    let onSave: (String) async -> String?
+
+    @State private var draft: String = ""
+    @State private var isSaving = false
+    @State private var error: String?
+    @State private var savedFlash = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("System prompt")
+                .font(.callout.weight(.medium))
+            TextEditor(text: $draft)
+                .font(.body)
+                .frame(minHeight: 90, maxHeight: 180)
+                .scrollContentBackground(.hidden)
+                .padding(8)
+                .background(OMAColor.elevated)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(.secondary.opacity(0.25))
+                }
+                .accessibilityLabel("System prompt")
+            Text(hint)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                Text("\(draft.trimmingCharacters(in: .whitespacesAndNewlines).count) tekens")
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+                if savedFlash {
+                    Text("Bewaard")
+                        .font(.caption)
+                        .foregroundStyle(OMAColor.positive)
+                }
+                Spacer()
+                if !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Button("Wis") {
+                        draft = ""
+                        save()
+                    }
+                    .controlSize(.small)
+                    .disabled(isSaving)
+                }
+                Button(isSaving ? "Bewaren…" : "Bewaar") {
+                    save()
+                }
+                .controlSize(.small)
+                .buttonStyle(.omaPrimary)
+                .disabled(isSaving || draft.trimmingCharacters(in: .whitespacesAndNewlines) == prompt.trimmingCharacters(in: .whitespacesAndNewlines))
+            }
+            if let error {
+                InlineNotice(error)
+            }
+        }
+        .onAppear {
+            if draft.isEmpty { draft = prompt }
+        }
+        .onChange(of: prompt) { _, newValue in
+            if !isSaving { draft = newValue }
+        }
+    }
+
+    private func save() {
+        error = nil
+        savedFlash = false
+        isSaving = true
+        let value = draft
+        Task {
+            if let message = await onSave(value) {
+                isSaving = false
+                error = message
+            } else {
+                isSaving = false
+                savedFlash = true
+            }
+        }
     }
 }
 
@@ -255,62 +437,82 @@ struct CustomAgentEditorSheet: View {
     @State private var saveError: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text(title).font(.title2.weight(.semibold))
-            if presets {
-                HStack(spacing: 8) {
-                    Text("Snel:").font(.callout).foregroundStyle(.secondary)
-                    Button("Opencode") { values = preset(name: "Opencode", binary: "opencode", arguments: "", symbol: "terminal.fill") }
-                        .controlSize(.small)
-                    Button("Cursor") { values = preset(name: "Cursor", binary: "cursor-agent", arguments: "", symbol: "cursorarrow") }
-                        .controlSize(.small)
-                    Button("Grok") { values = preset(name: "Grok", binary: "grok", arguments: "", symbol: "sparkle") }
-                        .controlSize(.small)
-                }
-            }
-            Form {
-                TextField("Naam", text: $values.name, prompt: Text("Bijvoorbeeld: Opencode"))
-                TextField("Commando", text: $values.binary, prompt: Text("Bijvoorbeeld: opencode"))
-                    .font(.body.monospaced())
-                TextField("Argumenten (optioneel)", text: $values.arguments, prompt: Text("Leeg laten voor de TUI"))
-                    .font(.body.monospaced())
-            }
-            .formStyle(.grouped)
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Icoon").font(.callout).foregroundStyle(.secondary)
-                AgentSymbolPicker(symbol: $values.symbol)
-            }
-            Text("Naam en commando zijn verplicht. Laat argumenten leeg om de interactieve TUI te starten. Extra argumenten komen vóór een optionele startprompt.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            if let saveError {
-                InlineNotice(saveError)
-            }
-            HStack {
-                Spacer()
-                Button("Annuleer") { onCancel(); dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                Button("Bewaar") {
-                    guard values.error == nil else { saveError = values.error; return }
-                    isSaving = true
-                    Task {
-                        if let message = await onSave(values) {
-                            isSaving = false
-                            saveError = message
-                        } else {
-                            isSaving = false
-                            saveError = nil
-                            dismiss()
-                        }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                Text(title).font(.title2.weight(.semibold))
+                if presets {
+                    HStack(spacing: 8) {
+                        Text("Snel:").font(.callout).foregroundStyle(.secondary)
+                        Button("Opencode") { values = preset(name: "Opencode", binary: "opencode", arguments: "", symbol: "terminal.fill") }
+                            .controlSize(.small)
+                        Button("Cursor") { values = preset(name: "Cursor", binary: "cursor-agent", arguments: "", symbol: "cursorarrow") }
+                            .controlSize(.small)
+                        Button("Grok") { values = preset(name: "Grok", binary: "grok", arguments: "", symbol: "sparkle") }
+                            .controlSize(.small)
                     }
                 }
-                .keyboardShortcut(.defaultAction)
-                .buttonStyle(.omaPrimary)
-                .disabled(values.error != nil || isSaving)
+                Form {
+                    TextField("Naam", text: $values.name, prompt: Text("Bijvoorbeeld: Opencode"))
+                    TextField("Commando", text: $values.binary, prompt: Text("Bijvoorbeeld: opencode"))
+                        .font(.body.monospaced())
+                    TextField("Argumenten (optioneel)", text: $values.arguments, prompt: Text("Leeg laten voor de TUI"))
+                        .font(.body.monospaced())
+                }
+                .formStyle(.grouped)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Icoon").font(.callout).foregroundStyle(.secondary)
+                    AgentSymbolPicker(symbol: $values.symbol)
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("System prompt (optioneel)").font(.callout).foregroundStyle(.secondary)
+                    TextEditor(text: $values.systemPrompt)
+                        .font(.body)
+                        .frame(minHeight: 90, maxHeight: 160)
+                        .scrollContentBackground(.hidden)
+                        .padding(8)
+                        .background(OMAColor.elevated)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .strokeBorder(.secondary.opacity(0.25))
+                        }
+                        .accessibilityLabel("System prompt")
+                    Text("Gebruik {{system}} in Argumenten om de plek te kiezen; zonder placeholder wordt de prompt vooraan toegevoegd.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Text("Naam en commando zijn verplicht. Laat argumenten leeg om de interactieve TUI te starten. Extra argumenten komen vóór een optionele startprompt.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if let saveError {
+                    InlineNotice(saveError)
+                }
+                HStack {
+                    Spacer()
+                    Button("Annuleer") { onCancel(); dismiss() }
+                        .keyboardShortcut(.cancelAction)
+                    Button("Bewaar") {
+                        guard values.error == nil else { saveError = values.error; return }
+                        isSaving = true
+                        Task {
+                            if let message = await onSave(values) {
+                                isSaving = false
+                                saveError = message
+                            } else {
+                                isSaving = false
+                                saveError = nil
+                                dismiss()
+                            }
+                        }
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .buttonStyle(.omaPrimary)
+                    .disabled(values.error != nil || isSaving)
+                }
             }
+            .padding(24)
         }
-        .padding(24)
-        .frame(width: 520)
+        .frame(width: 520, height: 640)
         .background(OMAColor.canvas)
     }
 

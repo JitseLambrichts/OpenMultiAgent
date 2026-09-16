@@ -104,6 +104,13 @@ function result(method: string, params: Record<string, unknown>): unknown {
       return { executable: "/usr/bin/true", arguments: [], cwd: "/" };
     case "agent.list":
       return [];
+    case "agent.system_prompt.list":
+      return [];
+    case "agent.system_prompt.set":
+      return {
+        agent: params["agent"] ?? "claude",
+        system_prompt: params["system_prompt"] ?? "",
+      };
     case "agent.add":
       return {
         id: "opencode",

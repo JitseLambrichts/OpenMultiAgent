@@ -207,6 +207,16 @@ struct CustomAgentDTO: Codable, Equatable, Identifiable, Sendable {
     }
 }
 
+struct AgentSystemPromptDTO: Codable, Equatable, Sendable {
+    let agent: String
+    let systemPrompt: String
+
+    private enum CodingKeys: String, CodingKey {
+        case agent
+        case systemPrompt = "system_prompt"
+    }
+}
+
 struct NewSessionRequest: Equatable, Sendable {
     let repoPath: String
     let agent: AgentKind

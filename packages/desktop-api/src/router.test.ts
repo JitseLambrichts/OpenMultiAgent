@@ -79,6 +79,12 @@ function services(overrides: Partial<DesktopServices> = {}): DesktopServices {
       symbol: input.symbol ?? "terminal",
     }),
     customAgentRemove: async (input) => ({ removed_agent_id: input.id }),
+    agentSystemPromptList: async () => [],
+    agentSystemPromptGet: async () => null,
+    agentSystemPromptSet: async (input) => ({
+      agent: input.agent,
+      system_prompt: input.system_prompt ?? "",
+    }),
     ...overrides,
   };
 }

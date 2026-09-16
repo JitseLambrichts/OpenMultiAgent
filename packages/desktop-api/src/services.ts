@@ -43,6 +43,12 @@ import {
   type CustomAgentDef,
 } from "@oma/core";
 import {
+  getAgentSystemPrompt,
+  listAgentSystemPrompts,
+  normalizePromptAgent,
+  setAgentSystemPrompt,
+} from "@oma/core";
+import {
   countPendingCandidates,
   extractSession,
   listCandidates,
@@ -163,6 +169,19 @@ export interface CustomAgentResult {
   symbol: string;
 }
 
+/** Wire shape for per-agent system prompts. Snake_case like the rest. */
+export interface AgentSystemPromptResult {
+  agent: string;
+  system_prompt: string;
+}
+
+function toAgentSystemPromptResult(input: {
+  agent: string;
+  systemPrompt: string;
+}): AgentSystemPromptResult {
+  return { agent: input.agent, system_prompt: input.systemPrompt };
+}
+
 function toCustomAgentResult(def: CustomAgentDef): CustomAgentResult {
   return {
     id: def.id,
@@ -266,6 +285,14 @@ export interface DesktopServices {
   customAgentRemove(input: {
     id: string;
   }): Promise<{ removed_agent_id: string }>;
+  agentSystemPromptList(): Promise<AgentSystemPromptResult[]>;
+  agentSystemPromptGet(input: {
+    agent: string;
+  }): Promise<AgentSystemPromptResult | null>;
+  agentSystemPromptSet(input: {
+    agent: string;
+    system_prompt?: string;
+  }): Promise<AgentSystemPromptResult>;
 }
 
 export interface SessionOperations {
@@ -593,6 +620,31 @@ export function createDesktopServices(
         throw toDesktopError(error, { agent: id });
       }
     },
+    agentSystemPromptList: async () =>
+      listAgentSystemPrompts().map(toAgentSystemPromptResult),
+    agentSystemPromptGet: async ({ agent }) => {
+      try {
+        const prompt = getAgentSystemPrompt(agent);
+        if (!prompt) return null;
+        return { agent: agent.trim().toLowerCase(), system_prompt: prompt };
+      } catch (error) {
+        throw toDesktopError(error, { agent });
+      }
+    },
+    agentSystemPromptSet: async ({ agent, system_prompt }) => {
+      try {
+        const updated = setAgentSystemPrompt(agent, system_prompt ?? "");
+        if (!updated) {
+          return {
+            agent: normalizePromptAgent(agent),
+            system_prompt: "",
+          };
+        }
+        return toAgentSystemPromptResult(updated);
+      } catch (error) {
+        throw toDesktopError(error, { agent });
+      }
+    },
   };
 }
 
@@ -604,6 +656,7 @@ export function createProductionServices(
 ): DesktopServices {
   const manager = new SessionManager(db, {
     adapterFor,
+    systemPromptFor: (agent) => getAgentSystemPrompt(agent),
     mcpServers: (scope) => [
       {
         name: "oma",

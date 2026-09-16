@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import type { AgentAdapter, McpServerSpec } from "./agent.ts";
+import { combineSystemPrompts, getAgentSystemPrompt } from "./agent-prompts.ts";
 import {
   changedFiles,
   createWorktree,
@@ -51,6 +52,11 @@ export interface SessionManagerOptions {
    * id only exists once the session row has been created.
    */
   mcpServers?: (scope: McpScope) => McpServerSpec[];
+  /**
+   * Configured per-agent system prompt (Instellingen). Defaults to reading
+   * `agent-system-prompts.json`; injected in tests.
+   */
+  systemPromptFor?: (agent: AgentName) => string | undefined;
   /** Overridable for tests. */
   now?: () => Date;
   /** Cross-process start lock; replace with an in-process passthrough in tests. */
@@ -119,6 +125,21 @@ export class SessionManager {
 
   private get discoveryIntervalMs(): number {
     return this.options.transcriptDiscovery?.intervalMs ?? 500;
+  }
+
+  private configuredSystemPrompt(agent: AgentName): string | undefined {
+    try {
+      const viaOption = this.options.systemPromptFor?.(agent)?.trim();
+      if (viaOption) return viaOption;
+    } catch {
+      // A throwing test stub must never break session start.
+    }
+    if (this.options.systemPromptFor) return undefined;
+    try {
+      return getAgentSystemPrompt(agent);
+    } catch {
+      return undefined;
+    }
   }
 
   /** Prepare and verify the real replacement before stopping the current run. */
@@ -210,7 +231,10 @@ export class SessionManager {
         sessionId: session.id,
         cwd: worktreePath,
         prompt: opts.prompt,
-        systemPrompt: opts.systemPrompt,
+        systemPrompt: combineSystemPrompts(
+          this.configuredSystemPrompt(opts.agent),
+          opts.systemPrompt,
+        ),
         mcpServers: this.options.mcpServers?.({
           sessionId: session.id,
           repoPath: root,
@@ -390,7 +414,10 @@ export class SessionManager {
           sessionId: session.id,
           cwd: session.worktree_path,
           prompt: opts.prompt ?? "Continue the task from the Handoff Brief.",
-          systemPrompt: handoff,
+          systemPrompt: combineSystemPrompts(
+            this.configuredSystemPrompt(agent),
+            handoff,
+          ),
           mcpServers: this.options.mcpServers?.({
             sessionId: session.id,
             repoPath: session.repo_path,
@@ -526,7 +553,10 @@ export class SessionManager {
           sessionId: session.id,
           cwd: session.worktree_path,
           forkNativeSessionId: previous.native_session_id,
-          systemPrompt: handoff,
+          systemPrompt: combineSystemPrompts(
+            this.configuredSystemPrompt(previous.agent),
+            handoff,
+          ),
           prompt: opts.prompt,
           mcpServers: this.options.mcpServers?.({
             sessionId: session.id,
