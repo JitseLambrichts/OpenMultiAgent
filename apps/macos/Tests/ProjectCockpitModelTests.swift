@@ -98,6 +98,28 @@ struct ProjectCockpitModelTests {
         #expect(await client.endMergeFlags == [true])
     }
 
+    @Test func mergeBlockedByDirtyWorktreeKeepsSessionAndShowsEndNotice() async {
+        let active = SessionViewDTO.sample(id: "active", status: "active")
+        let client = CockpitClientStub(
+            detail: ProjectDetailDTO(project: .cockpitSample, sessions: [active]),
+            endError: RPCErrorDTO(code: -32003, message: "Commit changes before merging", recovery: "commit_first")
+        )
+        let model = ProjectCockpitModel(project: .cockpitSample, client: client)
+        await model.load()
+
+        await model.perform(.mergeAndEnd, for: "active")
+
+        #expect(model.endNotice?.contains("niet-gecommitte") == true)
+        #expect(model.activeSessions.map(\.id) == ["active"])
+
+        // Een background reload mag de uitleg niet wissen.
+        await model.load()
+        #expect(model.endNotice?.contains("niet-gecommitte") == true)
+
+        model.clearEndNotice()
+        #expect(model.endNotice == nil)
+    }
+
     @Test func removeRequestRetainsCoreDirtyWorktreeError() async {
         let ended = SessionViewDTO.sample(id: "ended", status: "ended")
         let client = CockpitClientStub(
@@ -130,6 +152,7 @@ private actor CockpitClientStub: DesktopAPI {
     let docs: [LivingDocDTO]
     let statuses: [String: SessionStatusDTO]
     var removeError: RPCErrorDTO?
+    var endError: RPCErrorDTO?
     var failure: (any Error)?
     var lastCreateRequest: NewSessionRequest?
     var endedSessionIDs: [String] = []
@@ -142,7 +165,8 @@ private actor CockpitClientStub: DesktopAPI {
         memories: [MemoryDTO] = [],
         docs: [LivingDocDTO] = [],
         statuses: [String: SessionStatusDTO] = [:],
-        removeError: RPCErrorDTO? = nil
+        removeError: RPCErrorDTO? = nil,
+        endError: RPCErrorDTO? = nil
     ) {
         self.detail = detail
         self.created = created
@@ -150,6 +174,7 @@ private actor CockpitClientStub: DesktopAPI {
         self.docs = docs
         self.statuses = statuses
         self.removeError = removeError
+        self.endError = endError
     }
 
     func fail(with error: any Error) { failure = error }
@@ -177,6 +202,7 @@ private actor CockpitClientStub: DesktopAPI {
     func endSession(id: String, merge: Bool) async throws {
         endedSessionIDs.append(id)
         endMergeFlags.append(merge)
+        if let endError { throw endError }
     }
     func removeSession(id: String, force: Bool, keepWorktree: Bool) async throws {
         removeCalls.append(RemoveCall(id: id, force: force, keepWorktree: keepWorktree))

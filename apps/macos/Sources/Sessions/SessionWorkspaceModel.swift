@@ -65,6 +65,11 @@ final class SessionWorkspaceModel {
     private(set) var candidateCount = 0
     private(set) var route: WorkspaceRoute?
     private(set) var notice: String?
+    /// Merge/beëindig-fouten blijven staan tot de volgende end-poging of tot de
+    /// gebruiker ze wegstuurt. Anders wist een background `loadStatus()` (via
+    /// `reconciliationTick`) de uitleg meteen weer, terwijl de sessie bewust
+    /// actief blijft bij dirty worktree of conflicten.
+    private(set) var endNotice: String?
     private(set) var isEnding = false
 
     init(session: SessionViewDTO, client: any DesktopAPI, transcriptPageSize: Int = 50, autoCheckInterval: Duration = .seconds(300)) {
@@ -107,6 +112,8 @@ final class SessionWorkspaceModel {
             let loaded = try await client.sessionStatus(id: session.id)
             status = loaded
             session = loaded.view
+            // Alleen transient status-fouten wissen; een endNotice (merge/conflict)
+            // blijft staan tot de gebruiker het wegstuurt of een nieuwe end lukt.
             notice = nil
             if !session.session.isActive {
                 await refreshCandidateCount()
@@ -114,6 +121,10 @@ final class SessionWorkspaceModel {
         } catch {
             notice = message(for: error)
         }
+    }
+
+    func clearEndNotice() {
+        endNotice = nil
     }
 
     /// Preview is read-only, so it doubles as the "are there candidates?" probe.
@@ -257,10 +268,15 @@ final class SessionWorkspaceModel {
         await stopAutoCheckLoop()
         do {
             try await client.endSession(id: session.id, merge: merge)
+            endNotice = nil
+            notice = nil
             await loadStatus()
             return true
         } catch {
-            notice = endMessage(for: error)
+            // Bewust apart van `notice`: de sessie blijft actief bij dirty
+            // worktree/conflicten en de uitleg mag niet verdwijnen bij de
+            // eerstvolgende background-verversing.
+            endNotice = endMessage(for: error)
             return false
         }
     }

@@ -146,7 +146,29 @@ struct SessionWorkspaceModelTests {
         let ended = await model.endSession(merge: true)
 
         #expect(!ended)
-        #expect(model.notice?.contains("conflicten") == true)
+        #expect(model.endNotice?.contains("conflicten") == true)
+        #expect(model.session.session.isActive)
+    }
+
+    @Test func mergeErrorSurvivesBackgroundReloadUntilDismissed() async {
+        let client = WorkspaceClientStub()
+        await client.setEndError(RPCErrorDTO(code: -32003, message: "Commit changes before merging", recovery: "commit_first"))
+        let model = SessionWorkspaceModel(
+            session: .sample(id: "s", status: "active"),
+            client: client
+        )
+
+        let ended = await model.endSession(merge: true)
+        #expect(!ended)
+        #expect(model.endNotice?.contains("niet-gecommitte") == true)
+
+        // Een background-verversing (reconciliationTick) mag de uitleg niet wissen,
+        // anders lijkt het alsof "de sessie niet is aangepast" zonder reden.
+        await model.loadStatus()
+        #expect(model.endNotice?.contains("niet-gecommitte") == true)
+
+        model.clearEndNotice()
+        #expect(model.endNotice == nil)
     }
 
     /// Regression test for the finding that a background auto-check could

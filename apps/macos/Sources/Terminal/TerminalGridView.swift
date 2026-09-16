@@ -8,6 +8,10 @@ import SwiftUI
 /// so SwiftUI controls layered on top of it would never receive them.
 struct TerminalGridView: View {
     let model: TerminalWorkspaceModel
+    /// Of de bijbehorende OMA-sessie nog actief is. Na beëindigen is de
+    /// tmux-koppeling weg én de sessie klaar; dan tonen we geen
+    /// "Verbind opnieuw" meer voor een dode tmux-sessie.
+    var sessionActive: Bool = true
     var titleFor: (String) -> String = { $0 }
     let onPickSession: (UUID) -> Void
 
@@ -137,19 +141,28 @@ struct TerminalGridView: View {
 
     private func exitedView(sessionID: String, code: Int32?) -> some View {
         VStack(spacing: 12) {
-            Label("Terminalkoppeling gestopt", systemImage: "bolt.slash")
+            Label(sessionActive ? "Terminalkoppeling gestopt" : "Sessie beëindigd", systemImage: sessionActive ? "bolt.slash" : "checkmark.circle")
                 .font(.headline)
-            Text(code.map { "De tmux-koppeling eindigde met code \($0). De sessie zelf is niet beëindigd." }
-                 ?? "De tmux-koppeling is verbroken. De sessie zelf is niet beëindigd.")
+            Text(exitedMessage(code: code))
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            Button("Verbind opnieuw", systemImage: "arrow.clockwise") {
-                Task { await model.reconnect(sessionID: sessionID) }
+            if sessionActive {
+                Button("Verbind opnieuw", systemImage: "arrow.clockwise") {
+                    Task { await model.reconnect(sessionID: sessionID) }
+                }
+                .buttonStyle(.omaPrimary)
             }
-            .buttonStyle(.omaPrimary)
         }
         .padding(20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func exitedMessage(code: Int32?) -> String {
+        guard sessionActive else {
+            return "De tmux-sessie is gestopt en de sessie staat op Afgerond. Het transcript, de worktree (na merge in de hoofdcheckout) en het geheugen blijven bewaard."
+        }
+        return code.map { "De tmux-koppeling eindigde met code \($0). De sessie zelf is niet beëindigd." }
+            ?? "De tmux-koppeling is verbroken. De sessie zelf is niet beëindigd."
     }
 }

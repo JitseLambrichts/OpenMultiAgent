@@ -19,7 +19,11 @@ struct SessionWorkspaceView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            if let notice = model.notice {
+            if let endNotice = model.endNotice {
+                InlineNotice(endNotice, actionTitle: "Sluiten") { model.clearEndNotice() }
+                    .padding(.horizontal, 28)
+                    .padding(.bottom, 12)
+            } else if let notice = model.notice {
                 InlineNotice(notice)
                     .padding(.horizontal, 28)
                     .padding(.bottom, 12)
@@ -69,20 +73,14 @@ struct SessionWorkspaceView: View {
         .alert("Sessie beëindigen?", isPresented: $showsEndConfirmation) {
             if model.session.session.usesWorktree {
                 Button("Merge + beëindig") {
-                    Task {
-                        if await model.endSession(merge: true) { app.reconcile() }
-                    }
+                    Task { await end(merge: true) }
                 }
                 Button("Alleen beëindigen", role: .destructive) {
-                    Task {
-                        if await model.endSession(merge: false) { app.reconcile() }
-                    }
+                    Task { await end(merge: false) }
                 }
             } else {
                 Button("Beëindig", role: .destructive) {
-                    Task {
-                        if await model.endSession() { app.reconcile() }
-                    }
+                    Task { await end(merge: false) }
                 }
             }
             Button("Annuleer", role: .cancel) {}
@@ -115,6 +113,20 @@ struct SessionWorkspaceView: View {
                 Task { await model.loadNewestTranscript() }
             }
         }
+    }
+
+    // MARK: Lifecycle
+
+    /// Beëindigt de sessie en houdt de workspace consistent: bij succes uit
+    /// focus (geen fullscreen-terminalval), AppModel synchroniseren en dan
+    /// pas reconcilen. Bij een merge-blokkade (dirty/conflict) blijft de
+    /// sessie bewust actief en toont `endNotice` de uitleg.
+    private func end(merge: Bool) async {
+        let ok = await model.endSession(merge: merge)
+        guard ok else { return }
+        terminals.unfocus()
+        app.selectedSession = model.session
+        app.reconcile()
     }
 
     // MARK: Header
@@ -248,6 +260,7 @@ struct SessionWorkspaceView: View {
             } else {
                 TerminalGridView(
                     model: terminals,
+                    sessionActive: model.session.session.isActive,
                     titleFor: { id in knownTitles[id] ?? (id == model.session.id ? model.session.session.displayTitle : String(id.prefix(8))) }
                 ) { cellID in pickerCellID = cellID }
             }

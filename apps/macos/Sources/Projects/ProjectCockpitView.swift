@@ -18,6 +18,9 @@ struct ProjectCockpitView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     header
+                    if let endNotice = model.endNotice {
+                        InlineNotice(endNotice, actionTitle: "Sluiten") { model.clearEndNotice() }
+                    }
                     if let notice = model.notice {
                         InlineNotice(notice.message, actionTitle: "Opnieuw") { Task { await model.load() } }
                     }

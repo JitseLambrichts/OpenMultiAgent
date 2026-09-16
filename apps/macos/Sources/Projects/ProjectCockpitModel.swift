@@ -101,6 +101,11 @@ final class ProjectCockpitModel {
     private(set) var isCreating = false
     private(set) var busySessionIDs: Set<String> = []
     private(set) var notice: ProjectsNotice?
+    /// Merge/beëindig-fouten (dirty worktree, conflicten) blijven staan tot een
+    /// nieuwe end-poging lukt of de gebruiker ze wegstuurt. Een background
+    /// `load()` mag ze niet wissen, anders lijkt het alsof "de sessie niet is
+    /// aangepast" zonder uitleg.
+    private(set) var endNotice: String?
     private(set) var alert: CockpitAlert?
     var selectedSessionID: String?
     var switchTarget: SessionViewDTO?
@@ -238,22 +243,32 @@ final class ProjectCockpitModel {
     }
 
     func end(sessionID: String, merge: Bool = false) async {
-        await perform(sessionID: sessionID) {
-            do {
-                try await self.client.endSession(id: sessionID, merge: merge)
-            } catch let error as RPCErrorDTO {
-                switch error.recoveryAction {
-                case .commitFirst:
-                    throw CockpitEndError.message("De worktree heeft niet-gecommitte wijzigingen. Commit eerst en probeer het mergen opnieuw.")
-                case .resolveConflicts:
-                    throw CockpitEndError.message("De merge heeft conflicten. Los ze op in de worktree (merge is afgebroken) en probeer het opnieuw.")
-                default:
-                    throw error
-                }
+        busySessionIDs.insert(sessionID)
+        defer { busySessionIDs.remove(sessionID) }
+        do {
+            try await client.endSession(id: sessionID, merge: merge)
+        } catch let error as RPCErrorDTO {
+            switch error.recoveryAction {
+            case .commitFirst:
+                endNotice = "De worktree heeft niet-gecommitte wijzigingen. Commit eerst en probeer het mergen opnieuw. De sessie blijft actief."
+            case .resolveConflicts:
+                endNotice = "De merge heeft conflicten. Los ze op in de worktree (merge is afgebroken) en probeer het opnieuw. De sessie blijft actief."
+            default:
+                notice = ProjectsNotice(message: message(for: error), action: .retry)
             }
-            self.statuses.removeValue(forKey: sessionID)
-            await self.load()
+            return
+        } catch {
+            notice = ProjectsNotice(message: message(for: error), action: .retry)
+            return
         }
+        endNotice = nil
+        notice = nil
+        statuses.removeValue(forKey: sessionID)
+        await load()
+    }
+
+    func clearEndNotice() {
+        endNotice = nil
     }
 
     func requestRemove(sessionID: String) {
