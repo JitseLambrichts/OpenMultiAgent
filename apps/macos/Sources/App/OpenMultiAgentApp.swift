@@ -69,15 +69,8 @@ struct SettingsView: View {
     let app: AppModel
 
     var body: some View {
-        TabView {
-            Tab("Agents", systemImage: "terminal") {
-                ScrollView {
-                    AgentsSettingsView(app: app)
-                        .padding()
-                }
-            }
-        }
-        .preferredColorScheme(.dark)
-        .frame(width: 560, height: 520)
+        AppSettingsView(app: app)
+            .preferredColorScheme(.dark)
+            .frame(width: 620, height: 560)
     }
 }

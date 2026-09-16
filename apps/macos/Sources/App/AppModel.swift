@@ -6,8 +6,15 @@ enum SidebarDestination: String, CaseIterable, Identifiable, Codable, Sendable {
     case sessions
     case memory
     case docs
+    case settings
 
     var id: Self { self }
+
+    /// Destinations shown in the top navigation stack. Settings lives at the
+    /// bottom of the sidebar, just above the collapse toggle.
+    static var primaryDestinations: [SidebarDestination] {
+        [.projects, .sessions, .memory, .docs]
+    }
 
     var title: String {
         switch self {
@@ -15,6 +22,7 @@ enum SidebarDestination: String, CaseIterable, Identifiable, Codable, Sendable {
         case .sessions: "Sessies"
         case .memory: "Geheugen"
         case .docs: "Living Docs"
+        case .settings: "Instellingen"
         }
     }
 
@@ -24,6 +32,7 @@ enum SidebarDestination: String, CaseIterable, Identifiable, Codable, Sendable {
         case .sessions: "terminal"
         case .memory: "brain.head.profile"
         case .docs: "doc.text"
+        case .settings: "gearshape"
         }
     }
 }

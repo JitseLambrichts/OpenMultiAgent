@@ -103,6 +103,8 @@ struct RootView: View {
                 )
             case .docs:
                 LivingDocsView(model: model)
+            case .settings:
+                AppSettingsView(app: model)
             }
         }
     }
@@ -191,13 +193,16 @@ struct SidebarView: View {
             }
 
             VStack(spacing: 4) {
-                ForEach(SidebarDestination.allCases) { destination in
+                ForEach(SidebarDestination.primaryDestinations) { destination in
                     row(destination)
                 }
             }
             Spacer(minLength: 0)
-            collapseToggle
-                .padding(.bottom, 12)
+            VStack(spacing: 4) {
+                row(.settings)
+                collapseToggle
+            }
+            .padding(.bottom, 12)
         }
         .padding(.horizontal, isCollapsed ? 8 : 20)
         .frame(width: isCollapsed ? 68 : 228)

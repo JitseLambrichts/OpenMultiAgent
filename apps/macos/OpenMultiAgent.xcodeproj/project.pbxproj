@@ -17,6 +17,7 @@
 		3C0307A5466816ADC156684B /* TerminalWorkspaceModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091D7E5D375B75B8FD432FCC /* TerminalWorkspaceModel.swift */; };
 		3DFFB318AA546842D95EA828 /* SmokeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF6500FD4D971176C7D39B02 /* SmokeUITests.swift */; };
 		3E470FC2CC743B53FCD33F5E /* ChangesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08699397F46B0EE752D58547 /* ChangesView.swift */; };
+		4371159941B24A7D2D21C957 /* AppSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2645B91B1EB68613AE4EF267 /* AppSettingsView.swift */; };
 		475BB09E7713BF06CF18DB97 /* TerminalGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2BA5F4DB24190B76CA51315 /* TerminalGridView.swift */; };
 		4C2D622B6F82ECA29106843B /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = EB0718B61BD3BD3D5CE06FBA /* SwiftTerm */; };
 		4ECE8C04A78693AD28E8975C /* AppCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = E59BF6A11E88AE323CDD434E /* AppCommands.swift */; };
@@ -83,6 +84,7 @@
 		14EE330743FFE3C0D2C9505F /* ProjectCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectCard.swift; sourceTree = "<group>"; };
 		1740A2E42EE5F8598288E11B /* SessionWorkspaceModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWorkspaceModel.swift; sourceTree = "<group>"; };
 		175D812CBDF62E172CBEF6B8 /* TerminalProcess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalProcess.swift; sourceTree = "<group>"; };
+		2645B91B1EB68613AE4EF267 /* AppSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettingsView.swift; sourceTree = "<group>"; };
 		2926BADAD098A4F890F39D94 /* RPCEnvelope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RPCEnvelope.swift; sourceTree = "<group>"; };
 		2AF7F33343F628EDFF4CF3A0 /* SidecarClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidecarClient.swift; sourceTree = "<group>"; };
 		2E393E7F52306C72212C347E /* contracts */ = {isa = PBXFileReference; lastKnownFileType = folder; name = contracts; path = "../../packages/desktop-api/testdata/contracts"; sourceTree = SOURCE_ROOT; };
@@ -179,6 +181,7 @@
 				E45608A6315C5D3E38537814 /* AgentsSettingsView.swift */,
 				E59BF6A11E88AE323CDD434E /* AppCommands.swift */,
 				74697C941F3F1E496B424CC5 /* AppModel.swift */,
+				2645B91B1EB68613AE4EF267 /* AppSettingsView.swift */,
 				9FEB5DDBD3950E602F9AAB54 /* OpenMultiAgentApp.swift */,
 				6478EC656FF56986F3E084E9 /* RecoveryView.swift */,
 				544B85D36118910DB8966FCA /* RootView.swift */,
@@ -454,6 +457,7 @@
 				5FD6E31C5082B3C4D3348737 /* AgentsSettingsView.swift in Sources */,
 				4ECE8C04A78693AD28E8975C /* AppCommands.swift in Sources */,
 				B4AD6B14A41EC1A3F7687291 /* AppModel.swift in Sources */,
+				4371159941B24A7D2D21C957 /* AppSettingsView.swift in Sources */,
 				3E470FC2CC743B53FCD33F5E /* ChangesView.swift in Sources */,
 				ED464A13AC7CC950EE9C7993 /* DTOs.swift in Sources */,
 				89FE30A206DA7912F67194C7 /* LivingDocsView.swift in Sources */,
