@@ -11,9 +11,25 @@ struct TerminalGridView: View {
     /// Of de bijbehorende OMA-sessie nog actief is. Na beëindigen is de
     /// tmux-koppeling weg én de sessie klaar; dan tonen we geen
     /// "Verbind opnieuw" meer voor een dode tmux-sessie.
+    ///
+    /// In de project-grid hebben cellen een gemengde status; gebruik dan
+    /// `sessionActiveFor` voor een lookup per sessie-ID. Als die nil is,
+    /// geldt `sessionActive` voor alle cellen (single-sessie detail).
     var sessionActive: Bool = true
+    var sessionActiveFor: ((String) -> Bool)? = nil
     var titleFor: (String) -> String = { $0 }
+    /// Wanneer gezet toont elke cel een "Open detail"-knop die naar de
+    /// single-sessie detailview navigeert. Alleen gebruikt in de project-grid;
+    /// het sessie-detail geeft nil door en verbergt de knop.
+    var onOpenDetail: ((String) -> Void)? = nil
+    /// In het single-sessie detail is sluiten van de enige koppeling
+    /// betekenisloos (zou een lege picker-cel tonen); verberg dan de knop.
+    var allowClose: Bool = true
     let onPickSession: (UUID) -> Void
+
+    private func isActive(_ sessionID: String) -> Bool {
+        sessionActiveFor?(sessionID) ?? sessionActive
+    }
 
     var body: some View {
         Group {
@@ -104,6 +120,13 @@ struct TerminalGridView: View {
                 StatusBadge(text: "Niet gekoppeld", symbol: "circle", color: OMAColor.quiet)
             }
             Spacer(minLength: 4)
+            if let onOpenDetail {
+                Button("Open detail", systemImage: "arrow.up.forward") {
+                    onOpenDetail(sessionID)
+                }
+                .help("Open het sessie-detail (terminal, wijzigingen, geheugen, transcript)")
+                .modifier(CellControl())
+            }
             if isFocused {
                 Button("Verlaat focus", systemImage: "arrow.down.right.and.arrow.up.left") {
                     model.unfocus()
@@ -117,11 +140,13 @@ struct TerminalGridView: View {
                 .help("Toon alleen deze terminal")
                 .modifier(CellControl())
             }
-            Button("Sluit terminal", systemImage: "xmark") {
-                model.close(sessionID: sessionID)
+            if allowClose {
+                Button("Sluit terminal", systemImage: "xmark") {
+                    model.close(sessionID: sessionID)
+                }
+                .help("Sluit alleen deze koppeling; de sessie blijft draaien")
+                .modifier(CellControl())
             }
-            .help("Sluit alleen deze koppeling; de sessie blijft draaien")
-            .modifier(CellControl())
         }
         .labelStyle(.iconOnly)
         .buttonStyle(.borderless)
@@ -140,14 +165,15 @@ struct TerminalGridView: View {
     }
 
     private func exitedView(sessionID: String, code: Int32?) -> some View {
-        VStack(spacing: 12) {
-            Label(sessionActive ? "Terminalkoppeling gestopt" : "Sessie beëindigd", systemImage: sessionActive ? "bolt.slash" : "checkmark.circle")
+        let active = isActive(sessionID)
+        return VStack(spacing: 12) {
+            Label(active ? "Terminalkoppeling gestopt" : "Sessie beëindigd", systemImage: active ? "bolt.slash" : "checkmark.circle")
                 .font(.headline)
-            Text(exitedMessage(code: code))
+            Text(exitedMessage(sessionID: sessionID, code: code))
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            if sessionActive {
+            if active {
                 Button("Verbind opnieuw", systemImage: "arrow.clockwise") {
                     Task { await model.reconnect(sessionID: sessionID) }
                 }
@@ -158,8 +184,8 @@ struct TerminalGridView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func exitedMessage(code: Int32?) -> String {
-        guard sessionActive else {
+    private func exitedMessage(sessionID: String, code: Int32?) -> String {
+        guard isActive(sessionID) else {
             return "De tmux-sessie is gestopt en de sessie staat op Afgerond. Het transcript, de worktree (na merge in de hoofdcheckout) en het geheugen blijven bewaard."
         }
         return code.map { "De tmux-koppeling eindigde met code \($0). De sessie zelf is niet beëindigd." }

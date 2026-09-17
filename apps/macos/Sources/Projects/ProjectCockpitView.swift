@@ -1,7 +1,37 @@
 import SwiftUI
 
+/// Projectniveau-weergave: overzicht van sessies/kennis, of de gelijkwaardige
+/// terminal-grid zonder hoofdsessie. Beëindigen gebeurt per sessie (rij,
+/// detail of cel-menu), nooit via een globale knop die een impliciete
+/// hoofdsessie zou beëindigen.
+enum CockpitTab: String, CaseIterable, Identifiable {
+    case overzicht
+    case terminals
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .overzicht: "Overzicht"
+        case .terminals: "Terminals"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .overzicht: "square.grid.2x2"
+        case .terminals: "terminal"
+        }
+    }
+}
+
 struct ProjectCockpitView: View {
     @State private var model: ProjectCockpitModel
+    @State private var terminals: TerminalWorkspaceModel
+    @State private var cockpitTab: CockpitTab = .overzicht
+    @State private var pickerCellID: UUID?
+    @State private var knownTitles: [String: String] = [:]
+    @SceneStorage("terminal-layout") private var storedLayout: TerminalLayout = .single
     let app: AppModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -9,34 +39,32 @@ struct ProjectCockpitView: View {
 
     init(project: ProjectDTO, app: AppModel) {
         _model = State(initialValue: ProjectCockpitModel(project: project, client: app.client))
+        _terminals = State(initialValue: TerminalWorkspaceModel(factory: SidecarTerminalFactory(client: app.client)))
         self.app = app
     }
 
     var body: some View {
         ZStack {
             OMAColor.canvas.ignoresSafeArea()
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    header
-                    if let endNotice = model.endNotice {
-                        InlineNotice(endNotice, actionTitle: "Sluiten") { model.clearEndNotice() }
-                    }
-                    if let notice = model.notice {
-                        InlineNotice(notice.message, actionTitle: "Opnieuw") { Task { await model.load() } }
-                    }
-                    sessionSection("Actief werk", symbol: "bolt.fill", sessions: model.activeSessions,
-                                   empty: "Geen actieve sessies. Start er een met Nieuwe sessie (⌘N).")
-                    LazyVGrid(columns: panelColumns, alignment: .leading, spacing: 16) {
-                        decisionsPanel
-                        changesPanel
-                        docsPanel
-                    }
-                    sessionSection("Recente sessies", symbol: "clock", sessions: model.recentSessions,
-                                   empty: "Afgeronde sessies verschijnen hier met hun geëxtraheerde kennis.")
+            VStack(spacing: 0) {
+                header
+                    .padding(.horizontal, 28)
+                    .padding(.top, 36)
+                    .padding(.bottom, 16)
+                tabBar
+                    .padding(.horizontal, 28)
+                    .padding(.bottom, 16)
+                if let endNotice = model.endNotice {
+                    InlineNotice(endNotice, actionTitle: "Sluiten") { model.clearEndNotice() }
+                        .padding(.horizontal, 28)
+                        .padding(.bottom, 12)
                 }
-                .padding(.horizontal, 28)
-                .padding(.top, 36)
-                .padding(.bottom, 28)
+                if let notice = model.notice {
+                    InlineNotice(notice.message, actionTitle: "Opnieuw") { Task { await model.load() } }
+                        .padding(.horizontal, 28)
+                        .padding(.bottom, 12)
+                }
+                content
             }
         }
         .inspector(isPresented: Binding(get: { app.isInspectorVisible }, set: { app.isInspectorVisible = $0 })) {
@@ -50,10 +78,52 @@ struct ProjectCockpitView: View {
                 await model.switchAgent(sessionID: target.id, agent: agent, prompt: prompt)
             }
         }
+        .sheet(item: $pickerCellID) { cellID in
+            SessionPickerSheet(
+                client: app.client,
+                repoPath: model.project.repoPath,
+                excluded: Set(terminals.occupiedSessionIDs),
+                symbolForAgent: { app.symbol(for: $0) }
+            ) { session in
+                knownTitles[session.id] = session.session.displayTitle
+                Task { try? await terminals.open(sessionID: session.id, into: cellID) }
+            }
+        }
+        .confirmationDialog(
+            "Deze indeling heeft minder cellen dan er terminals open zijn",
+            isPresented: Binding(get: { terminals.pendingLayoutConfirmation != nil }, set: { if !$0 { terminals.cancelPendingLayout() } }),
+            titleVisibility: .visible
+        ) {
+            if let requested = terminals.pendingLayoutConfirmation {
+                let surplus = Array(terminals.occupiedSessionIDs.dropFirst(requested.capacity))
+                Button("Sluit \(surplus.count) terminalkoppeling(en)", role: .destructive) {
+                    terminals.confirmPendingLayout(closing: surplus)
+                }
+            }
+            Button("Annuleer", role: .cancel) { terminals.cancelPendingLayout() }
+        } message: {
+            Text("De sessies blijven draaien; alleen de lokale terminalkoppelingen worden gesloten.")
+        }
         .alert(item: Binding(get: { model.alert }, set: { if $0 == nil { model.dismissAlert() } })) { alert in
             cockpitAlert(alert)
         }
-        .task { await model.load() }
+        .task {
+            await model.load()
+            terminals.requestLayout(storedLayout)
+            // Shortcuts (⌃1–⌃4) die binnenkwamen terwijl de cockpit niet
+            // zichtbaar was (bijv. vanuit het sessie-detail) alsnog oppakken.
+            if let layout = app.consumeTerminalLayout() {
+                cockpitTab = .terminals
+                terminals.requestLayout(layout)
+            }
+        }
+        .onChange(of: terminals.layout) { _, layout in storedLayout = layout }
+        .onChange(of: app.pendingCommand) { _, _ in
+            if let layout = app.consumeTerminalLayout() {
+                cockpitTab = .terminals
+                terminals.requestLayout(layout)
+            }
+        }
         .onChange(of: app.reconciliationTick) { _, _ in Task { await model.load() } }
         .overlay {
             if model.isLoading && model.sessions.isEmpty {
@@ -63,6 +133,90 @@ struct ProjectCockpitView: View {
             }
         }
         .omaPanelAnimation(model.sessions.count, reduceMotion: reduceMotion)
+    }
+
+    private var tabBar: some View {
+        HStack(spacing: 10) {
+            OMAPillPicker(
+                options: CockpitTab.allCases,
+                selection: $cockpitTab,
+                accessibilityLabel: "Projectweergave",
+                title: { $0.title },
+                symbol: { $0.symbol }
+            )
+            .help("Wissel tussen overzicht en gelijkwaardige terminal-grid")
+            Spacer()
+            if cockpitTab == .terminals {
+                OMAPillPicker(
+                    options: TerminalLayout.allCases,
+                    selection: Binding(get: { terminals.layout }, set: { terminals.requestLayout($0) }),
+                    iconOnly: true,
+                    accessibilityLabel: "Terminalindeling",
+                    title: { $0.title },
+                    symbol: { $0.symbol }
+                )
+                .help("Terminalindeling (⌃1 – ⌃4)")
+                Button("Open in raster", systemImage: "plus.rectangle.on.rectangle") {
+                    pickerCellID = terminals.cells.first(where: { !$0.isOccupied })?.id ?? UUID()
+                }
+                .buttonStyle(.omaIcon)
+                .help("Open een sessie van dit project in het raster")
+                .disabled(!terminals.canOpenMore)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch cockpitTab {
+        case .overzicht:
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    sessionSection("Actief werk", symbol: "bolt.fill", sessions: model.activeSessions,
+                                   empty: "Geen actieve sessies. Start er een met Nieuwe sessie (⌘N).")
+                    LazyVGrid(columns: panelColumns, alignment: .leading, spacing: 16) {
+                        decisionsPanel
+                        changesPanel
+                        docsPanel
+                    }
+                    sessionSection("Recente sessies", symbol: "clock", sessions: model.recentSessions,
+                                   empty: "Afgeronde sessies verschijnen hier met hun geëxtraheerde kennis.")
+                }
+                .padding(.horizontal, 28)
+                .padding(.bottom, 28)
+            }
+        case .terminals:
+            terminalsSection
+        }
+    }
+
+    private var terminalsSection: some View {
+        Group {
+            if let error = terminals.errorMessage {
+                ContentUnavailableView {
+                    Label("Terminal niet beschikbaar", systemImage: "terminal")
+                } description: {
+                    Text(error)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                TerminalGridView(
+                    model: terminals,
+                    sessionActiveFor: { id in model.session(withID: id)?.session.isActive ?? true },
+                    titleFor: { id in
+                        knownTitles[id]
+                            ?? model.session(withID: id)?.session.displayTitle
+                            ?? String(id.prefix(8))
+                    },
+                    onOpenDetail: { id in
+                        if let view = model.session(withID: id) {
+                            model.selectedSessionID = view.id
+                            app.openSession(view)
+                        }
+                    }
+                ) { cellID in pickerCellID = cellID }
+            }
+        }
     }
 
     // MARK: Actions

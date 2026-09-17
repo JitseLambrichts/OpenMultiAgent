@@ -2,17 +2,14 @@ import SwiftUI
 
 struct SessionWorkspaceView: View {
     @State private var model: SessionWorkspaceModel
-    @State private var terminals: TerminalWorkspaceModel
-    @State private var pickerCellID: UUID?
-    @State private var knownTitles: [String: String] = [:]
+    @State private var terminal: TerminalWorkspaceModel
     @State private var showsEndConfirmation = false
-    @SceneStorage("terminal-layout") private var storedLayout: TerminalLayout = .single
     let app: AppModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(session: SessionViewDTO, app: AppModel) {
         _model = State(initialValue: SessionWorkspaceModel(session: session, client: app.client))
-        _terminals = State(initialValue: TerminalWorkspaceModel(factory: SidecarTerminalFactory(client: app.client)))
+        _terminal = State(initialValue: TerminalWorkspaceModel(factory: SidecarTerminalFactory(client: app.client)))
         self.app = app
     }
 
@@ -44,32 +41,6 @@ struct SessionWorkspaceView: View {
                 onClose: { model.dismissRoute(); app.reconcile() }
             )
         }
-        .sheet(item: $pickerCellID) { cellID in
-            SessionPickerSheet(
-                client: app.client,
-                repoPath: model.session.session.repoPath,
-                excluded: Set(terminals.occupiedSessionIDs),
-                symbolForAgent: { app.symbol(for: $0) }
-            ) { session in
-                knownTitles[session.id] = session.session.displayTitle
-                Task { try? await terminals.open(sessionID: session.id, into: cellID) }
-            }
-        }
-        .confirmationDialog(
-            "Deze indeling heeft minder cellen dan er terminals open zijn",
-            isPresented: Binding(get: { terminals.pendingLayoutConfirmation != nil }, set: { if !$0 { terminals.cancelPendingLayout() } }),
-            titleVisibility: .visible
-        ) {
-            if let requested = terminals.pendingLayoutConfirmation {
-                let surplus = Array(terminals.occupiedSessionIDs.dropFirst(requested.capacity))
-                Button("Sluit \(surplus.count) terminalkoppeling(en)", role: .destructive) {
-                    terminals.confirmPendingLayout(closing: surplus)
-                }
-            }
-            Button("Annuleer", role: .cancel) { terminals.cancelPendingLayout() }
-        } message: {
-            Text("De sessies blijven draaien; alleen de lokale terminalkoppelingen worden gesloten.")
-        }
         .alert("Sessie beëindigen?", isPresented: $showsEndConfirmation) {
             if model.session.session.usesWorktree {
                 Button("Merge + beëindig") {
@@ -94,18 +65,11 @@ struct SessionWorkspaceView: View {
         .task {
             await model.loadStatus()
             model.startAutoCheckLoop()
-            terminals.requestLayout(storedLayout)
-            await terminals.openReportingError(sessionID: model.session.id)
+            terminal.requestLayout(.single)
+            await terminal.openReportingError(sessionID: model.session.id)
         }
         .onDisappear {
             Task { await model.stopAutoCheckLoop() }
-        }
-        .onChange(of: terminals.layout) { _, layout in storedLayout = layout }
-        .onChange(of: app.pendingCommand) { _, _ in
-            if let layout = app.consumeTerminalLayout() {
-                model.tab = .terminal
-                terminals.requestLayout(layout)
-            }
         }
         .onChange(of: app.reconciliationTick) { _, _ in Task { await model.loadStatus() } }
         .onChange(of: model.tab) { _, tab in
@@ -117,14 +81,12 @@ struct SessionWorkspaceView: View {
 
     // MARK: Lifecycle
 
-    /// Beëindigt de sessie en houdt de workspace consistent: bij succes uit
-    /// focus (geen fullscreen-terminalval), AppModel synchroniseren en dan
-    /// pas reconcilen. Bij een merge-blokkade (dirty/conflict) blijft de
-    /// sessie bewust actief en toont `endNotice` de uitleg.
+    /// Beëindigt alleen deze sessie. De grid leeft op projectniveau, dus er is
+    /// geen andere sessie die per ongeluk geraakt kan worden.
     private func end(merge: Bool) async {
         let ok = await model.endSession(merge: merge)
         guard ok else { return }
-        terminals.unfocus()
+        terminal.unfocus()
         app.selectedSession = model.session
         app.reconcile()
     }
@@ -179,23 +141,6 @@ struct SessionWorkspaceView: View {
                 )
                 .help("Wissel tussen terminal, wijzigingen, geheugen en transcript")
                 Spacer()
-                if model.tab == .terminal {
-                    OMAPillPicker(
-                        options: TerminalLayout.allCases,
-                        selection: Binding(get: { terminals.layout }, set: { terminals.requestLayout($0) }),
-                        iconOnly: true,
-                        accessibilityLabel: "Terminalindeling",
-                        title: { $0.title },
-                        symbol: { $0.symbol }
-                    )
-                    .help("Terminalindeling (⌃1 – ⌃4)")
-                    Button("Open in raster", systemImage: "plus.rectangle.on.rectangle") {
-                        pickerCellID = terminals.cells.first(where: { !$0.isOccupied })?.id ?? UUID()
-                    }
-                    .buttonStyle(.omaIcon)
-                    .help("Open een andere sessie van dit project in het raster")
-                    .disabled(!terminals.canOpenMore)
-                }
             }
         }
         .padding(.horizontal, 28)
@@ -248,21 +193,28 @@ struct SessionWorkspaceView: View {
     private var content: some View {
         switch model.tab {
         case .terminal:
-            if let error = terminals.errorMessage {
+            if let error = terminal.errorMessage {
                 ContentUnavailableView {
                     Label("Terminal niet beschikbaar", systemImage: "terminal")
                 } description: {
                     Text(error)
                 } actions: {
-                    Button("Probeer opnieuw") { Task { await terminals.openReportingError(sessionID: model.session.id) } }
+                    Button("Probeer opnieuw") { Task { await terminal.openReportingError(sessionID: model.session.id) } }
                         .buttonStyle(.omaPrimary)
                 }
+            } else if terminal.occupiedSessionIDs.isEmpty {
+                ProgressView("Terminal verbinden…")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
+                // Single-sessie detail: geen grid, geen picker, geen hoofdsessie-
+                // ambiguïteit. Sluiten is verborgen; beëindigen gaat via de
+                // header-actie en raakt alleen deze sessie.
                 TerminalGridView(
-                    model: terminals,
+                    model: terminal,
                     sessionActive: model.session.session.isActive,
-                    titleFor: { id in knownTitles[id] ?? (id == model.session.id ? model.session.session.displayTitle : String(id.prefix(8))) }
-                ) { cellID in pickerCellID = cellID }
+                    titleFor: { _ in model.session.session.displayTitle },
+                    allowClose: false
+                ) { _ in }
             }
         case .changes:
             ChangesView(status: model.status, isLoading: model.isLoadingStatus, notice: model.notice) {
