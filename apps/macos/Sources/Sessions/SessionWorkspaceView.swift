@@ -65,13 +65,29 @@ struct SessionWorkspaceView: View {
         .task {
             await model.loadStatus()
             model.startAutoCheckLoop()
-            terminal.requestLayout(.single)
-            await terminal.openReportingError(sessionID: model.session.id)
+            // Alleen een attach proberen als er nog een tmux-sessie kán zijn.
+            // Voor een beëindigde sessie is tmux al opgeruimd; een attach zou
+            // direct met code 256 falen en de detailview vullen met een
+            // doodlopende "Verbind opnieuw"-kaart.
+            if model.canAttachTerminal {
+                terminal.requestLayout(.single)
+                await terminal.openReportingError(sessionID: model.session.id)
+            }
         }
         .onDisappear {
             Task { await model.stopAutoCheckLoop() }
         }
         .onChange(of: app.reconciliationTick) { _, _ in Task { await model.loadStatus() } }
+        .onChange(of: model.session.session.isActive) { _, active in
+            // Valt de sessie weg (bv. elders beëindigd) terwijl de terminaltab
+            // open staat, ruim de dode koppeling dan meteen op zodat de
+            // beëindigd-kaart verschijnt in plaats van een fullscreen
+            // exited-terminal waar de gebruiker niet meer uit kan.
+            if !active {
+                terminal.close(sessionID: model.session.id)
+                terminal.unfocus()
+            }
+        }
         .onChange(of: model.tab) { _, tab in
             if tab == .transcript && !model.hasLoadedTranscript {
                 Task { await model.loadNewestTranscript() }
@@ -87,6 +103,7 @@ struct SessionWorkspaceView: View {
         let ok = await model.endSession(merge: merge)
         guard ok else { return }
         terminal.unfocus()
+        terminal.close(sessionID: model.session.id)
         app.selectedSession = model.session
         app.reconcile()
     }
@@ -99,6 +116,7 @@ struct SessionWorkspaceView: View {
                 let agent = model.session.currentAgent
                 Button("Terug naar project", systemImage: "chevron.left") { app.closeSession() }
                     .buttonStyle(.omaIcon)
+                    .accessibilityLabel("Terug naar project")
                     .help("Terug naar de projectcockpit")
                 Image(systemName: agent.map { app.symbol(for: $0) } ?? "terminal")
                     .font(.system(size: 16, weight: .semibold))
@@ -193,7 +211,9 @@ struct SessionWorkspaceView: View {
     private var content: some View {
         switch model.tab {
         case .terminal:
-            if let error = terminal.errorMessage {
+            if !model.canAttachTerminal {
+                endedSessionView
+            } else if let error = terminal.errorMessage {
                 ContentUnavailableView {
                     Label("Terminal niet beschikbaar", systemImage: "terminal")
                 } description: {
@@ -203,18 +223,23 @@ struct SessionWorkspaceView: View {
                         .buttonStyle(.omaPrimary)
                 }
             } else if terminal.occupiedSessionIDs.isEmpty {
+                // Bewust géén maxHeight:.infinity (zie endedSessionView).
                 ProgressView("Terminal verbinden…")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 80)
+                    .padding(.bottom, 20)
             } else {
-                // Single-sessie detail: geen grid, geen picker, geen hoofdsessie-
-                // ambiguïteit. Sluiten is verborgen; beëindigen gaat via de
-                // header-actie en raakt alleen deze sessie.
-                TerminalGridView(
+                // Single-sessie detail: één cel, direct in de VStack en bewust
+                // géén Grid (zie SingleTerminalView): een Grid-cel met
+                // ongelimiteerde hoogte kan de header buiten beeld duwen.
+                // Sluiten is verborgen; beëindigen gaat via de header-actie en
+                // raakt alleen deze sessie.
+                SingleTerminalView(
                     model: terminal,
-                    sessionActive: model.session.session.isActive,
-                    titleFor: { _ in model.session.session.displayTitle },
-                    allowClose: false
-                ) { _ in }
+                    sessionID: model.session.id,
+                    title: model.session.session.displayTitle,
+                    sessionActive: model.session.session.isActive
+                )
             }
         case .changes:
             ChangesView(status: model.status, isLoading: model.isLoadingStatus, notice: model.notice) {
@@ -226,6 +251,39 @@ struct SessionWorkspaceView: View {
         case .transcript:
             TranscriptView(model: model)
         }
+    }
+
+    /// Beëindigd-status voor de terminaltab. Bewust top-aligned zónder
+    /// `frame(maxHeight: .infinity)` en zónder Spacer(): onder de
+    /// AppKit-splitview van `.inspector` wordt content met ongelimiteerde
+    /// hoogte gemeten, en elke gulzige hoogteclaim laat de VStack exploderen
+    /// (harness-bewezen: detail werd 2210px in een venster van 949, header op
+    /// y=-513). De "Terug naar project"-knop is een extra vluchtweg voor het
+    /// geval de header ooit afgedekt zou worden.
+    private var endedSessionView: some View {
+        VStack(spacing: 12) {
+            Label("Sessie beëindigd", systemImage: "checkmark.circle")
+                .font(.headline)
+            Text("De tmux-sessie is gestopt en de sessie staat op Afgerond. Het transcript, de worktree (na merge in de hoofdcheckout) en het geheugen blijven bewaard.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 10) {
+                Button("Bekijk transcript", systemImage: "text.bubble") { model.tab = .transcript }
+                    .buttonStyle(.omaSecondary)
+                Button("Terug naar project", systemImage: "chevron.left") { app.closeSession() }
+                    .buttonStyle(.omaPrimary)
+            }
+            .padding(.top, 4)
+        }
+        .padding(24)
+        .frame(maxWidth: 560)
+        .background(OMAColor.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .top)
+        .padding(.horizontal, 28)
+        .padding(.top, 24)
+        .padding(.bottom, 20)
     }
 }
 
@@ -247,14 +305,16 @@ struct SessionPickerSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            PageTitle(title: "Kies een sessie", subtitle: "Alleen sessies van dit project. Een sessie kan maar in één cel staan.")
+            PageTitle(title: "Kies een sessie", subtitle: "Alleen actieve sessies van dit project. Een sessie kan maar in één cel staan.")
             if let notice {
                 InlineNotice(notice)
             }
-            let available = sessions.filter { !excluded.contains($0.id) }
+            // Beëindigde sessies hebben geen tmux-sessie meer; een attach zou
+            // direct met code 256 falen. Bied ze hier niet aan.
+            let available = sessions.filter { $0.session.isActive && !excluded.contains($0.id) }
             if available.isEmpty {
-                ContentUnavailableView("Geen andere sessies", systemImage: "terminal",
-                                       description: Text("Start een nieuwe sessie vanuit de projectcockpit."))
+                ContentUnavailableView("Geen andere actieve sessies", systemImage: "terminal",
+                                       description: Text("Start een nieuwe sessie vanuit de projectcockpit. Beëindigde sessies hebben geen terminal meer."))
                     .frame(minHeight: 200)
             } else {
                 ScrollView {

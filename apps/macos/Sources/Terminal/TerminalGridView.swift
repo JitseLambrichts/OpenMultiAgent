@@ -35,7 +35,16 @@ struct TerminalGridView: View {
         Group {
             if let focused = model.focusedSessionID,
                let controller = model.controller(for: focused) as? TerminalController {
-                terminalCell(controller, sessionID: focused, isFocused: true)
+                TerminalCellView(
+                    model: model,
+                    controller: controller,
+                    sessionID: focused,
+                    isFocused: true,
+                    title: titleFor(focused),
+                    sessionActive: isActive(focused),
+                    allowClose: allowClose,
+                    onOpenDetail: onOpenDetail.map { callback in { callback(focused) } }
+                )
             } else {
                 Grid(horizontalSpacing: 8, verticalSpacing: 8) {
                     ForEach(rows, id: \.first?.id) { row in
@@ -51,6 +60,7 @@ struct TerminalGridView: View {
         .padding(.horizontal, 28)
         .padding(.bottom, 20)
         .background(OMAColor.canvas)
+        .clipped()
         .transaction { $0.animation = nil }
     }
 
@@ -65,7 +75,16 @@ struct TerminalGridView: View {
     private func cellView(_ cell: TerminalCell) -> some View {
         if let sessionID = cell.sessionID,
            let controller = model.controller(for: sessionID) as? TerminalController {
-            terminalCell(controller, sessionID: sessionID, isFocused: false)
+            TerminalCellView(
+                model: model,
+                controller: controller,
+                sessionID: sessionID,
+                isFocused: false,
+                title: titleFor(sessionID),
+                sessionActive: isActive(sessionID),
+                allowClose: allowClose,
+                onOpenDetail: onOpenDetail.map { callback in { callback(sessionID) } }
+            )
         } else {
             Button {
                 onPickSession(cell.id)
@@ -83,31 +102,95 @@ struct TerminalGridView: View {
             .accessibilityLabel("Open een sessie in deze lege terminal")
         }
     }
+}
 
-    private func terminalCell(_ controller: TerminalController, sessionID: String, isFocused: Bool) -> some View {
+/// Single-sessie detailvariant zónder Grid. Het detail heeft per definitie
+/// één bezette cel; die direct (zonder Grid) in de VStack leggen is het enige
+/// meet-veilige patroon: de VStack geeft de header zijn ideale hoogte en de
+/// cel vult de resterende ruimte. Een Grid-cel met ongelimiteerde hoogte kan
+/// bij het meten ongelimiteerde hoogte naar boven rapporteren, waardoor de
+/// VStack uitpuilt en de header (Terug-knop, tabs) buiten beeld verdwijnt —
+/// precies de fullscreen-terminalval waarbij alleen de sidebar nog klikbaar
+/// is. Zie `TerminalCellView`.
+struct SingleTerminalView: View {
+    let model: TerminalWorkspaceModel
+    let sessionID: String
+    var title: String
+    var sessionActive: Bool
+
+    var body: some View {
+        Group {
+            if let controller = model.controller(for: sessionID) as? TerminalController {
+                TerminalCellView(
+                    model: model,
+                    controller: controller,
+                    sessionID: sessionID,
+                    isFocused: false,
+                    title: title,
+                    sessionActive: sessionActive,
+                    allowFocus: false,
+                    allowClose: false,
+                    onOpenDetail: nil
+                )
+            } else {
+                // Bewust géén maxHeight:.infinity (zie endedSessionView in
+                // SessionWorkspaceView): onder de AppKit-splitview van
+                // `.inspector` explodeert elke gulzige hoogteclaim.
+                ProgressView("Terminal verbinden…")
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 80)
+                    .padding(.bottom, 20)
+            }
+        }
+        .padding(.horizontal, 28)
+        .padding(.bottom, 20)
+        .background(OMAColor.canvas)
+        .clipped()
+    }
+}
+
+/// Eén terminalcel: header met status plus de terminal of de exited-status.
+/// Gedeeld door de project-grid (in een Grid-cel) en het sessie-detail
+/// (direct in de VStack via `SingleTerminalView`, zónder Grid).
+struct TerminalCellView: View {
+    let model: TerminalWorkspaceModel
+    let controller: TerminalController
+    let sessionID: String
+    let isFocused: Bool
+    var title: String
+    var sessionActive: Bool
+    /// Focus-toggle verbergen in het single-sessie detail: bij één cel is
+    /// focussen betekenisloos.
+    var allowFocus: Bool = true
+    var allowClose: Bool = true
+    /// Nil = geen "Open detail"-knop (sessie-detail); gezet in de project-grid.
+    var onOpenDetail: (() -> Void)? = nil
+
+    var body: some View {
         VStack(spacing: 0) {
-            cellHeader(controller: controller, sessionID: sessionID, isFocused: isFocused)
+            cellHeader
             Divider()
             if case .exited(let code) = controller.state {
-                exitedView(sessionID: sessionID, code: code)
+                exitedView(code: code)
             } else {
                 TerminalRepresentable(controller: controller)
             }
         }
         .background(OMAColor.surface)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipped()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Terminal voor sessie \(sessionID)")
     }
 
-    private func cellHeader(controller: TerminalController, sessionID: String, isFocused: Bool) -> some View {
+    private var cellHeader: some View {
         HStack(spacing: 6) {
             Image(systemName: "terminal")
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
-            Text(titleFor(sessionID))
+            Text(title)
                 .font(.caption.weight(.medium))
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -121,24 +204,24 @@ struct TerminalGridView: View {
             }
             Spacer(minLength: 4)
             if let onOpenDetail {
-                Button("Open detail", systemImage: "arrow.up.forward") {
-                    onOpenDetail(sessionID)
-                }
-                .help("Open het sessie-detail (terminal, wijzigingen, geheugen, transcript)")
-                .modifier(CellControl())
+                Button("Open detail", systemImage: "arrow.up.forward", action: onOpenDetail)
+                    .help("Open het sessie-detail (terminal, wijzigingen, geheugen, transcript)")
+                    .modifier(CellControl())
             }
-            if isFocused {
-                Button("Verlaat focus", systemImage: "arrow.down.right.and.arrow.up.left") {
-                    model.unfocus()
+            if allowFocus {
+                if isFocused {
+                    Button("Verlaat focus", systemImage: "arrow.down.right.and.arrow.up.left") {
+                        model.unfocus()
+                    }
+                    .help("Terug naar de rasterindeling")
+                    .modifier(CellControl())
+                } else {
+                    Button("Focus", systemImage: "arrow.up.left.and.arrow.down.right") {
+                        model.focus(sessionID: sessionID)
+                    }
+                    .help("Toon alleen deze terminal")
+                    .modifier(CellControl())
                 }
-                .help("Terug naar de rasterindeling")
-                .modifier(CellControl())
-            } else {
-                Button("Focus", systemImage: "arrow.up.left.and.arrow.down.right") {
-                    model.focus(sessionID: sessionID)
-                }
-                .help("Toon alleen deze terminal")
-                .modifier(CellControl())
             }
             if allowClose {
                 Button("Sluit terminal", systemImage: "xmark") {
@@ -164,16 +247,15 @@ struct TerminalGridView: View {
         }
     }
 
-    private func exitedView(sessionID: String, code: Int32?) -> some View {
-        let active = isActive(sessionID)
-        return VStack(spacing: 12) {
-            Label(active ? "Terminalkoppeling gestopt" : "Sessie beëindigd", systemImage: active ? "bolt.slash" : "checkmark.circle")
+    private func exitedView(code: Int32?) -> some View {
+        VStack(spacing: 12) {
+            Label(sessionActive ? "Terminalkoppeling gestopt" : "Sessie beëindigd", systemImage: sessionActive ? "bolt.slash" : "checkmark.circle")
                 .font(.headline)
-            Text(exitedMessage(sessionID: sessionID, code: code))
+            Text(exitedMessage(code: code))
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            if active {
+            if sessionActive {
                 Button("Verbind opnieuw", systemImage: "arrow.clockwise") {
                     Task { await model.reconnect(sessionID: sessionID) }
                 }
@@ -184,8 +266,8 @@ struct TerminalGridView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func exitedMessage(sessionID: String, code: Int32?) -> String {
-        guard isActive(sessionID) else {
+    private func exitedMessage(code: Int32?) -> String {
+        guard sessionActive else {
             return "De tmux-sessie is gestopt en de sessie staat op Afgerond. Het transcript, de worktree (na merge in de hoofdcheckout) en het geheugen blijven bewaard."
         }
         return code.map { "De tmux-koppeling eindigde met code \($0). De sessie zelf is niet beëindigd." }

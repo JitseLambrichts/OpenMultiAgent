@@ -92,6 +92,14 @@ final class SessionWorkspaceModel {
         !session.session.isActive && promotion != .extracting && promotion != .applying
     }
 
+    /// Een tmux-attach naar een beëindigde sessie kan nooit slagen: `end`
+    /// killt de tmux-sessie (zie session-manager), dus `tmux attach` eindigt
+    /// altijd met "no such session" (exit 1, door SwiftTerm gerapporteerd als
+    /// 256). Probeer het dan niet eens; toon direct de beëindigd-status.
+    var canAttachTerminal: Bool {
+        session.session.isActive
+    }
+
     var canLoadOlderTranscript: Bool { nextCursor != nil && !isLoadingTranscript }
 
     var runtime: String {

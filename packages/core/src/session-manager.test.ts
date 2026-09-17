@@ -480,6 +480,27 @@ describe("SessionManager.end and remove", () => {
 
     expect(existsSync(join(repo, "README.md"))).toBe(true);
   });
+
+  test("rm succeeds when the worktree was already deleted out-of-band", async () => {
+    const mgr = manager();
+    const view = await mgr.create({
+      repoPath: repo,
+      agent: "claude",
+      worktree: true,
+    });
+    const worktree = view.session.worktree_path;
+    // De map verdwijnt buiten OMA om; `git worktree remove` faalt dan met
+    // "not a working tree" (128), ook ná `git worktree prune`. Verwijderen
+    // moet alsnog slagen: de gewenste eindsituatie is al bereikt.
+    rmSync(worktree, { recursive: true, force: true });
+
+    await mgr.remove(view.session.id);
+
+    expect(existsSync(worktree)).toBe(false);
+    expect(
+      db.query<{ n: number }, []>("SELECT COUNT(*) AS n FROM session").get()?.n,
+    ).toBe(0);
+  });
 });
 
 describe("SessionManager.switchAgent and resume", () => {

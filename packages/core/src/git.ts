@@ -65,10 +65,40 @@ export async function removeWorktree(
 ): Promise<void> {
   const root = await repoRoot(repoPath);
   if (resolve(worktreePath) === resolve(root)) return; // never remove the main tree
+  if (!existsSync(worktreePath)) {
+    // Already gone (deleted out-of-band): there is nothing to remove.
+    // Prune stale admin data so `git worktree list` is clean again, then
+    // succeed — the caller (session removal) wants exactly this end state.
+    // A path that exists but is not a worktree is deliberately NOT deleted
+    // here: that could be user data, so it keeps throwing below.
+    await exec(["git", "worktree", "prune"], { cwd: root });
+    if (await isWorktreeRegistered(root, worktreePath)) {
+      throw new Error(
+        `worktree path is missing but still registered: ${worktreePath}`,
+      );
+    }
+    return;
+  }
   await execOrThrow(
     ["git", "worktree", "remove", ...(opts.force ? ["--force"] : []), worktreePath],
     { cwd: root },
   );
+}
+
+/** True when git still lists the path as a worktree (possibly stale). */
+export async function isWorktreeRegistered(
+  repoPath: string,
+  worktreePath: string,
+): Promise<boolean> {
+  const result = await exec(["git", "worktree", "list", "--porcelain"], {
+    cwd: repoPath,
+  });
+  if (result.code !== 0) return false;
+  const wanted = resolve(worktreePath);
+  return result.stdout.split("\n").some((line) => {
+    const match = /^worktree\s+(.+)$/.exec(line.trim());
+    return match !== null && resolve(match[1]!.trim()) === wanted;
+  });
 }
 
 export interface ChangedFile {

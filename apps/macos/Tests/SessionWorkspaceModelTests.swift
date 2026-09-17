@@ -61,6 +61,19 @@ struct SessionWorkspaceModelTests {
         #expect(await client.extractCalls == 0)
     }
 
+    @Test func terminalAttachIsOnlyAttemptedForActiveSessions() async {
+        // Een tmux-attach naar een beëindigde sessie kan nooit slagen: `end`
+        // ruimt de tmux-sessie op, dus `tmux attach` eindigt altijd met
+        // "no such session" (exit 1, door SwiftTerm gerapporteerd als 256).
+        // De view gebruikt dit om de attach-poging over te slaan en direct de
+        // begrensde beëindigd-kaart te tonen.
+        let active = SessionWorkspaceModel(session: .sample(id: "a", status: "active"), client: WorkspaceClientStub())
+        #expect(active.canAttachTerminal)
+
+        let ended = SessionWorkspaceModel(session: .sample(id: "e", status: "ended"), client: WorkspaceClientStub())
+        #expect(!ended.canAttachTerminal)
+    }
+
     @Test func memorySearchOnlySendsTheSettledQuery() async {
         let client = WorkspaceClientStub()
         let model = MemorySearchModel(client: client, repoPath: "/repo", debounce: .milliseconds(30))
