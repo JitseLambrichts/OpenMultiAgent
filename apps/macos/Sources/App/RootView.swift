@@ -42,8 +42,8 @@ struct RootView: View {
         }
         .sheet(isPresented: $showsRootSessionSheet) {
             NewSessionSheet(
-                projects: model.projects.projects,
-                preselected: model.selectedProject,
+                projects: sessionSheetProjects,
+                preselected: sessionSheetPreselected,
                 agents: model.availableAgents,
                 displayName: { model.displayName(for: $0) },
                 symbol: { model.symbol(for: $0) }
@@ -148,6 +148,43 @@ struct RootView: View {
         case .terminalLayout, .none:
             break
         }
+    }
+
+    /// Projectcontext voor de sessie-sheet: zit de gebruiker binnen een
+    /// project (cockpit of sessie-workspace), dan is dat het enige project
+    /// dat de sheet aanbiedt, zodat er geen projectkiezer verschijnt en de
+    /// sessie altijd in het huidige project wordt aangemaakt. Daarbuiten
+    /// (dashboard, Sessies, Geheugen, Docs, Instellingen) blijven alle
+    /// projecten kiesbaar.
+    private var currentProjectContext: ProjectDTO? {
+        if let selected = model.selectedProject {
+            if let fresh = model.projects.projects.first(where: { $0.id == selected.id }) {
+                return fresh
+            }
+            return selected
+        }
+        if let session = model.selectedSession {
+            return model.projects.project(forRepoPath: session.session.repoPath)
+        }
+        return nil
+    }
+
+    private var isInsideProject: Bool {
+        model.selection == .projects && currentProjectContext != nil
+    }
+
+    private var sessionSheetProjects: [ProjectDTO] {
+        if isInsideProject, let current = currentProjectContext {
+            return [current]
+        }
+        return model.projects.projects
+    }
+
+    private var sessionSheetPreselected: ProjectDTO? {
+        if isInsideProject {
+            return currentProjectContext
+        }
+        return model.selectedProject
     }
 
     private func restoreIfNeeded(projects: [ProjectDTO]) {
