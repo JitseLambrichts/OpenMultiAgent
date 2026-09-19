@@ -5,6 +5,9 @@ struct ChangesView: View {
     let status: SessionStatusDTO?
     let isLoading: Bool
     let notice: String?
+    var projectID: String? = nil
+    var session: SessionViewDTO? = nil
+    var onSelectFile: ((FileDiffTarget) -> Void)? = nil
     let onRefresh: () -> Void
 
     var body: some View {
@@ -26,7 +29,16 @@ struct ChangesView: View {
                                 .foregroundStyle(.secondary)
                         } else {
                             ForEach(status.changedFiles) { file in
-                                ChangedFileRow(file: file)
+                                ChangedFileRow(file: file) {
+                                    if let projectID, let onSelectFile {
+                                        onSelectFile(FileDiffTarget(
+                                            projectID: projectID,
+                                            sessionID: session?.id,
+                                            sessionTitle: session?.session.displayTitle,
+                                            file: file
+                                        ))
+                                    }
+                                }
                             }
                         }
                     }

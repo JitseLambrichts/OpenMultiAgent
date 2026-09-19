@@ -4,6 +4,7 @@ struct SessionWorkspaceView: View {
     @State private var model: SessionWorkspaceModel
     @State private var terminal: TerminalWorkspaceModel
     @State private var showsEndConfirmation = false
+    @State private var diffTarget: FileDiffTarget?
     let app: AppModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -29,7 +30,20 @@ struct SessionWorkspaceView: View {
         }
         .background(OMAColor.canvas)
         .inspector(isPresented: Binding(get: { app.isInspectorVisible }, set: { app.isInspectorVisible = $0 })) {
-            SessionInspector(session: model.session, status: model.status, symbolForAgent: { app.symbol(forAgentID: $0) })
+            SessionInspector(
+                session: model.session,
+                status: model.status,
+                symbolForAgent: { app.symbol(forAgentID: $0) }
+            ) { file in
+                if let projectID = currentProjectID {
+                    diffTarget = FileDiffTarget(
+                        projectID: projectID,
+                        sessionID: model.session.id,
+                        sessionTitle: model.session.session.displayTitle,
+                        file: file
+                    )
+                }
+            }
                 .inspectorColumnWidth(min: 260, ideal: 300, max: 380)
         }
         .sheet(isPresented: Binding(get: { model.route == .promotionPreview }, set: { if !$0 { model.dismissRoute() } })) {
@@ -40,6 +54,11 @@ struct SessionWorkspaceView: View {
                 onRetry: { Task { await model.retryPromotion() } },
                 onClose: { model.dismissRoute(); app.reconcile() }
             )
+        }
+        .sheet(item: $diffTarget) { target in
+            FileDiffSheet(target: target, client: app.client) { opened in
+                app.openProjectEditor(sessionID: opened.sessionID, path: opened.file.path)
+            }
         }
         .alert("Sessie beëindigen?", isPresented: $showsEndConfirmation) {
             if model.session.session.usesWorktree {
@@ -106,6 +125,11 @@ struct SessionWorkspaceView: View {
         terminal.close(sessionID: model.session.id)
         app.selectedSession = model.session
         app.reconcile()
+    }
+
+    private var currentProjectID: String? {
+        app.selectedProject?.id
+            ?? app.projects.project(forRepoPath: model.session.session.repoPath)?.id
     }
 
     // MARK: Header
@@ -242,7 +266,15 @@ struct SessionWorkspaceView: View {
                 )
             }
         case .changes:
-            ChangesView(status: model.status, isLoading: model.isLoadingStatus, notice: model.notice) {
+            ChangesView(
+                status: model.status,
+                isLoading: model.isLoadingStatus,
+                notice: model.notice,
+                projectID: currentProjectID,
+                session: model.session
+            ) { target in
+                diffTarget = target
+            } onRefresh: {
                 Task { await model.loadStatus() }
             }
         case .memory:

@@ -196,6 +196,10 @@ protocol DesktopAPI: Sendable {
     func removeCustomAgent(id: String) async throws
     func listAgentSystemPrompts() async throws -> [AgentSystemPromptDTO]
     func setAgentSystemPrompt(agent: String, systemPrompt: String) async throws
+    func fsTree(projectID: String, sessionID: String?) async throws -> FileTreeDTO
+    func fsRead(projectID: String, sessionID: String?, path: String) async throws -> FileContentDTO
+    func fsWrite(projectID: String, sessionID: String?, path: String, content: String) async throws -> FileWriteDTO
+    func gitFileDiff(projectID: String, sessionID: String?, path: String) async throws -> FileDiffDTO
 }
 
 /// Defaults keep focused test stubs small: a stub only implements the calls the
@@ -227,6 +231,10 @@ extension DesktopAPI {
     func removeCustomAgent(id: String) async throws { throw notWired }
     func listAgentSystemPrompts() async throws -> [AgentSystemPromptDTO] { throw notWired }
     func setAgentSystemPrompt(agent: String, systemPrompt: String) async throws { throw notWired }
+    func fsTree(projectID: String, sessionID: String?) async throws -> FileTreeDTO { throw notWired }
+    func fsRead(projectID: String, sessionID: String?, path: String) async throws -> FileContentDTO { throw notWired }
+    func fsWrite(projectID: String, sessionID: String?, path: String, content: String) async throws -> FileWriteDTO { throw notWired }
+    func gitFileDiff(projectID: String, sessionID: String?, path: String) async throws -> FileDiffDTO { throw notWired }
 }
 
 actor SidecarClient: DesktopAPI {
@@ -472,6 +480,40 @@ actor SidecarClient: DesktopAPI {
                 "system_prompt": .string(systemPrompt),
             ]
         )
+    }
+
+    func fsTree(projectID: String, sessionID: String?) async throws -> FileTreeDTO {
+        var params: [String: JSONValue] = ["project_id": .string(projectID)]
+        if let sessionID { params["session_id"] = .string(sessionID) }
+        return try await request(method: "fs.tree", params: params)
+    }
+
+    func fsRead(projectID: String, sessionID: String?, path: String) async throws -> FileContentDTO {
+        var params: [String: JSONValue] = [
+            "project_id": .string(projectID),
+            "path": .string(path),
+        ]
+        if let sessionID { params["session_id"] = .string(sessionID) }
+        return try await request(method: "fs.read", params: params)
+    }
+
+    func fsWrite(projectID: String, sessionID: String?, path: String, content: String) async throws -> FileWriteDTO {
+        var params: [String: JSONValue] = [
+            "project_id": .string(projectID),
+            "path": .string(path),
+            "content": .string(content),
+        ]
+        if let sessionID { params["session_id"] = .string(sessionID) }
+        return try await request(method: "fs.write", params: params)
+    }
+
+    func gitFileDiff(projectID: String, sessionID: String?, path: String) async throws -> FileDiffDTO {
+        var params: [String: JSONValue] = [
+            "project_id": .string(projectID),
+            "path": .string(path),
+        ]
+        if let sessionID { params["session_id"] = .string(sessionID) }
+        return try await request(method: "git.fileDiff", params: params)
     }
 
     // MARK: Lifecycle

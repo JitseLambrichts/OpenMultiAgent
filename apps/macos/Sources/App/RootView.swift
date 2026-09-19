@@ -145,7 +145,7 @@ struct RootView: View {
             if model.selection != .memory {
                 model.selection = .memory
             }
-        case .terminalLayout, .none:
+        case .saveEditor, .terminalLayout, .none:
             break
         }
     }

@@ -65,6 +65,31 @@ final class CriticalFlowUITests: XCTestCase {
         XCTAssertTrue(transcriptTab.isHittable, "Tabblad is niet aanklikbaar; header buiten beeld?\n\(app.debugDescription)")
     }
 
+    func testChangedFileOpensDiffAndEditor() throws {
+        let app = launchWithFixtureSidecar()
+
+        let openProject = app.buttons["Open OpenMultiAgent"]
+        XCTAssertTrue(openProject.waitForExistence(timeout: 10), app.debugDescription)
+        openProject.click()
+
+        let changed = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'README.md'")).firstMatch
+        XCTAssertTrue(changed.waitForExistence(timeout: 5), "Gewijzigd bestand zou klikbaar moeten zijn\n\(app.debugDescription)")
+        changed.click()
+
+        let openEditor = app.buttons["Open in editor"]
+        XCTAssertTrue(openEditor.waitForExistence(timeout: 5), "Diff-sheet ontbreekt\n\(app.debugDescription)")
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "value CONTAINS 'changed'")).firstMatch.waitForExistence(timeout: 5), app.debugDescription)
+        openEditor.click()
+
+        let codeTab = app.buttons["Code"]
+        XCTAssertTrue(codeTab.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(codeTab.isHittable)
+        let readme = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'README.md' OR value CONTAINS 'README.md'")).firstMatch
+        XCTAssertTrue(readme.waitForExistence(timeout: 5), "Editor zou README.md moeten tonen\n\(app.debugDescription)")
+        let content = app.textViews.matching(NSPredicate(format: "value CONTAINS '# OpenMultiAgent'")).firstMatch
+        XCTAssertTrue(content.waitForExistence(timeout: 5), "Editor zou de bestandsinhoud moeten tonen\n\(app.debugDescription)")
+    }
+
     /// Combined accessibility elements expose their text as a label on a group,
     /// so lookups match on label prefix across every element type.
     private func element(_ app: XCUIApplication, labelPrefix: String) -> XCUIElement {

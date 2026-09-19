@@ -7,6 +7,7 @@ import SwiftUI
 enum CockpitTab: String, CaseIterable, Identifiable {
     case overzicht
     case terminals
+    case code
 
     var id: Self { self }
 
@@ -14,6 +15,7 @@ enum CockpitTab: String, CaseIterable, Identifiable {
         switch self {
         case .overzicht: "Overzicht"
         case .terminals: "Terminals"
+        case .code: "Code"
         }
     }
 
@@ -21,6 +23,7 @@ enum CockpitTab: String, CaseIterable, Identifiable {
         switch self {
         case .overzicht: "square.grid.2x2"
         case .terminals: "terminal"
+        case .code: "chevron.left.forwardslash.chevron.right"
         }
     }
 }
@@ -28,9 +31,11 @@ enum CockpitTab: String, CaseIterable, Identifiable {
 struct ProjectCockpitView: View {
     @State private var model: ProjectCockpitModel
     @State private var terminals: TerminalWorkspaceModel
+    @State private var editor: CodeWorkspaceModel
     @State private var cockpitTab: CockpitTab = .overzicht
     @State private var pickerCellID: UUID?
     @State private var knownTitles: [String: String] = [:]
+    @State private var diffTarget: FileDiffTarget?
     @SceneStorage("terminal-layout") private var storedLayout: TerminalLayout = .single
     let app: AppModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -40,6 +45,7 @@ struct ProjectCockpitView: View {
     init(project: ProjectDTO, app: AppModel) {
         _model = State(initialValue: ProjectCockpitModel(project: project, client: app.client))
         _terminals = State(initialValue: TerminalWorkspaceModel(factory: SidecarTerminalFactory(client: app.client)))
+        _editor = State(initialValue: CodeWorkspaceModel(project: project, client: app.client))
         self.app = app
     }
 
@@ -89,6 +95,12 @@ struct ProjectCockpitView: View {
                 Task { try? await terminals.open(sessionID: session.id, into: cellID) }
             }
         }
+        .sheet(item: $diffTarget) { target in
+            FileDiffSheet(target: target, client: app.client) { opened in
+                cockpitTab = .code
+                Task { await editor.reveal(path: opened.file.path, sessionID: opened.sessionID) }
+            }
+        }
         .confirmationDialog(
             "Deze indeling heeft minder cellen dan er terminals open zijn",
             isPresented: Binding(get: { terminals.pendingLayoutConfirmation != nil }, set: { if !$0 { terminals.cancelPendingLayout() } }),
@@ -116,15 +128,27 @@ struct ProjectCockpitView: View {
                 cockpitTab = .terminals
                 terminals.requestLayout(layout)
             }
+            await openPendingEditor()
         }
         .onChange(of: terminals.layout) { _, layout in storedLayout = layout }
         .onChange(of: app.pendingCommand) { _, _ in
+            if app.consume(.saveEditor) {
+                Task { await editor.saveSelected() }
+            }
             if let layout = app.consumeTerminalLayout() {
                 cockpitTab = .terminals
                 terminals.requestLayout(layout)
             }
         }
-        .onChange(of: app.reconciliationTick) { _, _ in Task { await model.load() } }
+        .onChange(of: app.pendingEditorOpen) { _, _ in
+            Task { await openPendingEditor() }
+        }
+        .onChange(of: app.reconciliationTick) { _, _ in
+            Task {
+                await model.load()
+                await editor.reloadCleanBuffers()
+            }
+        }
         .overlay {
             if model.isLoading && model.sessions.isEmpty {
                 ProgressView("Project laden…")
@@ -144,7 +168,7 @@ struct ProjectCockpitView: View {
                 title: { $0.title },
                 symbol: { $0.symbol }
             )
-            .help("Wissel tussen overzicht en gelijkwaardige terminal-grid")
+            .help("Wissel tussen overzicht, terminals en code")
             Spacer()
             if cockpitTab == .terminals {
                 OMAPillPicker(
@@ -187,6 +211,14 @@ struct ProjectCockpitView: View {
             }
         case .terminals:
             terminalsSection
+        case .code:
+            CodeWorkspaceView(
+                model: editor,
+                sessions: model.sessions,
+                terminals: terminals,
+                onOpenTerminals: { cockpitTab = .terminals },
+                onStartShell: { app.request(.newSession) }
+            )
         }
     }
 
@@ -219,7 +251,11 @@ struct ProjectCockpitView: View {
         }
     }
 
-    // MARK: Actions
+    private func openPendingEditor() async {
+        guard let request = app.consumeEditorOpen() else { return }
+        cockpitTab = .code
+        await editor.reveal(path: request.path, sessionID: request.sessionID)
+    }
 
     private var actions: some View {
         HStack(spacing: 10) {
@@ -359,7 +395,14 @@ struct ProjectCockpitView: View {
                         Text(change.session.session.displayTitle)
                             .font(.subheadline.weight(.medium))
                         ForEach(change.files.prefix(6)) { file in
-                            ChangedFileRow(file: file)
+                            ChangedFileRow(file: file) {
+                                diffTarget = FileDiffTarget(
+                                    projectID: model.project.id,
+                                    sessionID: change.session.id,
+                                    sessionTitle: change.session.session.displayTitle,
+                                    file: file
+                                )
+                            }
                         }
                         if change.files.count > 6 {
                             Text("+ \(change.files.count - 6) meer")
@@ -433,6 +476,7 @@ func sessionLifecycleAlert(_ alert: CockpitAlert, perform: @escaping (CockpitAle
 
 struct ChangedFileRow: View {
     let file: ChangedFileDTO
+    var action: (() -> Void)? = nil
 
     private var status: (text: String, symbol: String, color: Color) {
         switch file.status.trimmingCharacters(in: .whitespaces) {
@@ -446,7 +490,7 @@ struct ChangedFileRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 8) {
+        let row = HStack(spacing: 8) {
             Image(systemName: status.symbol)
                 .foregroundStyle(status.color)
                 .frame(width: 16)
@@ -460,8 +504,17 @@ struct ChangedFileRow: View {
                 .font(.caption)
                 .foregroundStyle(status.color)
         }
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(file.path), \(status.text)")
+
+        if let action {
+            Button(action: action) { row }
+                .buttonStyle(.plain)
+                .accessibilityHint("Toon de diff en open in de editor")
+        } else {
+            row
+        }
     }
 }
 

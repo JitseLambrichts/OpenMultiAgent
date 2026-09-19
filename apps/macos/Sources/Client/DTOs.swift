@@ -488,3 +488,29 @@ struct PromotionApplyDTO: Decodable, Equatable, Sendable {
 struct PendingPromotionCountDTO: Decodable, Equatable, Sendable {
     let count: Int
 }
+
+// MARK: - Project editor
+
+struct FileTreeDTO: Decodable, Equatable, Sendable {
+    let paths: [String]
+}
+
+struct FileContentDTO: Decodable, Equatable, Sendable {
+    let path: String
+    let content: String
+}
+
+struct FileWriteDTO: Decodable, Equatable, Sendable {
+    let path: String
+    let bytesWritten: Int
+
+    private enum CodingKeys: String, CodingKey {
+        case path
+        case bytesWritten = "bytes_written"
+    }
+}
+
+struct FileDiffDTO: Decodable, Equatable, Sendable {
+    let path: String
+    let diff: String
+}

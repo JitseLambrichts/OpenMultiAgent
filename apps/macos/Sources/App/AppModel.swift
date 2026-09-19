@@ -55,6 +55,12 @@ enum AppCommand: Equatable, Sendable {
     case addProject
     case search
     case terminalLayout(TerminalLayout)
+    case saveEditor
+}
+
+struct EditorOpenRequest: Equatable, Sendable {
+    let sessionID: String?
+    let path: String
 }
 
 /// Composition root. Owns the sidecar client, connection state, top-level
@@ -76,6 +82,7 @@ final class AppModel {
     var selectedSession: SessionViewDTO?
     var isInspectorVisible = false
     private(set) var pendingCommand: AppCommand?
+    private(set) var pendingEditorOpen: EditorOpenRequest?
     /// Incremented after lifecycle changes and on wake; feature models reload
     /// when it changes so a missed notification cannot leave stale state.
     private(set) var reconciliationTick = 0
@@ -224,6 +231,18 @@ final class AppModel {
 
     func closeSession() {
         selectedSession = nil
+    }
+
+    func openProjectEditor(sessionID: String?, path: String) {
+        pendingEditorOpen = EditorOpenRequest(sessionID: sessionID, path: path)
+        selectedSession = nil
+        selection = .projects
+    }
+
+    func consumeEditorOpen() -> EditorOpenRequest? {
+        let request = pendingEditorOpen
+        pendingEditorOpen = nil
+        return request
     }
 
     func closeProject() {

@@ -130,6 +130,45 @@ export async function diffStat(path: string): Promise<string> {
   return result.code === 0 ? result.stdout.trim() : "";
 }
 
+/**
+ * Tracked and untracked files under `cwd`, excluding gitignored paths.
+ * Deleted index entries are omitted so the editor tree only lists files
+ * that can actually be opened.
+ */
+export async function listedFiles(cwd: string): Promise<string[]> {
+  const result = await exec(
+    ["git", "-C", cwd, "ls-files", "-c", "-o", "--exclude-standard"],
+  );
+  if (result.code !== 0) return [];
+  return result.stdout
+    .split("\n")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0 && existsSync(join(cwd, entry)));
+}
+
+/**
+ * Unified diff of one path against HEAD. Untracked files are shown as a
+ * full added-file diff so the desktop preview has something to display.
+ */
+export async function fileDiff(
+  cwd: string,
+  relativePath: string,
+): Promise<string> {
+  const againstHead = await exec(["git", "diff", "HEAD", "--", relativePath], {
+    cwd,
+  });
+  if (againstHead.stdout.trim()) return againstHead.stdout;
+
+  const absolute = join(cwd, relativePath);
+  if (!existsSync(absolute)) return "";
+
+  const noIndex = await exec(
+    ["git", "diff", "--no-index", "--", "/dev/null", relativePath],
+    { cwd },
+  );
+  return noIndex.stdout;
+}
+
 /** True when the tree has staged, unstaged or untracked changes. */
 export async function hasUncommittedChanges(path: string): Promise<boolean> {
   return (await changedFiles(path)).length > 0;

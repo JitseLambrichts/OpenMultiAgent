@@ -1,0 +1,8 @@
+{
+  "jsonrpc": "2.0",
+  "id": 15,
+  "result": {
+    "path": "README.md",
+    "diff": "diff --git a/README.md b/README.md\n--- a/README.md\n+++ b/README.md\n@@ -1 +1,2 @@\n # OpenMultiAgent\n+changed\n"
+  }
+}

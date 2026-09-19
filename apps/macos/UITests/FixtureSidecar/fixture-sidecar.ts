@@ -52,6 +52,25 @@ const activeSession = {
 };
 const presentedSession = deadTmux ? activeSession : session;
 
+const liveSession = {
+  session: {
+    id: "session-live",
+    repo_path: project.repo_path,
+    worktree_path: `${project.repo_path}/.worktrees/edit`,
+    branch: "oma/edit",
+    title: "Edit README",
+    status: "active",
+    started_at: "2026-08-11T11:00:00.000Z",
+    ended_at: null,
+  },
+  runs: [],
+  tmux_alive: true,
+};
+
+const listedSessions = deadTmux
+  ? [presentedSession]
+  : [presentedSession, liveSession];
+
 let extracted = false;
 
 // Optional trace for debugging the launch path (FIXTURE_LOG=/path).
@@ -82,15 +101,42 @@ function result(method: string, params: Record<string, unknown>): unknown {
     case "project.list":
       return [project];
     case "project.detail":
-      return { project, sessions: [presentedSession] };
+      return { project, sessions: listedSessions };
     case "session.list":
-      return [presentedSession];
-    case "session.status":
+      return listedSessions;
+    case "session.status": {
+      const sessionId = params["session_id"];
+      if (sessionId === liveSession.session.id) {
+        return {
+          ...liveSession,
+          changed_files: [{ path: "README.md", status: "M" }],
+          diff_stat: " README.md | 1 +",
+          pane: "",
+        };
+      }
       return {
         ...presentedSession,
         changed_files: [{ path: "README.md", status: "M" }],
         diff_stat: " README.md | 1 +",
         pane: "",
+      };
+    }
+    case "fs.tree":
+      return { paths: ["README.md", "src/index.ts"] };
+    case "fs.read":
+      return {
+        path: params["path"] ?? "README.md",
+        content: "# OpenMultiAgent\n",
+      };
+    case "fs.write":
+      return {
+        path: params["path"] ?? "README.md",
+        bytes_written: 16,
+      };
+    case "git.fileDiff":
+      return {
+        path: params["path"] ?? "README.md",
+        diff: "diff --git a/README.md b/README.md\n--- a/README.md\n+++ b/README.md\n@@ -1 +1,2 @@\n # OpenMultiAgent\n+changed\n",
       };
     case "memory.list":
       return [];

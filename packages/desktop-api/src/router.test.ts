@@ -85,6 +85,16 @@ function services(overrides: Partial<DesktopServices> = {}): DesktopServices {
       agent: input.agent,
       system_prompt: input.system_prompt ?? "",
     }),
+    fsTree: async () => ({ paths: ["README.md"] }),
+    fsRead: async (input) => ({ path: input.path, content: "# hello\n" }),
+    fsWrite: async (input) => ({
+      path: input.path,
+      bytes_written: Buffer.byteLength(input.content, "utf8"),
+    }),
+    gitFileDiff: async (input) => ({
+      path: input.path,
+      diff: `diff --git a/${input.path} b/${input.path}\n`,
+    }),
     ...overrides,
   };
 }
@@ -206,6 +216,21 @@ describe("desktop router", () => {
 
     expect(response).toMatchObject({
       error: { code: -32601, message: "Method not found: project.rename" },
+    });
+  });
+
+  test("dispatches fs.tree for a project", async () => {
+    const response = await createRouter(services()).dispatch({
+      jsonrpc: "2.0",
+      id: 5,
+      method: "fs.tree",
+      params: { project_id: "project-1" },
+    });
+
+    expect(response).toEqual({
+      jsonrpc: "2.0",
+      id: 5,
+      result: { paths: ["README.md"] },
     });
   });
 

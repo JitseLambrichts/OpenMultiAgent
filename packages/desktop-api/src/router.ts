@@ -254,6 +254,38 @@ async function invoke(
           typeof systemPrompt === "string" ? systemPrompt : undefined,
       });
     }
+    case "fs.tree":
+      return services.fsTree({
+        project_id: requiredString(params, "project_id"),
+        session_id: optionalString(params, "session_id"),
+      });
+    case "fs.read":
+      return services.fsRead({
+        project_id: requiredString(params, "project_id"),
+        session_id: optionalString(params, "session_id"),
+        path: requiredString(params, "path"),
+      });
+    case "fs.write": {
+      const content = params.content;
+      if (typeof content !== "string") {
+        throw new DesktopError(
+          RPC_ERROR.INVALID_PARAMS,
+          "content must be a string",
+        );
+      }
+      return services.fsWrite({
+        project_id: requiredString(params, "project_id"),
+        session_id: optionalString(params, "session_id"),
+        path: requiredString(params, "path"),
+        content,
+      });
+    }
+    case "git.fileDiff":
+      return services.gitFileDiff({
+        project_id: requiredString(params, "project_id"),
+        session_id: optionalString(params, "session_id"),
+        path: requiredString(params, "path"),
+      });
     default:
       throw new DesktopError(
         RPC_ERROR.METHOD_NOT_FOUND,

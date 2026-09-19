@@ -77,6 +77,18 @@ struct DTOContractTests {
         #expect(pendingCount.result?.count == 3)
     }
 
+    @Test func decodesFilesystemContracts() throws {
+        let tree: RPCResponse<FileTreeDTO> = try fixture("fs-tree")
+        let read: RPCResponse<FileContentDTO> = try fixture("fs-read")
+        let write: RPCResponse<FileWriteDTO> = try fixture("fs-write")
+        let diff: RPCResponse<FileDiffDTO> = try fixture("git-file-diff")
+
+        #expect(tree.result?.paths == ["README.md", "src/index.ts"])
+        #expect(read.result?.content.contains("OpenMultiAgent") == true)
+        #expect(write.result?.bytesWritten == 16)
+        #expect(diff.result?.diff.contains("+changed") == true)
+    }
+
     @Test func rpcErrorPreservesRecoveryCode() throws {
         let envelope: RPCResponse<EmptyResult> = try fixture("rpc-error")
 

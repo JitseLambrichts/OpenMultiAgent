@@ -27,6 +27,10 @@ struct AppCommands: Commands {
             }
         }
 
+        CommandGroup(after: .saveItem) {
+            Button("Bewaar") { model.request(.saveEditor) }
+                .keyboardShortcut("s", modifiers: .command)
+        }
         CommandGroup(after: .sidebar) {
             Button(model.isInspectorVisible ? "Verberg inspector" : "Toon inspector") {
                 model.isInspectorVisible.toggle()

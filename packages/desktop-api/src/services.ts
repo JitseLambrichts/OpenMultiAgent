@@ -1,5 +1,14 @@
-import { join } from "node:path";
-import { lstatSync, statSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { join, isAbsolute, relative, resolve, dirname } from "node:path";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import type {
   AgentRun,
   AgentName,
@@ -19,7 +28,9 @@ import type {
 import {
   createProject,
   exec,
+  fileDiff,
   isGitRepo,
+  listedFiles,
   listAgentRuns,
   listEventsPage,
   listMemory,
@@ -293,6 +304,26 @@ export interface DesktopServices {
     agent: string;
     system_prompt?: string;
   }): Promise<AgentSystemPromptResult>;
+  fsTree(input: {
+    project_id: string;
+    session_id?: string;
+  }): Promise<{ paths: string[] }>;
+  fsRead(input: {
+    project_id: string;
+    session_id?: string;
+    path: string;
+  }): Promise<{ path: string; content: string }>;
+  fsWrite(input: {
+    project_id: string;
+    session_id?: string;
+    path: string;
+    content: string;
+  }): Promise<{ path: string; bytes_written: number }>;
+  gitFileDiff(input: {
+    project_id: string;
+    session_id?: string;
+    path: string;
+  }): Promise<{ path: string; diff: string }>;
 }
 
 export interface SessionOperations {
@@ -339,6 +370,51 @@ function statusView(view: SessionStatusView): DesktopSessionStatusView {
     diff_stat: view.diffStat,
     pane: view.pane,
   };
+}
+
+const MAX_EDITOR_FILE_BYTES = 1_048_576;
+
+function resolveInsideRoot(root: string, relativePath: string): string {
+  if (relativePath.trim() === "" || relativePath !== relativePath.trim()) {
+    throw new DesktopError(-32001, "path must be a relative file path", {
+      path: relativePath,
+    });
+  }
+  if (isAbsolute(relativePath)) {
+    throw new DesktopError(-32001, "Path is outside the project root", {
+      path: relativePath,
+    });
+  }
+  const normalizedRoot = resolve(root);
+  const resolved = resolve(normalizedRoot, relativePath);
+  const rel = relative(normalizedRoot, resolved);
+  if (rel === "" || rel.startsWith(`..`) || isAbsolute(rel)) {
+    throw new DesktopError(-32001, "Path is outside the project root", {
+      path: relativePath,
+    });
+  }
+  if (rel === ".git" || rel.startsWith(`.git/`)) {
+    throw new DesktopError(-32001, "Path is outside the project root", {
+      path: relativePath,
+    });
+  }
+  return resolved;
+}
+
+function decodeUtf8Text(bytes: Buffer, path: string): string {
+  if (bytes.includes(0)) {
+    throw new DesktopError(-32001, "File is not UTF-8 text", { path });
+  }
+  if (bytes.byteLength > MAX_EDITOR_FILE_BYTES) {
+    throw new DesktopError(-32001, "File is too large to open in the editor", {
+      path,
+    });
+  }
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    throw new DesktopError(-32001, "File is not UTF-8 text", { path });
+  }
 }
 
 export function createDesktopServices(
@@ -410,6 +486,19 @@ export function createDesktopServices(
     });
     activeExtractions.set(sessionId, extraction);
     await extraction;
+  }
+
+  function editorRoot(projectId: string, sessionId?: string): string {
+    const project = resolveProject(db, projectId);
+    if (!sessionId) return project.repo_path;
+    const session = resolveSession(db, sessionId);
+    if (session.repo_path !== project.repo_path) {
+      throw new DesktopError(-32001, "Session does not belong to this project", {
+        project_id: projectId,
+        session_id: sessionId,
+      });
+    }
+    return session.worktree_path;
   }
 
   return {
@@ -644,6 +733,35 @@ export function createDesktopServices(
       } catch (error) {
         throw toDesktopError(error, { agent });
       }
+    },
+    fsTree: async ({ project_id, session_id }) => {
+      const root = editorRoot(project_id, session_id);
+      return { paths: await listedFiles(root) };
+    },
+    fsRead: async ({ project_id, session_id, path }) => {
+      const root = editorRoot(project_id, session_id);
+      const absolute = resolveInsideRoot(root, path);
+      if (!existsSync(absolute) || !lstatSync(absolute).isFile()) {
+        throw new DesktopError(-32004, "File not found", { path });
+      }
+      const bytes = readFileSync(absolute);
+      return { path, content: decodeUtf8Text(bytes, path) };
+    },
+    fsWrite: async ({ project_id, session_id, path, content }) => {
+      const root = editorRoot(project_id, session_id);
+      const absolute = resolveInsideRoot(root, path);
+      const payload = Buffer.from(content, "utf8");
+      decodeUtf8Text(payload, path);
+      mkdirSync(dirname(absolute), { recursive: true });
+      const temp = `${absolute}.oma-tmp-${randomUUID()}`;
+      writeFileSync(temp, payload);
+      renameSync(temp, absolute);
+      return { path, bytes_written: payload.byteLength };
+    },
+    gitFileDiff: async ({ project_id, session_id, path }) => {
+      const root = editorRoot(project_id, session_id);
+      resolveInsideRoot(root, path);
+      return { path, diff: await fileDiff(root, path) };
     },
   };
 }

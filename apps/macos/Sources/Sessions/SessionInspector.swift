@@ -5,6 +5,7 @@ struct SessionInspectorSections: View {
     let session: SessionViewDTO
     let status: SessionStatusDTO?
     var symbolForAgent: (String) -> String = { AgentKind(rawValue: $0).symbol }
+    var onSelectFile: ((ChangedFileDTO) -> Void)? = nil
 
     var body: some View {
         Section("Sessie") {
@@ -33,7 +34,9 @@ struct SessionInspectorSections: View {
                     Text("Geen openstaande wijzigingen.").foregroundStyle(.secondary)
                 } else {
                     ForEach(status.changedFiles) { file in
-                        ChangedFileRow(file: file)
+                        ChangedFileRow(file: file) {
+                            onSelectFile?(file)
+                        }
                     }
                 }
                 if !status.diffStat.isEmpty {
@@ -70,10 +73,11 @@ struct SessionInspector: View {
     let session: SessionViewDTO
     let status: SessionStatusDTO?
     var symbolForAgent: (String) -> String = { AgentKind(rawValue: $0).symbol }
+    var onSelectFile: ((ChangedFileDTO) -> Void)? = nil
 
     var body: some View {
         List {
-            SessionInspectorSections(session: session, status: status, symbolForAgent: symbolForAgent)
+            SessionInspectorSections(session: session, status: status, symbolForAgent: symbolForAgent, onSelectFile: onSelectFile)
         }
         .scrollContentBackground(.hidden)
         .background(OMAColor.surface)

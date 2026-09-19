@@ -132,9 +132,15 @@ On first launch macOS may ask for access to the folder that contains this
 checkout (for example Desktop or Documents); the sidecar cannot start until
 that is granted.
 
-Keyboard: ⌘N new session, ⌘O add project, ⌘F search memory, ⌥⌘I inspector,
-⌃1–⌃4 terminal layouts. Closing a terminal cell or the app never ends a tmux
-session; **End Session** is an explicit, confirmed action.
+Keyboard: ⌘N new session, ⌘O add project, ⌘F search memory, ⌘S save the
+open editor file, ⌥⌘I inspector, ⌃1–⌃4 terminal layouts. Closing a terminal
+cell or the app never ends a tmux session; **End Session** is an explicit,
+confirmed action.
+
+The project cockpit has a **Code** tab: a file tree of the checkout or a
+session worktree, a native text editor, and the existing tmux terminal for
+running commands. Clicking a changed file shows a short diff, then **Open in
+editor** jumps to that path.
 
 ## Architecture and roadmap
 
