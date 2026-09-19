@@ -49,6 +49,7 @@
 		A4F36FA403510893E8F71856 /* ProjectCockpitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7286E04C45FE5F5FED122184 /* ProjectCockpitView.swift */; };
 		A647E220974E471071A1524C /* SessionRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 502FE1C998A90A7BDBAF444F /* SessionRow.swift */; };
 		A8488B162CE3158EC55DF8E3 /* TerminalController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6572C5FAED4B924A0CF5CBE3 /* TerminalController.swift */; };
+		A9C6B68C7D8965B4D13DDF83 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = 5125B8A7A89AC24136E7762A /* Highlightr */; };
 		AC60D904CC26588B17BC0925 /* ProjectsDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BA936525D989EDACCB3818A /* ProjectsDashboard.swift */; };
 		B4AD6B14A41EC1A3F7687291 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74697C941F3F1E496B424CC5 /* AppModel.swift */; };
 		BF2968222E04FF4535308EDC /* OpenMultiAgentApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FEB5DDBD3950E602F9AAB54 /* OpenMultiAgentApp.swift */; };
@@ -152,6 +153,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4C2D622B6F82ECA29106843B /* SwiftTerm in Frameworks */,
+				A9C6B68C7D8965B4D13DDF83 /* Highlightr in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -345,6 +347,7 @@
 			name = OpenMultiAgent;
 			packageProductDependencies = (
 				EB0718B61BD3BD3D5CE06FBA /* SwiftTerm */,
+				5125B8A7A89AC24136E7762A /* Highlightr */,
 			);
 			productName = OpenMultiAgent;
 			productReference = D850DC9AD8239199DC61307C /* OpenMultiAgent.app */;
@@ -419,6 +422,7 @@
 			mainGroup = FC22A665DA199E82D08DF02D;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				91D7A65534357C354506C60F /* XCRemoteSwiftPackageReference "Highlightr" */,
 				A5AC4C024AF24C08885181DC /* XCRemoteSwiftPackageReference "SwiftTerm" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -810,6 +814,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		91D7A65534357C354506C60F /* XCRemoteSwiftPackageReference "Highlightr" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/raspu/Highlightr.git";
+			requirement = {
+				kind = exactVersion;
+				version = 2.3.0;
+			};
+		};
 		A5AC4C024AF24C08885181DC /* XCRemoteSwiftPackageReference "SwiftTerm" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/migueldeicaza/SwiftTerm.git";
@@ -821,6 +833,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		5125B8A7A89AC24136E7762A /* Highlightr */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 91D7A65534357C354506C60F /* XCRemoteSwiftPackageReference "Highlightr" */;
+			productName = Highlightr;
+		};
 		EB0718B61BD3BD3D5CE06FBA /* SwiftTerm */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = A5AC4C024AF24C08885181DC /* XCRemoteSwiftPackageReference "SwiftTerm" */;

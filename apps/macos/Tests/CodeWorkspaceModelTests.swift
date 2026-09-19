@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import SwiftUI
 import Testing
 @testable import OpenMultiAgent
 
@@ -19,15 +20,80 @@ struct FileTreeBuilderTests {
     }
 }
 
+@MainActor
 struct CodeHighlighterTests {
     @Test func defaultForegroundStaysLightOnDark() {
-        let font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
-        let highlighted = CodeHighlighter.highlight("<html>\n", language: "text", font: font)
+        let highlighted = CodeHighlighter.highlight("<html>\n", language: "text", font: Self.font)
         let color = highlighted.attribute(.foregroundColor, at: 0, effectiveRange: nil) as? NSColor
         #expect(color == CodeHighlighter.textColor)
         #expect(color != NSColor.labelColor)
         #expect(color != NSColor.black)
     }
+
+    @Test func swiftGetsSeveralTokenColors() {
+        let source = "import Foundation\nstruct Foo {\n    let name: String = \"hoi\"\n}\n"
+        #expect(distinctColors(CodeHighlighter.highlight(source, language: "swift", font: Self.font)) >= 4)
+    }
+
+    /// HTML en CSS vielen terug op "text" en bleven daardoor volledig wit.
+    @Test func webLanguagesGetHighlighted() {
+        let html = "<!DOCTYPE html>\n<html lang=\"nl\">\n<head><title>Hoi</title></head>\n</html>\n"
+        let css = "body { color: #1a1a1a; margin: 0; }\n"
+
+        #expect(CodeHighlighter.language(for: "index.html") == "xml")
+        #expect(CodeHighlighter.language(for: "site.css") == "css")
+        #expect(distinctColors(CodeHighlighter.highlight(html, language: "xml", font: Self.font)) > 1)
+        #expect(distinctColors(CodeHighlighter.highlight(css, language: "css", font: Self.font)) > 1)
+    }
+
+    /// Highlightr legt het font van zijn thema op (Courier); onze monospace
+    /// moet daar overheen, anders verspringt de tekst t.o.v. de regelnummers.
+    @Test func theMonospacedFontSurvivesHighlighting() {
+        let highlighted = CodeHighlighter.highlight("let x = 1\n", language: "swift", font: Self.font)
+        var fonts = Set<String>()
+        highlighted.enumerateAttribute(.font, in: NSRange(location: 0, length: highlighted.length)) { value, _, _ in
+            if let font = value as? NSFont { fonts.insert(font.fontName) }
+        }
+        #expect(fonts == [Self.font.fontName])
+    }
+
+    /// Highlighten kost ~1,3 ms per KB: een erg groot bestand zou de UI
+    /// seconden blokkeren, dus daarboven blijft het platte tekst.
+    @Test func veryLargeFilesSkipHighlighting() {
+        let huge = String(repeating: "let x = 1\n", count: CodeHighlighter.maximumHighlightedBytes / 5)
+        #expect(huge.utf8.count > CodeHighlighter.maximumHighlightedBytes)
+        #expect(distinctColors(CodeHighlighter.highlight(huge, language: "swift", font: Self.font)) == 1)
+    }
+
+    private static let font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
+}
+
+@MainActor
+struct SourceEditorHighlightingTests {
+    /// Regressie: `applyHighlight` zette na het plaatsen van de gekleurde
+    /// tekst `textView.textColor`, en die setter kleurt de héle text storage
+    /// in één kleur. Alle highlighting werd daarmee meteen weggegooid.
+    @Test func applyHighlightKeepsTheTokenColors() {
+        let host = EditorHostView(frame: .zero)
+        let coordinator = SourceEditorView.Coordinator(text: .constant(""), path: "Demo.swift", onSave: {})
+
+        coordinator.applyHighlight(to: host.textView, string: "import Foundation\nlet name = \"hoi\"\n")
+
+        guard let storage = host.textView.textStorage else {
+            Issue.record("geen text storage")
+            return
+        }
+        #expect(distinctColors(storage) > 1)
+    }
+}
+
+@MainActor
+private func distinctColors(_ text: NSAttributedString) -> Int {
+    var colors = Set<String>()
+    text.enumerateAttribute(.foregroundColor, in: NSRange(location: 0, length: text.length)) { value, _, _ in
+        if let color = value as? NSColor { colors.insert(color.description) }
+    }
+    return colors.count
 }
 
 struct EditorLayoutTests {

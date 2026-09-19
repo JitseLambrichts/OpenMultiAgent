@@ -54,6 +54,13 @@ struct SourceEditorView: NSViewRepresentable {
         var path: String
         var onSave: () -> Void
         private var isApplying = false
+        private var pendingHighlight: Task<Void, Never>?
+
+        /// Highlighten kost ~1,3 ms per KB en liep voorheen bij élke
+        /// toetsaanslag over het hele bestand — op een bestand van 13 KB is dat
+        /// al een gemist frame. Even wachten tot het typen stilvalt houdt de
+        /// editor vloeiend; openen highlight nog steeds meteen.
+        private static let highlightDebounce = Duration.milliseconds(150)
 
         init(text: Binding<String>, path: String, onSave: @escaping () -> Void) {
             self.text = text
@@ -64,10 +71,22 @@ struct SourceEditorView: NSViewRepresentable {
         func textDidChange(_ notification: Notification) {
             guard !isApplying, let textView = notification.object as? NSTextView else { return }
             text.wrappedValue = textView.string
-            applyHighlight(to: textView, string: textView.string, preserveSelection: true)
+            scheduleHighlight(for: textView)
+        }
+
+        func scheduleHighlight(for textView: NSTextView) {
+            pendingHighlight?.cancel()
+            pendingHighlight = Task { [weak self, weak textView] in
+                try? await Task.sleep(for: Coordinator.highlightDebounce)
+                guard !Task.isCancelled, let self, let textView else { return }
+                self.pendingHighlight = nil
+                self.applyHighlight(to: textView, string: textView.string, preserveSelection: true)
+            }
         }
 
         func applyHighlight(to textView: NSTextView, string: String, preserveSelection: Bool = false) {
+            pendingHighlight?.cancel()
+            pendingHighlight = nil
             isApplying = true
             let selected = textView.selectedRange()
             let font = textView.font ?? .monospacedSystemFont(ofSize: 13, weight: .regular)
@@ -79,10 +98,11 @@ struct SourceEditorView: NSViewRepresentable {
             } else {
                 textView.string = string
             }
-            textView.textColor = CodeHighlighter.textColor
+            // Geen `textView.textColor = ...` hier: die setter kleurt de héle
+            // text storage in één kleur en gooit daarmee alle highlighting weg.
             textView.typingAttributes = [
                 .font: font,
-                .foregroundColor: CodeHighlighter.textColor,
+                .foregroundColor: CodeHighlighter.plainTextColor,
             ]
             if preserveSelection {
                 let max = textView.string.utf16.count
@@ -136,9 +156,10 @@ final class EditorHostView: NSView {
         editor.backgroundColor = CodeHighlighter.backgroundColor
         editor.textColor = CodeHighlighter.textColor
         editor.insertionPointColor = CodeHighlighter.keywordColor
+        // Alleen een achtergrond: zou hier een `.foregroundColor` staan, dan
+        // verliest geselecteerde tekst zijn tokenkleuren.
         editor.selectedTextAttributes = [
             .backgroundColor: NSColor(calibratedRed: 201 / 255, green: 246 / 255, blue: 111 / 255, alpha: 0.28),
-            .foregroundColor: CodeHighlighter.textColor,
         ]
 
         self.textContainer = container

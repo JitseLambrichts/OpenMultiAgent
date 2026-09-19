@@ -14,6 +14,9 @@ packages:
   SwiftTerm:
     url: https://github.com/migueldeicaza/SwiftTerm.git
     exactVersion: 1.18.0
+  Highlightr:
+    url: https://github.com/raspu/Highlightr.git
+    exactVersion: 2.3.0
 targets:
   OpenMultiAgent:
     type: application
@@ -22,6 +25,7 @@ targets:
       - path: Sources
     dependencies:
       - package: SwiftTerm
+      - package: Highlightr
     info:
       path: OpenMultiAgent/Info.plist
       properties:
