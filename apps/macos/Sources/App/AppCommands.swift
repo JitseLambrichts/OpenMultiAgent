@@ -17,6 +17,19 @@ struct AppCommands: Commands {
                 .keyboardShortcut("n", modifiers: [.command, .option])
         }
 
+        CommandMenu("Project") {
+            if model.projects.projects.isEmpty {
+                Button("Geen projecten") {}
+                    .disabled(true)
+            } else {
+                ForEach(model.projects.projects) { project in
+                    Button(projectMenuTitle(project)) {
+                        model.openProject(project)
+                    }
+                }
+            }
+        }
+
         CommandMenu("Sessie") {
             Button("Zoek in geheugen") { model.request(.search) }
                 .keyboardShortcut("f", modifiers: .command)
@@ -37,6 +50,22 @@ struct AppCommands: Commands {
             }
             .keyboardShortcut("i", modifiers: [.command, .option])
         }
+    }
+}
+
+extension AppCommands {
+    /// Twee projecten met dezelfde weergavenaam blijven in het menu uit elkaar te houden.
+    private func projectMenuTitle(_ project: ProjectDTO) -> String {
+        let projects = model.projects.projects
+        let sharesName = projects.contains {
+            $0.id != project.id && $0.displayName == project.displayName
+        }
+        guard sharesName else { return project.displayName }
+        let folder = URL(fileURLWithPath: project.repoPath).lastPathComponent
+        if folder != project.displayName {
+            return "\(project.displayName) — \(folder)"
+        }
+        return project.repoPath
     }
 }
 

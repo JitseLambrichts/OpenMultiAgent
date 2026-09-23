@@ -15,7 +15,10 @@ struct RootView: View {
             SidebarView(
                 selection: sidebarSelection,
                 isCollapsed: sidebarCollapsed,
-                pendingPromotionCount: model.pendingPromotionCount
+                pendingPromotionCount: model.pendingPromotionCount,
+                projects: model.projects.projects,
+                openProjectID: model.selection == .projects ? model.selectedProject?.id : nil,
+                onOpenProject: { model.openProject($0) }
             )
             detail
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -68,7 +71,14 @@ struct RootView: View {
     private var sidebarSelection: Binding<SidebarDestination> {
         Binding(
             get: { model.selection },
-            set: { model.selection = $0 }
+            set: { destination in
+                // "Projecten" is het overzicht. Een open project of sessie
+                // blijft anders in beeld, omdat de detailkolom die eerst toont.
+                if destination == .projects {
+                    model.closeProject()
+                }
+                model.selection = destination
+            }
         )
     }
 
@@ -214,6 +224,9 @@ struct SidebarView: View {
     @Binding var selection: SidebarDestination
     @Binding var isCollapsed: Bool
     let pendingPromotionCount: Int
+    let projects: [ProjectDTO]
+    let openProjectID: String?
+    let onOpenProject: (ProjectDTO) -> Void
 
     var body: some View {
         VStack(alignment: isCollapsed ? .center : .leading, spacing: 0) {
@@ -234,7 +247,10 @@ struct SidebarView: View {
                     row(destination)
                 }
             }
-            Spacer(minLength: 0)
+
+            projectSection
+                .padding(.top, 22)
+
             VStack(spacing: 4) {
                 row(.settings)
                 collapseToggle
@@ -297,8 +313,81 @@ struct SidebarView: View {
         .keyboardShortcut("s", modifiers: [.command, .option])
     }
 
+    private var projectSection: some View {
+        VStack(alignment: isCollapsed ? .center : .leading, spacing: 4) {
+            if !isCollapsed {
+                Text("Projecten")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.leading, 12)
+                    .padding(.bottom, 6)
+            }
+
+            ScrollView {
+                VStack(spacing: 4) {
+                    if projects.isEmpty && !isCollapsed {
+                        Text("Nog geen projecten")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.tertiary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.leading, 16)
+                            .padding(.vertical, 8)
+                    }
+                    ForEach(projects) { project in
+                        projectRow(project)
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+        }
+        .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    private func projectRow(_ project: ProjectDTO) -> some View {
+        let isSelected = project.id == openProjectID
+        return Button {
+            onOpenProject(project)
+        } label: {
+            if isCollapsed {
+                projectIcon(isSelected: isSelected)
+            } else {
+                HStack(spacing: 12) {
+                    projectIcon(isSelected: isSelected)
+                    Text(project.displayName)
+                        .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
+                        .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Spacer(minLength: 0)
+                }
+                .padding(.trailing, 4)
+                .background(isSelected ? OMAColor.surface : .clear, in: Capsule())
+                .contentShape(Capsule())
+            }
+        }
+        .buttonStyle(.plain)
+        .help("Open \(project.displayName)")
+        .accessibilityLabel("Open \(project.displayName)")
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+
+    private func projectIcon(isSelected: Bool) -> some View {
+        Image(systemName: "shippingbox")
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(isSelected ? OMAColor.onAccent : Color.secondary)
+            .frame(width: 40, height: 40)
+            .background(isSelected ? OMAColor.accent : .clear, in: Circle())
+    }
+
+    private func isDestinationSelected(_ destination: SidebarDestination) -> Bool {
+        guard destination == selection else { return false }
+        // Het overzicht is alleen geselecteerd als er geen project openstaat.
+        if destination == .projects { return openProjectID == nil }
+        return true
+    }
+
     private func row(_ destination: SidebarDestination) -> some View {
-        let isSelected = destination == selection
+        let isSelected = isDestinationSelected(destination)
         let badge = destination == .memory ? pendingPromotionCount : 0
         return Button {
             selection = destination
