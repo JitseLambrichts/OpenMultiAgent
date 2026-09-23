@@ -18,8 +18,8 @@
     "typecheck": "tsc --noEmit",
     "check": "bun run lint && bun run typecheck && bun test",
     "oma": "bun run packages/cli/src/index.ts",
-    "macos:generate": "cd apps/macos && xcodegen generate",
-    "macos:test": "cd apps/macos && xcodegen generate >/dev/null && xcodebuild test -project OpenMultiAgent.xcodeproj -scheme OpenMultiAgent -destination 'platform=macOS' -quiet",
+    "macos:generate": "scripts/generate-macos-project.sh",
+    "macos:test": "scripts/generate-macos-project.sh >/dev/null && cd apps/macos && xcodebuild test -project OpenMultiAgent.xcodeproj -scheme OpenMultiAgent -destination 'platform=macOS' -quiet",
     "macos:build": "scripts/build-macos-app.sh",
     "macos:smoke": "scripts/macos-smoke.sh"
   },

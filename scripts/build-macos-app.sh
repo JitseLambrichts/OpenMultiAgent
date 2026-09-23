@@ -38,7 +38,7 @@ find "$BUILD_DIR" "$ROOT" -maxdepth 1 -name '*.bun-build' -delete
 [[ -x "$SIDECAR_BIN" ]] || { echo "error: sidecar binary was not produced" >&2; exit 1; }
 
 echo "==> Generating Xcode project"
-(cd "$APP_DIR" && xcodegen generate >/dev/null)
+"$ROOT/scripts/generate-macos-project.sh" >/dev/null
 
 echo "==> Building OpenMultiAgent ($CONFIGURATION)"
 (cd "$APP_DIR" && xcodebuild build \

@@ -23,13 +23,18 @@ targets:
     platform: macOS
     sources:
       - path: Sources
+      - path: OpenMultiAgent/AppIcon.icon
     dependencies:
       - package: SwiftTerm
       - package: Highlightr
+    settings:
+      base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     info:
       path: OpenMultiAgent/Info.plist
       properties:
         CFBundleDisplayName: OpenMultiAgent
+        CFBundleIconName: AppIcon
         LSMinimumSystemVersion: "15.0"
         NSHighResolutionCapable: true
   OpenMultiAgentTests:

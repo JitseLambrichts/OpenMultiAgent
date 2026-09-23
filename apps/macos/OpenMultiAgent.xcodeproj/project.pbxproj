@@ -65,6 +65,7 @@
 		ED464A13AC7CC950EE9C7993 /* DTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1EE7B665D883461B3D1128F /* DTOs.swift */; };
 		F41C832C18062A8C62B95926 /* ProjectsModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 539874FBD27EA9EABBF93443 /* ProjectsModel.swift */; };
 		F4E3CA602B01E7FDE73AF75A /* TerminalWorkspaceModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FF13DAE64A588271564032C /* TerminalWorkspaceModelTests.swift */; };
+		F8CA916F55D72D2672287292 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = A3188AC5B196D44CD5F50FC2 /* AppIcon.icon */; };
 		FA1456FCC2F9A8CE7DDE4105 /* RPCEnvelope.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2926BADAD098A4F890F39D94 /* RPCEnvelope.swift */; };
 /* End PBXBuildFile section */
 
@@ -124,6 +125,7 @@
 		976A48F6881481A8F2BA4F1C /* ProjectCockpitModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectCockpitModel.swift; sourceTree = "<group>"; };
 		9FEB5DDBD3950E602F9AAB54 /* OpenMultiAgentApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenMultiAgentApp.swift; sourceTree = "<group>"; };
 		A244791944B79118D68F7381 /* WindowState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowState.swift; sourceTree = "<group>"; };
+		A3188AC5B196D44CD5F50FC2 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		A9F34D0864B048A22DB0A7B9 /* TranscriptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptView.swift; sourceTree = "<group>"; };
 		AE13ACC287E8AFFA1616AB67 /* SidecarClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidecarClientTests.swift; sourceTree = "<group>"; };
 		B1EE7B665D883461B3D1128F /* DTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DTOs.swift; sourceTree = "<group>"; };
@@ -302,6 +304,14 @@
 			path = Memory;
 			sourceTree = "<group>";
 		};
+		BAAA6B75B9ADEFF5175760AB /* OpenMultiAgent */ = {
+			isa = PBXGroup;
+			children = (
+				A3188AC5B196D44CD5F50FC2 /* AppIcon.icon */,
+			);
+			path = OpenMultiAgent;
+			sourceTree = "<group>";
+		};
 		D7E04B5056E564676B211779 /* Sessions */ = {
 			isa = PBXGroup;
 			children = (
@@ -323,6 +333,7 @@
 			children = (
 				2E393E7F52306C72212C347E /* contracts */,
 				A549CB71A457ECE5E1838744 /* FixtureSidecar */,
+				BAAA6B75B9ADEFF5175760AB /* OpenMultiAgent */,
 				80F8E9FD97BA5ED6FD1CABF0 /* Sources */,
 				A5FBD7BF405DAF867A1F4A5B /* Tests */,
 				748D78C5A08537F9D39F3F53 /* UITests */,
@@ -338,6 +349,7 @@
 			buildConfigurationList = D57F97981A5CE76797FAAD08 /* Build configuration list for PBXNativeTarget "OpenMultiAgent" */;
 			buildPhases = (
 				E8E90385C0314C48BA3F1C13 /* Sources */,
+				3AAE9BC3C0C648DBBC074CFC /* Resources */,
 				9E61BB7ADCFE469E0EEBEC19 /* Frameworks */,
 			);
 			buildRules = (
@@ -438,6 +450,14 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		3AAE9BC3C0C648DBBC074CFC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F8CA916F55D72D2672287292 /* AppIcon.icon in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		46ABEB41018AE8C7DF55F892 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
