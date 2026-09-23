@@ -110,15 +110,15 @@ install_app() {
     log "Installing $target"
     rm -rf "$target"
     ditto "$built" "$target"
-    xattr -cr "$target"
-    codesign --force --deep --sign - "$target" >/dev/null
+    /usr/bin/xattr -cr "$target"
+    /usr/bin/codesign --force --deep --sign - "$target" >/dev/null
   else
     log "Administrator permission is required to install into $DEST_DIR"
     sudo mkdir -p "$DEST_DIR"
     sudo rm -rf "$target"
     sudo ditto "$built" "$target"
-    sudo xattr -cr "$target"
-    sudo codesign --force --deep --sign - "$target" >/dev/null
+    sudo /usr/bin/xattr -cr "$target"
+    sudo /usr/bin/codesign --force --deep --sign - "$target" >/dev/null
     sudo chown -R "$(id -un):admin" "$target"
   fi
 
@@ -136,7 +136,8 @@ main() {
   ensure_formula xcodegen xcodegen
   ensure_formula tmux tmux
   require_bun_version
-  command -v codesign >/dev/null 2>&1 || die "codesign is required."
+  [[ -x /usr/bin/codesign ]] || die "/usr/bin/codesign is required."
+  [[ -x /usr/bin/xattr ]] || die "/usr/bin/xattr is required."
 
   sync_source
   log "Installing dependencies"
