@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Clones OpenMultiAgent, builds the Release app, and copies it to /Applications.
 #
-#   curl -fsSL https://raw.githubusercontent.com/jlambrichtsopt/OpenMultiAgent/master/scripts/install-macos.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/JitseLambrichts/OpenMultiAgent/main/scripts/install-macos.sh | bash
 #
 # Requires macOS 15 or newer on Apple Silicon, Xcode 26, and Homebrew.
 # Bun, XcodeGen, Git and tmux are installed with Homebrew when missing.
 # Override the checkout or destination with OMA_SRC and OMA_DEST.
 set -euo pipefail
 
-REPO_URL="${OMA_REPO:-https://github.com/jlambrichtsopt/OpenMultiAgent.git}"
+REPO_URL="${OMA_REPO:-https://github.com/JitseLambrichts/OpenMultiAgent.git}"
 SRC_DIR="${OMA_SRC:-$HOME/.oma/src/OpenMultiAgent}"
 DEST_DIR="${OMA_DEST:-/Applications}"
 APP_NAME="OpenMultiAgent.app"

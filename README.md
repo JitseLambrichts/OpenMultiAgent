@@ -16,7 +16,7 @@ On Apple Silicon with macOS 15 or newer, Xcode 26 and Homebrew, this builds the
 app and copies it to `/Applications`:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jlambrichtsopt/OpenMultiAgent/master/scripts/install-macos.sh | bash
+curl -fsSL https://raw.githubusercontent.com/JitseLambrichts/OpenMultiAgent/main/scripts/install-macos.sh | bash
 ```
 
 The script installs Bun, XcodeGen and tmux when they are missing, clones this
@@ -47,7 +47,7 @@ brew install bun git tmux xcodegen
 ## Setup
 
 ```sh
-git clone https://github.com/jlambrichtsopt/OpenMultiAgent.git
+git clone https://github.com/JitseLambrichts/OpenMultiAgent.git
 cd OpenMultiAgent
 bun install
 bun run check
