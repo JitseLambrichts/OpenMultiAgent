@@ -1,0 +1,10 @@
+{
+  "id": "prt_0002a",
+  "sessionID": "ses_demo",
+  "messageID": "msg_0002",
+  "type": "reasoning",
+  "text": "Delivery is at-least-once, so the consumer has to be idempotent.",
+  "time": {
+    "start": 1770980290100
+  }
+}

@@ -3,6 +3,7 @@ import {
   asRecord,
   asString,
   parseLines,
+  fromTranscriptFile,
   seqFor,
   truncate,
   type ParseResult,
@@ -168,5 +169,5 @@ export function parseCodexTranscript(content: string): ParseResult {
 
 export const codexParser: TranscriptParser = {
   agent: "codex",
-  parse: parseCodexTranscript,
+  readEvents: fromTranscriptFile(parseCodexTranscript),
 };

@@ -5,6 +5,11 @@ import { join } from "node:path";
 import {
   claudeProjectSlug,
   claudeTranscriptPath,
+  cursorChatsDir,
+  homeDirectory,
+  isPaneLog,
+  paneLogPath,
+  opencodeStorageDir,
   tmuxSessionName,
   TMUX_PREFIX,
 } from "./paths.ts";
@@ -81,6 +86,50 @@ describe("claudeTranscriptPath", () => {
   test("falls back to the literal path for a directory that does not exist yet", () => {
     expect(claudeTranscriptPath("/nope/not/here", "abc", "/home")).toBe(
       "/home/.claude/projects/-nope-not-here/abc.jsonl",
+    );
+  });
+});
+
+describe("opencodeStorageDir", () => {
+  test("defaults to the XDG data directory under the home", () => {
+    expect(opencodeStorageDir({}, "/home")).toBe(
+      "/home/.local/share/opencode/storage",
+    );
+  });
+
+  test("honours XDG_DATA_HOME, which is where OpenCode actually looks", () => {
+    expect(opencodeStorageDir({ XDG_DATA_HOME: "/data" }, "/home")).toBe(
+      "/data/opencode/storage",
+    );
+  });
+});
+
+describe("cursorChatsDir", () => {
+  test("is a fixed location in the home, unlike the XDG-aware ones", () => {
+    expect(cursorChatsDir("/home")).toBe("/home/.cursor/chats");
+  });
+});
+
+describe("paneLogPath", () => {
+  test("is named so ingest can tell a captured pane from an agent transcript", () => {
+    const path = paneLogPath("run-1", "/oma");
+    expect(path).toBe("/oma/panes/run-1.pane.log");
+    expect(isPaneLog(path)).toBe(true);
+    expect(isPaneLog("/home/.codex/sessions/rollout-1.jsonl")).toBe(false);
+  });
+});
+
+describe("homeDirectory", () => {
+  test("prefers $HOME, which Bun's homedir() ignores but POSIX tools follow", () => {
+    expect(homeDirectory({ HOME: "/home/dev" }, "/passwd/entry")).toBe(
+      "/home/dev",
+    );
+  });
+
+  test("falls back to the passwd entry when $HOME is unset or blank", () => {
+    expect(homeDirectory({}, "/passwd/entry")).toBe("/passwd/entry");
+    expect(homeDirectory({ HOME: "  " }, "/passwd/entry")).toBe(
+      "/passwd/entry",
     );
   });
 });

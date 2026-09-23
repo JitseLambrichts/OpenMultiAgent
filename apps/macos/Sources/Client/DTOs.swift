@@ -178,6 +178,9 @@ struct CustomAgentDTO: Codable, Equatable, Identifiable, Sendable {
     let name: String
     let binary: String
     let launchArgs: [String]
+    /// argv for the headless run that knowledge extraction makes. Empty means
+    /// the sidecar falls back to its own guess for this binary.
+    let headlessArgs: [String]
     let symbol: String
 
     private enum CodingKeys: String, CodingKey {
@@ -185,14 +188,23 @@ struct CustomAgentDTO: Codable, Equatable, Identifiable, Sendable {
         case name
         case binary
         case launchArgs = "launch_args"
+        case headlessArgs = "headless_args"
         case symbol
     }
 
-    init(id: String, name: String, binary: String, launchArgs: [String], symbol: String = "terminal") {
+    init(
+        id: String,
+        name: String,
+        binary: String,
+        launchArgs: [String],
+        headlessArgs: [String] = [],
+        symbol: String = "terminal"
+    ) {
         self.id = id
         self.name = name
         self.binary = binary
         self.launchArgs = launchArgs
+        self.headlessArgs = headlessArgs
         self.symbol = symbol.isEmpty ? "terminal" : symbol
     }
 
@@ -202,6 +214,7 @@ struct CustomAgentDTO: Codable, Equatable, Identifiable, Sendable {
         name = try container.decode(String.self, forKey: .name)
         binary = try container.decode(String.self, forKey: .binary)
         launchArgs = try container.decode([String].self, forKey: .launchArgs)
+        headlessArgs = try container.decodeIfPresent([String].self, forKey: .headlessArgs) ?? []
         let decoded = try container.decodeIfPresent(String.self, forKey: .symbol) ?? "terminal"
         symbol = decoded.isEmpty ? "terminal" : decoded
     }

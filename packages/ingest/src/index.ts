@@ -1,21 +1,29 @@
 import type { Database } from "bun:sqlite";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import type { AgentName } from "@oma/core";
 import {
   insertEvents,
+  isPaneLog,
+  listCustomAgents,
   listRunsWithTranscripts,
   recordArtifact,
   setNativeSessionId,
 } from "@oma/core";
 import { claudeParser } from "./claude.ts";
 import { codexParser } from "./codex.ts";
+import { cursorParser } from "./cursor.ts";
 import { geminiParser } from "./gemini.ts";
-import type { ParseResult, TranscriptParser } from "./types.ts";
+import { opencodeParser } from "./opencode.ts";
+import { paneParser } from "./pane.ts";
+import { emptyResult, type ParseResult, type TranscriptParser } from "./types.ts";
 
 export * from "./types.ts";
 export { parseClaudeTranscript, claudeParser } from "./claude.ts";
 export { parseCodexTranscript, codexParser } from "./codex.ts";
 export { parseGeminiTranscript, geminiParser } from "./gemini.ts";
+export { parseOpenCodeSession, opencodeParser } from "./opencode.ts";
+export { parseCursorChat, cursorParser } from "./cursor.ts";
+export { parsePaneLog, paneParser } from "./pane.ts";
 
 const PARSERS: Partial<Record<AgentName, TranscriptParser>> = {
   claude: claudeParser,
@@ -23,30 +31,40 @@ const PARSERS: Partial<Record<AgentName, TranscriptParser>> = {
   gemini: geminiParser,
 };
 
+/**
+ * A custom agent's id is whatever the user typed, so it says nothing about the
+ * transcript format. The binary does: a storage layout is a property of the
+ * program, not of what someone named it in OMA.
+ */
+const BINARY_PARSERS: Record<string, TranscriptParser> = {
+  opencode: opencodeParser,
+  "cursor-agent": cursorParser,
+};
+
+function binaryParser(agent: AgentName): TranscriptParser | undefined {
+  const binary = listCustomAgents().find((def) => def.id === agent)?.binary;
+  if (!binary) return undefined;
+  return BINARY_PARSERS[binary.split("/").at(-1) ?? binary];
+}
+
 const genericParser: TranscriptParser = {
   agent: "custom",
-  parse: () => ({
-    events: [],
-    meta: {
-      nativeSessionId: null,
-      cwd: null,
-      gitBranch: null,
-      parentSessionId: null,
-    },
-    touchedFiles: [],
-    skippedLines: 0,
-  }),
+  readEvents: () => emptyResult(),
 };
 
 export function parserFor(agent: AgentName): TranscriptParser {
-  return PARSERS[agent] ?? genericParser;
+  return PARSERS[agent] ?? binaryParser(agent) ?? genericParser;
 }
 
 export function parseTranscriptFile(
   agent: AgentName,
-  path: string,
+  locator: string,
 ): ParseResult {
-  return parserFor(agent).parse(readFileSync(path, "utf8"));
+  // The pane log is OMA's own fallback capture, not something an agent wrote,
+  // so the locator decides here rather than the agent: the same agent can have
+  // a real transcript on one run and only a captured pane on the next.
+  if (isPaneLog(locator)) return paneParser.readEvents(locator);
+  return parserFor(agent).readEvents(locator);
 }
 
 export interface IngestReport {

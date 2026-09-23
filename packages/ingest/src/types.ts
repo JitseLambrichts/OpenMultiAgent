@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from "node:fs";
 import type { AgentName, NormalizedEvent } from "@oma/core";
 
 export interface TranscriptMeta {
@@ -26,7 +27,41 @@ export interface ParseResult {
 
 export interface TranscriptParser {
   agent: AgentName;
-  parse(content: string): ParseResult;
+  /**
+   * Reads a run's conversation from its locator. A locator is whatever the
+   * adapter's `resolveTranscript` handed back and the DB stored: a JSONL file
+   * for Claude, Codex and Gemini, a session record for OpenCode, a chat
+   * directory for Cursor. Parsers that are handed content instead cannot serve
+   * an agent that does not write one file per session, which is most of them.
+   */
+  readEvents(locator: string): ParseResult;
+}
+
+export function emptyResult(): ParseResult {
+  return {
+    events: [],
+    meta: {
+      nativeSessionId: null,
+      cwd: null,
+      gitBranch: null,
+      parentSessionId: null,
+    },
+    touchedFiles: [],
+    skippedLines: 0,
+  };
+}
+
+/**
+ * Adapts a content parser to the locator contract, for the agents whose
+ * transcript really is one file. A locator that is not there yet is normal —
+ * discovery races the agent's first write — so it reads as empty rather than
+ * throwing; malformed content still surfaces as the parser's own error.
+ */
+export function fromTranscriptFile(
+  parse: (content: string) => ParseResult,
+): (locator: string) => ParseResult {
+  return (locator) =>
+    existsSync(locator) ? parse(readFileSync(locator, "utf8")) : emptyResult();
 }
 
 /**

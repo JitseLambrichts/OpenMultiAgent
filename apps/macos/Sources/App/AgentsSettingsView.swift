@@ -4,6 +4,7 @@ struct CustomAgentFormValues: Equatable, Sendable {
     var name = ""
     var binary = ""
     var arguments = ""
+    var headlessArguments = ""
     var symbol = "terminal"
     var systemPrompt = ""
 
@@ -13,12 +14,21 @@ struct CustomAgentFormValues: Equatable, Sendable {
         name = agent.name
         binary = agent.binary
         arguments = agent.launchArgs.joined(separator: " ")
+        headlessArguments = agent.headlessArgs.joined(separator: " ")
         symbol = agent.symbol
         self.systemPrompt = systemPrompt
     }
 
     var launchArgs: [String] {
-        arguments.split(separator: " ").map(String.init).filter { !$0.isEmpty }
+        Self.split(arguments)
+    }
+
+    var headlessArgs: [String] {
+        Self.split(headlessArguments)
+    }
+
+    private static func split(_ value: String) -> [String] {
+        value.split(separator: " ").map(String.init).filter { !$0.isEmpty }
     }
 
     var error: String? {
@@ -78,6 +88,7 @@ final class AgentsSettingsModel {
                 name: values.name.trimmingCharacters(in: .whitespacesAndNewlines),
                 binary: values.binary.trimmingCharacters(in: .whitespacesAndNewlines),
                 launchArgs: values.launchArgs,
+                headlessArgs: values.headlessArgs,
                 symbol: values.symbol
             )
             let prompt = values.systemPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -100,6 +111,7 @@ final class AgentsSettingsModel {
                 name: values.name.trimmingCharacters(in: .whitespacesAndNewlines),
                 binary: values.binary.trimmingCharacters(in: .whitespacesAndNewlines),
                 launchArgs: values.launchArgs,
+                headlessArgs: values.headlessArgs,
                 symbol: values.symbol
             )
             try await client.setAgentSystemPrompt(
@@ -443,12 +455,36 @@ struct CustomAgentEditorSheet: View {
                 if presets {
                     HStack(spacing: 8) {
                         Text("Snel:").font(.callout).foregroundStyle(.secondary)
-                        Button("Opencode") { values = preset(name: "Opencode", binary: "opencode", arguments: "", symbol: "terminal.fill") }
-                            .controlSize(.small)
-                        Button("Cursor") { values = preset(name: "Cursor", binary: "cursor-agent", arguments: "", symbol: "cursorarrow") }
-                            .controlSize(.small)
-                        Button("Grok") { values = preset(name: "Grok", binary: "grok", arguments: "", symbol: "sparkle") }
-                            .controlSize(.small)
+                        Button("Opencode") {
+                            values = preset(
+                                name: "Opencode",
+                                binary: "opencode",
+                                arguments: "",
+                                headlessArguments: "run --format json --auto -- {{prompt}}",
+                                symbol: "terminal.fill"
+                            )
+                        }
+                        .controlSize(.small)
+                        Button("Cursor") {
+                            values = preset(
+                                name: "Cursor",
+                                binary: "cursor-agent",
+                                arguments: "",
+                                headlessArguments: "-p --output-format json {{prompt}}",
+                                symbol: "cursorarrow"
+                            )
+                        }
+                        .controlSize(.small)
+                        Button("Grok") {
+                            values = preset(
+                                name: "Grok",
+                                binary: "grok",
+                                arguments: "",
+                                headlessArguments: "",
+                                symbol: "sparkle"
+                            )
+                        }
+                        .controlSize(.small)
                     }
                 }
                 Form {
@@ -457,6 +493,12 @@ struct CustomAgentEditorSheet: View {
                         .font(.body.monospaced())
                     TextField("Argumenten (optioneel)", text: $values.arguments, prompt: Text("Leeg laten voor de TUI"))
                         .font(.body.monospaced())
+                    TextField(
+                        "Headless argumenten (optioneel)",
+                        text: $values.headlessArguments,
+                        prompt: Text("Bijvoorbeeld: -p --output-format json {{prompt}}")
+                    )
+                    .font(.body.monospaced())
                 }
                 .formStyle(.grouped)
                 VStack(alignment: .leading, spacing: 8) {
@@ -482,6 +524,9 @@ struct CustomAgentEditorSheet: View {
                         .foregroundStyle(.secondary)
                 }
                 Text("Naam en commando zijn verplicht. Laat argumenten leeg om de interactieve TUI te starten. Extra argumenten komen vóór een optionele startprompt.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("Headless argumenten worden gebruikt voor kennisextractie: de eenmalige, niet-interactieve run die JSON moet teruggeven. Gebruik {{prompt}} om de plek van de prompt te kiezen; zonder placeholder komt die achteraan.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 if let saveError {
@@ -516,11 +561,18 @@ struct CustomAgentEditorSheet: View {
         .background(OMAColor.canvas)
     }
 
-    private func preset(name: String, binary: String, arguments: String, symbol: String) -> CustomAgentFormValues {
+    private func preset(
+        name: String,
+        binary: String,
+        arguments: String,
+        headlessArguments: String,
+        symbol: String
+    ) -> CustomAgentFormValues {
         var v = CustomAgentFormValues()
         v.name = name
         v.binary = binary
         v.arguments = arguments
+        v.headlessArguments = headlessArguments
         v.symbol = symbol
         return v
     }

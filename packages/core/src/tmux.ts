@@ -1,4 +1,6 @@
-import { exec, execOrThrow } from "./exec.ts";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+import { exec, execOrThrow, shellQuote } from "./exec.ts";
 import { TMUX_PREFIX, tmuxSessionName } from "./paths.ts";
 
 export interface TmuxSession {
@@ -101,6 +103,26 @@ export async function renameSession(from: string, to: string): Promise<void> {
 
 export async function sendKeys(name: string, text: string): Promise<void> {
   await execOrThrow(["tmux", "send-keys", "-t", name, text, "Enter"]);
+}
+
+/**
+ * Appends everything the pane prints to `logPath`, for agents whose own store
+ * OMA cannot read. `-o` toggles, so a second call on an already-piped pane
+ * would stop the capture; every caller starts a freshly created session.
+ *
+ * Failure is deliberately quiet: the pane may already be gone, and losing the
+ * fallback capture must never take a session down with it.
+ */
+export async function pipePane(name: string, logPath: string): Promise<void> {
+  mkdirSync(dirname(logPath), { recursive: true });
+  await exec([
+    "tmux",
+    "pipe-pane",
+    "-o",
+    "-t",
+    name,
+    `cat >> ${shellQuote([logPath])}`,
+  ]);
 }
 
 export async function capturePane(name: string, lines = 200): Promise<string> {

@@ -177,6 +177,7 @@ export interface CustomAgentResult {
   name: string;
   binary: string;
   launch_args: string[];
+  headless_args: string[];
   symbol: string;
 }
 
@@ -199,6 +200,7 @@ function toCustomAgentResult(def: CustomAgentDef): CustomAgentResult {
     name: def.name,
     binary: def.binary,
     launch_args: def.launchArgs,
+    headless_args: def.headlessArgs,
     symbol: def.symbol,
   };
 }
@@ -284,6 +286,7 @@ export interface DesktopServices {
     name?: string;
     binary?: string;
     launchArgs?: string[];
+    headlessArgs?: string[];
     symbol?: string;
   }): Promise<CustomAgentResult>;
   customAgentUpdate(input: {
@@ -291,6 +294,7 @@ export interface DesktopServices {
     name?: string;
     binary?: string;
     launchArgs?: string[];
+    headlessArgs?: string[];
     symbol?: string;
   }): Promise<CustomAgentResult>;
   customAgentRemove(input: {
@@ -688,6 +692,7 @@ export function createDesktopServices(
             name: input.name,
             binary: input.binary,
             launchArgs: input.launchArgs,
+            headlessArgs: input.headlessArgs,
             symbol: input.symbol,
           }),
         );

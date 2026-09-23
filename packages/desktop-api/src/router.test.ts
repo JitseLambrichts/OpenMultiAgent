@@ -69,6 +69,7 @@ function services(overrides: Partial<DesktopServices> = {}): DesktopServices {
       name: input.name ?? "opencode",
       binary: input.binary ?? "opencode",
       launch_args: input.launchArgs ?? [],
+      headless_args: input.headlessArgs ?? [],
       symbol: input.symbol ?? "terminal",
     }),
     customAgentUpdate: async (input) => ({
@@ -76,6 +77,7 @@ function services(overrides: Partial<DesktopServices> = {}): DesktopServices {
       name: input.name ?? input.id,
       binary: input.binary ?? input.id,
       launch_args: input.launchArgs ?? [],
+      headless_args: input.headlessArgs ?? [],
       symbol: input.symbol ?? "terminal",
     }),
     customAgentRemove: async (input) => ({ removed_agent_id: input.id }),
@@ -128,6 +130,7 @@ describe("desktop router", () => {
         name: "Opencode",
         binary: "opencode",
         launch_args: ["run"],
+        headless_args: ["run", "--format", "json", "--", "{{prompt}}"],
         symbol: "terminal.fill",
       },
     });
@@ -139,8 +142,23 @@ describe("desktop router", () => {
         name: "Opencode",
         binary: "opencode",
         launch_args: ["run"],
+        headless_args: ["run", "--format", "json", "--", "{{prompt}}"],
         symbol: "terminal.fill",
       },
+    });
+  });
+
+  test("rejects headless_args that are not strings", async () => {
+    const response = await createRouter(services()).dispatch({
+      jsonrpc: "2.0",
+      id: "bad-agent",
+      method: "agent.add",
+      params: { name: "Opencode", binary: "opencode", headless_args: [7] },
+    });
+
+    expect(response).toMatchObject({
+      id: "bad-agent",
+      error: { message: "headless_args must be a string array" },
     });
   });
 

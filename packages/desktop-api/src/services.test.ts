@@ -557,6 +557,7 @@ describe("custom agents", () => {
         name: "Opencode",
         binary: "opencode",
         launch_args: ["run"],
+        headless_args: [],
         symbol: "terminal",
       });
       expect(JSON.stringify(added)).not.toContain("launchArgs");
@@ -573,6 +574,18 @@ describe("custom agents", () => {
         launch_args: [],
         symbol: "cursorarrow",
       });
+
+      const headless = await service.customAgentUpdate({
+        id: "opencode",
+        headlessArgs: ["run", "--format", "json", "--", "{{prompt}}"],
+      });
+      expect(headless.headless_args).toEqual([
+        "run",
+        "--format",
+        "json",
+        "--",
+        "{{prompt}}",
+      ]);
 
       expect(await service.customAgentRemove({ id: "opencode" })).toEqual({
         removed_agent_id: "opencode",

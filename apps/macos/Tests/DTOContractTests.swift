@@ -129,6 +129,38 @@ struct DTOContractTests {
         #expect(AgentKind.claude.resolvedSymbol(in: grok) == "sparkles")
     }
 
+    @Test func decodesHeadlessArgumentsAndDefaultsThemToEmpty() throws {
+        let configured = """
+        [{"id":"cursor","name":"Cursor","binary":"cursor-agent","launch_args":[],
+          "headless_args":["-p","--output-format","json","{{prompt}}"]}]
+        """.data(using: .utf8)!
+        let agents = try JSONDecoder.oma.decode([CustomAgentDTO].self, from: configured)
+        #expect(agents.first?.headlessArgs == ["-p", "--output-format", "json", "{{prompt}}"])
+
+        // A sidecar that predates the field must not fail to decode.
+        let legacy = """
+        [{"id":"opencode","name":"Opencode","binary":"opencode","launch_args":["run"]}]
+        """.data(using: .utf8)!
+        let older = try JSONDecoder.oma.decode([CustomAgentDTO].self, from: legacy)
+        #expect(older.first?.headlessArgs == [])
+    }
+
+    @Test func customAgentFormRoundTripsHeadlessArguments() {
+        let agent = CustomAgentDTO(
+            id: "cursor",
+            name: "Cursor",
+            binary: "cursor-agent",
+            launchArgs: ["--force"],
+            headlessArgs: ["-p", "--output-format", "json", "{{prompt}}"],
+            symbol: "cursorarrow"
+        )
+        let values = CustomAgentFormValues(agent: agent)
+
+        #expect(values.headlessArguments == "-p --output-format json {{prompt}}")
+        #expect(values.headlessArgs == agent.headlessArgs)
+        #expect(CustomAgentFormValues().headlessArgs == [])
+    }
+
     @Test func sidecarConfigurationPrefersEnvironmentThenBundleThenCheckout() {
         let fromEnvironment = SidecarConfiguration.resolve(
             environment: [

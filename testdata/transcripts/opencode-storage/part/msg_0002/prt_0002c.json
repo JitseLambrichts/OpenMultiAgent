@@ -1,0 +1,21 @@
+{
+  "id": "prt_0002c",
+  "sessionID": "ses_demo",
+  "messageID": "msg_0002",
+  "type": "tool",
+  "callID": "write:1",
+  "tool": "write",
+  "state": {
+    "status": "completed",
+    "input": {
+      "filePath": "/Users/dev/Projects/Demo/src/worker.ts",
+      "content": "export const worker = () => {};"
+    },
+    "output": "File written successfully.",
+    "title": "src/worker.ts",
+    "time": {
+      "start": 1770980291000,
+      "end": 1770980291020
+    }
+  }
+}

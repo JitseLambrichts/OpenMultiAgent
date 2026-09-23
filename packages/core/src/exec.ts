@@ -34,3 +34,15 @@ export async function execOrThrow(
   }
   return result.stdout;
 }
+
+/**
+ * tmux takes the command as a single shell string, so arguments containing
+ * spaces or newlines (a Handoff Brief does) must be quoted.
+ */
+export function shellQuote(argv: string[]): string {
+  return argv
+    .map((arg) =>
+      /^[\w@%+=:,./-]+$/.test(arg) ? arg : `'${arg.replaceAll("'", `'\\''`)}'`,
+    )
+    .join(" ");
+}

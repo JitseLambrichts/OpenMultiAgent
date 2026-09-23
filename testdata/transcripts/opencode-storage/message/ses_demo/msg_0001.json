@@ -1,0 +1,10 @@
+{
+  "id": "msg_0001",
+  "sessionID": "ses_demo",
+  "role": "user",
+  "agent": "build",
+  "model": "kimi-k2.5-free",
+  "time": {
+    "created": 1770980286849
+  }
+}

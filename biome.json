@@ -7,7 +7,8 @@
       "!.worktrees",
       "!.oma",
       "!apps/macos/Build",
-      "!apps/macos/OpenMultiAgent.xcodeproj"
+      "!apps/macos/OpenMultiAgent.xcodeproj",
+      "!testdata"
     ]
   },
   "formatter": {

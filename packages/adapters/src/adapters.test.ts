@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { adapterFor } from "./index.ts";
@@ -47,6 +47,7 @@ describe("generic adapter", () => {
       name: "Opencode",
       binary: "opencode",
       launchArgs: ["run"],
+      headlessArgs: [],
       symbol: "terminal",
     });
     const launch = adapter.buildLaunch({
@@ -70,6 +71,7 @@ describe("generic adapter", () => {
       name: "Opencode",
       binary: "opencode",
       launchArgs: ["run", "{{system}}", "--", "{{prompt}}"],
+      headlessArgs: [],
       symbol: "terminal",
     });
     const launch = adapter.buildLaunch({
@@ -88,6 +90,7 @@ describe("generic adapter", () => {
         name: "Opencode",
         binary: "opencode",
         launchArgs,
+        headlessArgs: [],
         symbol: "terminal",
       });
       const launch = adapter.buildLaunch({
@@ -105,6 +108,7 @@ describe("generic adapter", () => {
         name: "Opencode",
         binary: "opencode",
         launchArgs,
+        headlessArgs: [],
         symbol: "terminal",
       });
       expect(
@@ -118,7 +122,7 @@ describe("generic adapter", () => {
         "run",
         "--format",
         "json",
-        "--dangerously-skip-permissions",
+        "--auto",
         "--",
         "Extract only durable knowledge",
       ]);
@@ -131,17 +135,12 @@ describe("generic adapter", () => {
       name: "OpenCode",
       binary: "/usr/local/bin/opencode",
       launchArgs: [],
+      headlessArgs: [],
       symbol: "terminal",
     });
     expect(
       adapter.headlessCommand({ cwd: "/tmp/x", prompt: "hi", json: false }),
-    ).toEqual([
-      "/usr/local/bin/opencode",
-      "run",
-      "--dangerously-skip-permissions",
-      "--",
-      "hi",
-    ]);
+    ).toEqual(["/usr/local/bin/opencode", "run", "--auto", "--", "hi"]);
   });
 
   test("headless custom agents still append the prompt", () => {
@@ -150,11 +149,196 @@ describe("generic adapter", () => {
       name: "Grok",
       binary: "grok",
       launchArgs: [],
+      headlessArgs: [],
       symbol: "sparkle",
     });
     expect(
       adapter.headlessCommand({ cwd: "/tmp/x", prompt: "Extract knowledge" }),
     ).toEqual(["grok", "Extract knowledge"]);
+  });
+
+  test("headlessArgs expand the prompt in place", () => {
+    const adapter = createGenericAdapter({
+      id: "cursor",
+      name: "Cursor",
+      binary: "cursor-agent",
+      launchArgs: [],
+      headlessArgs: ["-p", "--output-format", "json", "{{prompt}}"],
+      symbol: "cursorarrow",
+    });
+    expect(
+      adapter.headlessCommand({
+        cwd: "/tmp/x",
+        prompt: "Extract knowledge",
+        json: true,
+      }),
+    ).toEqual([
+      "cursor-agent",
+      "-p",
+      "--output-format",
+      "json",
+      "Extract knowledge",
+    ]);
+  });
+
+  test("headlessArgs without a placeholder get the prompt appended", () => {
+    const adapter = createGenericAdapter({
+      id: "cursor",
+      name: "Cursor",
+      binary: "cursor-agent",
+      launchArgs: [],
+      headlessArgs: ["-p", "--output-format", "json"],
+      symbol: "cursorarrow",
+    });
+    expect(
+      adapter.headlessCommand({ cwd: "/tmp/x", prompt: "Extract knowledge" }),
+    ).toEqual([
+      "cursor-agent",
+      "-p",
+      "--output-format",
+      "json",
+      "Extract knowledge",
+    ]);
+  });
+
+  test("headlessArgs override the built-in OpenCode guess", () => {
+    const adapter = createGenericAdapter({
+      id: "opencode",
+      name: "Opencode",
+      binary: "opencode",
+      launchArgs: [],
+      headlessArgs: ["run", "--format", "json", "--", "{{prompt}}"],
+      symbol: "terminal",
+    });
+    expect(
+      adapter.headlessCommand({ cwd: "/tmp/x", prompt: "hi", json: true }),
+    ).toEqual(["opencode", "run", "--format", "json", "--", "hi"]);
+  });
+
+  test("headlessArgs expand the working directory", () => {
+    const adapter = createGenericAdapter({
+      id: "grok",
+      name: "Grok",
+      binary: "grok",
+      launchArgs: [],
+      headlessArgs: ["--cwd", "{{cwd}}", "{{prompt}}"],
+      symbol: "sparkle",
+    });
+    expect(
+      adapter.headlessCommand({ cwd: "/tmp/x", prompt: "hi" }),
+    ).toEqual(["grok", "--cwd", "/tmp/x", "hi"]);
+  });
+
+  test("OpenCode transcripts are discovered by cwd and start time", async () => {
+    const data = tempDir();
+    const previous = process.env.XDG_DATA_HOME;
+    process.env.XDG_DATA_HOME = data;
+    try {
+      const sessions = join(data, "opencode", "storage", "session", "proj");
+      mkdirSync(sessions, { recursive: true });
+      const write = (id: string, directory: string, created: number): string => {
+        const path = join(sessions, `${id}.json`);
+        writeFileSync(
+          path,
+          JSON.stringify({ id, directory, time: { created } }),
+        );
+        return path;
+      };
+      const startedAt = new Date(2_000_000);
+      const wanted = write("ses_wanted", "/repo/worktree", 2_500_000);
+      write("ses_elsewhere", "/other/repo", 2_500_000);
+      write("ses_earlier", "/repo/worktree", 1_000_000);
+
+      const adapter = createGenericAdapter({
+        id: "ocode",
+        name: "Opencode",
+        binary: "opencode",
+        launchArgs: [],
+        headlessArgs: [],
+        symbol: "terminal",
+      });
+
+      expect(
+        await adapter.resolveTranscript({ cwd: "/repo/worktree", startedAt }),
+      ).toBe(wanted);
+      expect(
+        await adapter.resolveTranscript({ cwd: "/nowhere", startedAt }),
+      ).toBeNull();
+      expect(
+        await adapter.resolveTranscript({
+          cwd: "/repo/worktree",
+          startedAt,
+          excludeNativeSessionId: "ses_wanted",
+        }),
+      ).toBeNull();
+    } finally {
+      if (previous === undefined) delete process.env.XDG_DATA_HOME;
+      else process.env.XDG_DATA_HOME = previous;
+    }
+  });
+
+  test("Cursor chats are discovered by cwd and start time", async () => {
+    const home = tempDir();
+    const previous = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const chat = (id: string, cwd: string, createdAtMs: number): string => {
+        const dir = join(home, ".cursor", "chats", "workspace-hash", id);
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(
+          join(dir, "meta.json"),
+          JSON.stringify({ schemaVersion: 1, createdAtMs, cwd, title: id }),
+        );
+        return dir;
+      };
+      const startedAt = new Date(2_000_000);
+      const wanted = chat("chat-wanted", "/repo/worktree", 2_500_000);
+      chat("chat-elsewhere", "/other/repo", 2_500_000);
+      chat("chat-earlier", "/repo/worktree", 1_000_000);
+
+      const adapter = createGenericAdapter({
+        id: "cursor",
+        name: "Cursor",
+        binary: "cursor-agent",
+        launchArgs: [],
+        headlessArgs: [],
+        symbol: "hammer",
+      });
+
+      expect(
+        await adapter.resolveTranscript({ cwd: "/repo/worktree", startedAt }),
+      ).toBe(wanted);
+      expect(
+        await adapter.resolveTranscript({ cwd: "/nowhere", startedAt }),
+      ).toBeNull();
+      expect(
+        await adapter.resolveTranscript({
+          cwd: "/repo/worktree",
+          startedAt,
+          excludeNativeSessionId: "chat-wanted",
+        }),
+      ).toBeNull();
+    } finally {
+      if (previous === undefined) delete process.env.HOME;
+      else process.env.HOME = previous;
+    }
+  });
+
+  test("an agent with no known storage layout still reports no transcript", async () => {
+    const adapter = createGenericAdapter({
+      id: "grok",
+      name: "Grok",
+      binary: "grok",
+      launchArgs: [],
+      headlessArgs: [],
+      symbol: "sparkle",
+    });
+    expect(
+      await adapter.resolveTranscript({
+        cwd: "/repo",
+        startedAt: new Date(0),
+      }),
+    ).toBeNull();
   });
 
   test("resume and fork are rejected with a clear error", () => {
@@ -163,6 +347,7 @@ describe("generic adapter", () => {
       name: "Opencode",
       binary: "opencode",
       launchArgs: [],
+      headlessArgs: [],
       symbol: "terminal",
     });
     expect(() =>

@@ -70,6 +70,80 @@ describe("custom agents", () => {
     expect(updated.symbol).toBe("cursorarrow");
   });
 
+  test("persists headless arguments separately from launch arguments", () => {
+    const dir = home();
+    const added = addCustomAgent(
+      {
+        name: "Cursor",
+        binary: "cursor-agent",
+        launchArgs: [],
+        headlessArgs: ["-p", "--output-format", "json", "{{prompt}}"],
+      },
+      dir,
+    );
+    expect(added.headlessArgs).toEqual([
+      "-p",
+      "--output-format",
+      "json",
+      "{{prompt}}",
+    ]);
+    expect(listCustomAgents(dir)[0]?.headlessArgs).toEqual(added.headlessArgs);
+
+    const updated = updateCustomAgent("cursor", { headlessArgs: [] }, dir);
+    expect(updated.headlessArgs).toEqual([]);
+  });
+
+  test("a partial update leaves the fields it does not mention alone", () => {
+    const dir = home();
+    addCustomAgent(
+      {
+        name: "Cursor",
+        binary: "cursor-agent",
+        launchArgs: ["--force"],
+        headlessArgs: ["-p", "{{prompt}}"],
+        symbol: "cursorarrow",
+      },
+      dir,
+    );
+    // A client that predates a field sends it as undefined rather than omitting
+    // it; that must not reset the field to its default.
+    const updated = updateCustomAgent(
+      "cursor",
+      {
+        name: undefined,
+        binary: undefined,
+        launchArgs: undefined,
+        headlessArgs: undefined,
+        symbol: "hammer",
+      },
+      dir,
+    );
+    expect(updated).toEqual({
+      id: "cursor",
+      name: "Cursor",
+      binary: "cursor-agent",
+      launchArgs: ["--force"],
+      headlessArgs: ["-p", "{{prompt}}"],
+      symbol: "hammer",
+    });
+  });
+
+  test("defaults missing headless arguments to an empty list", () => {
+    expect(
+      validateCustomAgentDef({ id: "grok", binary: "grok" }).headlessArgs,
+    ).toEqual([]);
+  });
+
+  test("rejects headless arguments that are not strings", () => {
+    expect(() =>
+      validateCustomAgentDef({
+        id: "grok",
+        binary: "grok",
+        headlessArgs: [3] as unknown as string[],
+      }),
+    ).toThrow(/headlessArgs/);
+  });
+
   test("rejects an invalid SF Symbol name", () => {
     expect(() =>
       validateCustomAgentDef({

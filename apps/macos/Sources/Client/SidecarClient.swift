@@ -191,8 +191,8 @@ protocol DesktopAPI: Sendable {
     func pendingPromotionCount() async throws -> PendingPromotionCountDTO
     func terminalAttachment(sessionID: String) async throws -> TerminalAttachmentDTO
     func listCustomAgents() async throws -> [CustomAgentDTO]
-    func addCustomAgent(name: String, binary: String, launchArgs: [String], symbol: String) async throws -> CustomAgentDTO
-    func updateCustomAgent(id: String, name: String, binary: String, launchArgs: [String], symbol: String) async throws -> CustomAgentDTO
+    func addCustomAgent(name: String, binary: String, launchArgs: [String], headlessArgs: [String], symbol: String) async throws -> CustomAgentDTO
+    func updateCustomAgent(id: String, name: String, binary: String, launchArgs: [String], headlessArgs: [String], symbol: String) async throws -> CustomAgentDTO
     func removeCustomAgent(id: String) async throws
     func listAgentSystemPrompts() async throws -> [AgentSystemPromptDTO]
     func setAgentSystemPrompt(agent: String, systemPrompt: String) async throws
@@ -226,8 +226,8 @@ extension DesktopAPI {
     func pendingPromotionCount() async throws -> PendingPromotionCountDTO { throw notWired }
     func terminalAttachment(sessionID: String) async throws -> TerminalAttachmentDTO { throw notWired }
     func listCustomAgents() async throws -> [CustomAgentDTO] { throw notWired }
-    func addCustomAgent(name: String, binary: String, launchArgs: [String], symbol: String) async throws -> CustomAgentDTO { throw notWired }
-    func updateCustomAgent(id: String, name: String, binary: String, launchArgs: [String], symbol: String) async throws -> CustomAgentDTO { throw notWired }
+    func addCustomAgent(name: String, binary: String, launchArgs: [String], headlessArgs: [String], symbol: String) async throws -> CustomAgentDTO { throw notWired }
+    func updateCustomAgent(id: String, name: String, binary: String, launchArgs: [String], headlessArgs: [String], symbol: String) async throws -> CustomAgentDTO { throw notWired }
     func removeCustomAgent(id: String) async throws { throw notWired }
     func listAgentSystemPrompts() async throws -> [AgentSystemPromptDTO] { throw notWired }
     func setAgentSystemPrompt(agent: String, systemPrompt: String) async throws { throw notWired }
@@ -440,21 +440,23 @@ actor SidecarClient: DesktopAPI {
         try await request(method: "agent.list")
     }
 
-    func addCustomAgent(name: String, binary: String, launchArgs: [String], symbol: String) async throws -> CustomAgentDTO {
+    func addCustomAgent(name: String, binary: String, launchArgs: [String], headlessArgs: [String], symbol: String) async throws -> CustomAgentDTO {
         try await request(method: "agent.add", params: [
             "name": .string(name),
             "binary": .string(binary),
             "launch_args": .array(launchArgs.map(JSONValue.string)),
+            "headless_args": .array(headlessArgs.map(JSONValue.string)),
             "symbol": .string(symbol),
         ])
     }
 
-    func updateCustomAgent(id: String, name: String, binary: String, launchArgs: [String], symbol: String) async throws -> CustomAgentDTO {
+    func updateCustomAgent(id: String, name: String, binary: String, launchArgs: [String], headlessArgs: [String], symbol: String) async throws -> CustomAgentDTO {
         try await request(method: "agent.update", params: [
             "id": .string(id),
             "name": .string(name),
             "binary": .string(binary),
             "launch_args": .array(launchArgs.map(JSONValue.string)),
+            "headless_args": .array(headlessArgs.map(JSONValue.string)),
             "symbol": .string(symbol),
         ])
     }

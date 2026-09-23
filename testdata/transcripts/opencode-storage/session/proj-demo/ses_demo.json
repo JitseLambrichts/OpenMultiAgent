@@ -1,0 +1,17 @@
+{
+  "id": "ses_demo",
+  "slug": "lucky-meadow",
+  "version": "1.1.65",
+  "projectID": "proj-demo",
+  "directory": "/Users/dev/Projects/Demo",
+  "title": "Implement the queue consumer",
+  "time": {
+    "created": 1770980286849,
+    "updated": 1770980982723
+  },
+  "summary": {
+    "additions": 12,
+    "deletions": 3,
+    "files": 1
+  }
+}

@@ -16,7 +16,8 @@ import {
   removeWorktree,
   repoRoot,
 } from "./git.ts";
-import { tmuxSessionName } from "./paths.ts";
+import { shellQuote } from "./exec.ts";
+import { isPaneLog, paneLogPath, tmuxSessionName } from "./paths.ts";
 import {
   activateSession,
   createAgentRun,
@@ -249,27 +250,34 @@ export class SessionManager {
         transcript_path: launch.transcriptPath,
       });
 
-      await this.startTmuxSession(session.id, worktreePath, launch);
+      await this.startTmuxSession(session.id, worktreePath, launch, run.id);
 
       // Codex only reveals its transcript once it has written `session_meta`,
       // so the path is filled in on a short poll rather than at launch.
-      // A plain terminal never publishes a transcript, so skip discovery.
-      if (!launch.transcriptPath && adapter.name !== "terminal") {
-        const discovery = this.discoverTranscript(
-          adapter,
-          run.id,
-          worktreePath,
-          startedAt,
-          launch.nativeSessionId,
-          undefined,
-          this.discoveryAttempts,
-          this.discoveryIntervalMs,
-        );
-        if (adapter.name === "codex") {
-          if (!(await discovery)) {
-            throw new Error("codex did not publish a correlatable transcript");
+      // A plain terminal never publishes one at all, so it goes straight to
+      // the captured pane rather than polling for something that never comes.
+      if (!launch.transcriptPath) {
+        if (adapter.name === "terminal") {
+          this.fallBackToPane(run.id);
+        } else {
+          const discovery = this.discoverTranscript(
+            adapter,
+            run.id,
+            worktreePath,
+            startedAt,
+            launch.nativeSessionId,
+            undefined,
+            this.discoveryAttempts,
+            this.discoveryIntervalMs,
+          );
+          if (adapter.name === "codex") {
+            if (!(await discovery)) {
+              throw new Error("codex did not publish a correlatable transcript");
+            }
+          } else {
+            void this.paneOnEmptyDiscovery(discovery, run.id);
           }
-        } else void discovery;
+        }
       }
 
       return this.liveView(session.id);
@@ -277,6 +285,35 @@ export class SessionManager {
       // Never leave a half-created session behind in the DB.
       await this.cleanup(session.id, { force: true });
       throw error;
+    }
+  }
+
+  /**
+   * Records everything the pane prints, for every run. Cheap, and the only
+   * record there will be for an agent whose own store OMA cannot read.
+   */
+  private async capturePane(sessionId: string, runId: string): Promise<void> {
+    await tmux.pipePane(tmuxSessionName(sessionId), paneLogPath(runId));
+  }
+
+  /** The agent published nothing we can read; the captured pane is the record. */
+  private fallBackToPane(runId: string): void {
+    setTranscriptPath(this.db, runId, paneLogPath(runId));
+  }
+
+  /**
+   * Discovery runs in the background, so the fallback has to wait for it: an
+   * agent that publishes late must not be overwritten by the pane log. By the
+   * time it resolves the session may already be gone, which is not an error.
+   */
+  private async paneOnEmptyDiscovery(
+    discovery: Promise<string | null>,
+    runId: string,
+  ): Promise<void> {
+    try {
+      if (!(await discovery)) this.fallBackToPane(runId);
+    } catch {
+      // A cleaned-up run has nothing left to point at.
     }
   }
 
@@ -348,6 +385,7 @@ export class SessionManager {
     sessionId: string,
     cwd: string,
     launch: { command: string[]; env?: Record<string, string> },
+    runId?: string,
   ): Promise<void> {
     const name = tmuxSessionName(sessionId);
     await tmux.newSession({
@@ -356,6 +394,10 @@ export class SessionManager {
       command: shellQuote(launch.command),
       env: { PATH: process.env.PATH ?? "/usr/bin:/bin", ...launch.env },
     });
+    // Before the liveness wait, not after: the pane cannot be piped until it
+    // exists, so whatever it prints in between is lost, and that window should
+    // be as short as it can be.
+    if (runId) await this.capturePane(sessionId, runId);
     await Bun.sleep(200);
     if (!(await tmux.hasSession(name))) {
       throw new Error(
@@ -456,15 +498,28 @@ export class SessionManager {
           transcript_path: transcriptPath,
         });
         activateSession(this.db, session.id);
-        if (!transcriptPath && adapter.name !== "terminal") {
-          const discovery = this.discoverTranscript(
-            adapter,
-            run.id,
-            session.worktree_path,
-            startedAt,
-            launch.nativeSessionId,
-          );
-          void discovery;
+        // A switch replaces the pane, so the capture is re-attached and keyed
+        // by the new run: the replacement's output never lands in the log of
+        // the agent it replaced.
+        await this.capturePane(session.id, run.id);
+        if (!transcriptPath) {
+          if (adapter.name === "terminal") {
+            this.fallBackToPane(run.id);
+          } else {
+            void this.paneOnEmptyDiscovery(
+              this.discoverTranscript(
+                adapter,
+                run.id,
+                session.worktree_path,
+                startedAt,
+                launch.nativeSessionId,
+                undefined,
+                this.discoveryAttempts,
+                this.discoveryIntervalMs,
+              ),
+              run.id,
+            );
+          }
         }
         return this.liveView(session.id);
       }),
@@ -595,16 +650,21 @@ export class SessionManager {
           transcript_path: transcriptPath,
         });
         activateSession(this.db, session.id);
+        await this.capturePane(session.id, run.id);
         if (!transcriptPath) {
-          const discovery = this.discoverTranscript(
-            adapter,
+          void this.paneOnEmptyDiscovery(
+            this.discoverTranscript(
+              adapter,
+              run.id,
+              session.worktree_path,
+              startedAt,
+              launch.nativeSessionId,
+              previous.native_session_id,
+              this.discoveryAttempts,
+              this.discoveryIntervalMs,
+            ),
             run.id,
-            session.worktree_path,
-            startedAt,
-            launch.nativeSessionId,
-            previous.native_session_id,
           );
-          void discovery;
         }
         return this.liveView(session.id);
       }),
@@ -706,14 +766,5 @@ export class SessionManager {
   }
 }
 
-/**
- * tmux takes the command as a single shell string, so arguments containing
- * spaces or newlines (a Handoff Brief does) must be quoted.
- */
-export function shellQuote(argv: string[]): string {
-  return argv
-    .map((arg) =>
-      /^[\w@%+=:,./-]+$/.test(arg) ? arg : `'${arg.replaceAll("'", `'\\''`)}'`,
-    )
-    .join(" ");
-}
+// `shellQuote` moved to exec.ts so tmux.ts can use it without a cycle.
+export { shellQuote } from "./exec.ts";

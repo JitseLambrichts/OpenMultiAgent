@@ -3,6 +3,7 @@ import {
   asRecord,
   asString,
   parseLines,
+  fromTranscriptFile,
   seqFor,
   truncate,
   type ParseResult,
@@ -149,5 +150,5 @@ export function parseGeminiTranscript(content: string): ParseResult {
 
 export const geminiParser: TranscriptParser = {
   agent: "gemini",
-  parse: parseGeminiTranscript,
+  readEvents: fromTranscriptFile(parseGeminiTranscript),
 };

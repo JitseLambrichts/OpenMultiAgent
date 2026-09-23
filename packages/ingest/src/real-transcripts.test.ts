@@ -1,10 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { cursorChatsDir, opencodeStorageDir } from "@oma/core";
 import { parseClaudeTranscript } from "./claude.ts";
 import { parseCodexTranscript } from "./codex.ts";
 import { parseGeminiTranscript } from "./gemini.ts";
+import { parseCursorChat } from "./cursor.ts";
+import { parseOpenCodeSession } from "./opencode.ts";
 
 /**
  * Contract test against the real transcripts on this machine. The fixtures in
@@ -64,6 +67,19 @@ const geminiFiles = newestFiles(
   /^session-.*\.jsonl?$/,
   SAMPLE_SIZE,
 );
+// OpenCode's unit is a session record, not a transcript file; the messages and
+// parts it points at live in sibling directories.
+const opencodeFiles = newestFiles(
+  join(opencodeStorageDir(), "session"),
+  /^ses_.*\.json$/,
+  SAMPLE_SIZE,
+);
+// A Cursor chat is a directory; its store is the file that dates it.
+const cursorChats = newestFiles(
+  cursorChatsDir(),
+  /^store\.db$/,
+  SAMPLE_SIZE,
+).map((path) => dirname(path));
 
 describe.if(claudeFiles.length > 0)("real Claude transcripts", () => {
   test(`parse without throwing (${claudeFiles.length} files)`, () => {
@@ -193,5 +209,86 @@ describe.if(geminiFiles.length > 0)("real Gemini transcripts", () => {
       const { skippedLines } = parseGeminiTranscript(content);
       expect(skippedLines).toBeLessThanOrEqual(lines > 0 ? 1 : 0);
     }
+  });
+});
+
+describe.if(opencodeFiles.length > 0)("real OpenCode sessions", () => {
+  test(`parse without throwing (${opencodeFiles.length} sessions)`, () => {
+    for (const path of opencodeFiles) {
+      expect(() => parseOpenCodeSession(path)).not.toThrow();
+    }
+  });
+
+  test("a session record is named after the id it reports", () => {
+    for (const path of opencodeFiles) {
+      const result = parseOpenCodeSession(path);
+      if (!result.meta.nativeSessionId) continue;
+      expect(path.endsWith(`${result.meta.nativeSessionId}.json`)).toBe(true);
+      expect(result.meta.cwd).not.toBeNull();
+    }
+  });
+
+  test("the message and part tree still yields conversation events", () => {
+    const parsed = opencodeFiles.map(parseOpenCodeSession);
+    expect(parsed.some((result) => result.events.length > 0)).toBe(true);
+    expect(parsed.every((result) => result.skippedLines === 0)).toBe(true);
+  });
+
+  test("known part types dominate, so the storage format has not drifted", () => {
+    let known = 0;
+    let unknown = 0;
+    for (const path of opencodeFiles) {
+      for (const event of parseOpenCodeSession(path).events) {
+        if (event.kind === "unknown") unknown++;
+        else known++;
+      }
+    }
+    expect(known).toBeGreaterThan(0);
+    expect(unknown / (known + unknown)).toBeLessThan(0.05);
+  });
+});
+
+/**
+ * Cursor's store is private and undocumented, so this is the test that matters
+ * most: it is the one that will fail when Cursor reorganizes it, instead of
+ * ingest quietly reading nothing.
+ */
+describe.if(cursorChats.length > 0)("real Cursor chats", () => {
+  test(`parse without throwing (${cursorChats.length} chats)`, () => {
+    for (const dir of cursorChats) {
+      expect(() => parseCursorChat(dir)).not.toThrow();
+    }
+  });
+
+  test("a chat reports the id its directory is named after", () => {
+    for (const dir of cursorChats) {
+      const result = parseCursorChat(dir);
+      if (!result.meta.nativeSessionId) continue;
+      expect(dir.endsWith(result.meta.nativeSessionId)).toBe(true);
+    }
+  });
+
+  test("the blob store still yields an ordered conversation", () => {
+    const parsed = cursorChats.map(parseCursorChat);
+    const withEvents = parsed.filter((result) => result.events.length > 0);
+    expect(withEvents.length).toBeGreaterThan(0);
+    for (const result of withEvents) {
+      expect(result.meta.cwd).not.toBeNull();
+      // A conversation starts with what the user asked, never with a reply.
+      expect(result.events[0]?.role).toBe("user");
+    }
+  });
+
+  test("known part types dominate, so the message shape has not drifted", () => {
+    let known = 0;
+    let unknown = 0;
+    for (const dir of cursorChats) {
+      for (const event of parseCursorChat(dir).events) {
+        if (event.kind === "unknown") unknown++;
+        else known++;
+      }
+    }
+    expect(known).toBeGreaterThan(0);
+    expect(unknown / (known + unknown)).toBeLessThan(0.05);
   });
 });

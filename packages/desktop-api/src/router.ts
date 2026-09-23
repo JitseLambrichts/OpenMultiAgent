@@ -220,6 +220,7 @@ async function invoke(
         name: optionalString(params, "name"),
         binary: optionalString(params, "binary"),
         launchArgs: optionalStringArray(params, "launch_args"),
+        headlessArgs: optionalStringArray(params, "headless_args"),
         symbol: optionalString(params, "symbol"),
       });
     case "agent.update":
@@ -228,6 +229,7 @@ async function invoke(
         name: optionalString(params, "name"),
         binary: optionalString(params, "binary"),
         launchArgs: optionalStringArray(params, "launch_args"),
+        headlessArgs: optionalStringArray(params, "headless_args"),
         symbol: optionalString(params, "symbol"),
       });
     case "agent.remove":

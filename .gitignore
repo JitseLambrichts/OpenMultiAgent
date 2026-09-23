@@ -13,8 +13,8 @@ dist/
 *.db-shm
 *.db-wal
 .oma/*
-!.oma/docs/
-!.oma/docs/**
+.oma/docs/
+.oma/docs/**
 tmp/
 
 # Xcode derived data and user-specific project state
@@ -29,3 +29,8 @@ PLAN.MD
 
 # git worktrees
 /.worktrees/
+
+# AI Agents
+.claude/
+.cursor/
+graphify-out/

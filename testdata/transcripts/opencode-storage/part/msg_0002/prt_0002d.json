@@ -1,0 +1,20 @@
+{
+  "id": "prt_0002d",
+  "sessionID": "ses_demo",
+  "messageID": "msg_0002",
+  "type": "tool",
+  "callID": "read:2",
+  "tool": "read",
+  "state": {
+    "status": "completed",
+    "input": {
+      "filePath": "/Users/dev/Projects/Demo/src/queue.ts"
+    },
+    "output": "export const queue = [];",
+    "title": "src/queue.ts",
+    "time": {
+      "start": 1770980291100,
+      "end": 1770980291110
+    }
+  }
+}

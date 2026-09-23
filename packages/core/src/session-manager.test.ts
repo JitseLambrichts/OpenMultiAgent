@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Database } from "bun:sqlite";
@@ -7,8 +7,8 @@ import type { AgentAdapter, Launch, LaunchContext } from "./agent.ts";
 import type { AgentName } from "./types.ts";
 import { openDb } from "./db.ts";
 import { exec } from "./exec.ts";
-import { tmuxSessionName } from "./paths.ts";
-import { listSessions } from "./store.ts";
+import { isPaneLog, paneLogPath, tmuxSessionName } from "./paths.ts";
+import { listAgentRuns, listSessions } from "./store.ts";
 import { SessionManager, shellQuote } from "./session-manager.ts";
 import * as tmux from "./tmux.ts";
 
@@ -751,5 +751,146 @@ describe("SessionManager.switchAgent and resume", () => {
     const systemPrompt = contexts.at(-1)?.systemPrompt ?? "";
     expect(systemPrompt).toContain("You are a careful reviewer.");
     expect(systemPrompt).toContain("Prompt wiring");
+  });
+});
+
+describe("the captured-pane fallback", () => {
+  /**
+   * `paneLogPath` writes under OMA_HOME, so every test here points it at a
+   * throwaway directory rather than the developer's own `~/.oma`.
+   */
+  function managerWithHome(adapter: AgentAdapter): {
+    mgr: SessionManager;
+    home: string;
+  } {
+    const home = mkdtempSync(join(tmpdir(), "oma-pane-home-"));
+    created.push(home);
+    process.env.OMA_HOME = home;
+    return {
+      home,
+      mgr: new SessionManager(db, {
+        adapterFor: () => adapter,
+        startLock: (fn) => fn(),
+        transcriptDiscovery: { attempts: 1, intervalMs: 1 },
+      }),
+    };
+  }
+
+  const silent = { ...process.env };
+  afterEach(() => {
+    if (silent.OMA_HOME === undefined) delete process.env.OMA_HOME;
+    else process.env.OMA_HOME = silent.OMA_HOME;
+  });
+
+  test("gives a terminal session the pane log as its transcript", async () => {
+    const { mgr } = managerWithHome(
+      fakeAdapter({
+        name: "terminal",
+        buildLaunch: () => ({
+          // Printed after a beat: output from before pipe-pane attaches is
+          // genuinely lost, and the test should not pretend otherwise.
+          command: ["sh", "-c", "sleep 0.5; echo oma-pane-marker; sleep 30"],
+          nativeSessionId: null,
+          transcriptPath: null,
+          writtenFiles: [],
+        }),
+      }),
+    );
+
+    const view = await mgr.create({ repoPath: repo, agent: "terminal" });
+    const run = listAgentRuns(db, view.session.id).at(-1);
+
+    expect(run?.transcript_path).toBe(paneLogPath(run!.id));
+    let captured = "";
+    for (let i = 0; i < 40 && !captured.includes("oma-pane-marker"); i++) {
+      await Bun.sleep(100);
+      captured = existsSync(run!.transcript_path ?? "")
+        ? readFileSync(run!.transcript_path!, "utf8")
+        : "";
+    }
+    expect(captured).toContain("oma-pane-marker");
+  });
+
+  test("falls back to the pane only after discovery comes back empty", async () => {
+    const { mgr } = managerWithHome(
+      fakeAdapter({
+        name: "grok",
+        buildLaunch: () => ({
+          command: ["sleep", "30"],
+          nativeSessionId: null,
+          transcriptPath: null,
+          writtenFiles: [],
+        }),
+        resolveTranscript: async () => null,
+      }),
+    );
+
+    const view = await mgr.create({ repoPath: repo, agent: "grok" });
+    const runId = listAgentRuns(db, view.session.id).at(-1)!.id;
+
+    let path: string | null = null;
+    for (let i = 0; i < 40 && path === null; i++) {
+      await Bun.sleep(50);
+      path = listAgentRuns(db, view.session.id).at(-1)?.transcript_path ?? null;
+    }
+    expect(path).toBe(paneLogPath(runId));
+  });
+
+  test("never replaces a transcript the agent publishes itself", async () => {
+    const { mgr } = managerWithHome(fakeAdapter());
+
+    const view = await mgr.create({ repoPath: repo, agent: "claude" });
+    await Bun.sleep(300);
+    const run = listAgentRuns(db, view.session.id).at(-1);
+
+    expect(run?.transcript_path).toEndWith("transcript.jsonl");
+    expect(isPaneLog(run?.transcript_path ?? "")).toBe(false);
+  });
+});
+
+describe("the captured-pane fallback across runs", () => {
+  const original = { ...process.env };
+  afterEach(() => {
+    if (original.OMA_HOME === undefined) delete process.env.OMA_HOME;
+    else process.env.OMA_HOME = original.OMA_HOME;
+  });
+
+  test("captures the replacement agent too, into its own run's log", async () => {
+    const home = mkdtempSync(join(tmpdir(), "oma-pane-home-"));
+    created.push(home);
+    process.env.OMA_HOME = home;
+
+    const transcriptless = (name: AgentName): AgentAdapter =>
+      fakeAdapter({
+        name,
+        buildLaunch: () => ({
+          command: ["sleep", "30"],
+          nativeSessionId: null,
+          transcriptPath: null,
+          writtenFiles: [],
+        }),
+        resolveTranscript: async () => null,
+      });
+    const mgr = new SessionManager(db, {
+      adapterFor: (agent) => transcriptless(agent),
+      startLock: (fn) => fn(),
+      transcriptDiscovery: { attempts: 1, intervalMs: 1 },
+    });
+
+    const view = await mgr.create({ repoPath: repo, agent: "grok" });
+    await mgr.switchAgent(view.session.id, "other");
+
+    const runs = listAgentRuns(db, view.session.id);
+    expect(runs).toHaveLength(2);
+    let paths: Array<string | null> = [];
+    for (let i = 0; i < 40; i++) {
+      paths = listAgentRuns(db, view.session.id).map((r) => r.transcript_path);
+      if (paths.every((path) => path !== null)) break;
+      await Bun.sleep(50);
+    }
+    // Each run gets its own capture: the second agent's output must not be
+    // appended to the first run's record.
+    expect(paths).toEqual(runs.map((run) => paneLogPath(run.id)));
+    expect(new Set(paths).size).toBe(2);
   });
 });

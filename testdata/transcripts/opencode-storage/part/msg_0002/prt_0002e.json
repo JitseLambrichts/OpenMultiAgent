@@ -1,0 +1,10 @@
+{
+  "id": "prt_0002e",
+  "sessionID": "ses_demo",
+  "messageID": "msg_0002",
+  "type": "text",
+  "text": "The consumer now dedupes on message id.",
+  "time": {
+    "start": 1770980292000
+  }
+}

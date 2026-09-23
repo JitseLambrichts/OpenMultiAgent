@@ -1,0 +1,23 @@
+{
+  "id": "msg_0002",
+  "sessionID": "ses_demo",
+  "role": "assistant",
+  "parentID": "msg_0001",
+  "modelID": "kimi-k2.5-free",
+  "providerID": "opencode",
+  "mode": "build",
+  "agent": "build",
+  "path": {
+    "cwd": "/Users/dev/Projects/Demo",
+    "root": "/"
+  },
+  "cost": 0,
+  "tokens": {
+    "input": 415,
+    "output": 84
+  },
+  "time": {
+    "created": 1770980290000,
+    "completed": 1770980292417
+  }
+}

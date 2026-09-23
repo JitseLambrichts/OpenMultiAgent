@@ -8,6 +8,12 @@ export interface CustomAgentDef {
   name: string;
   binary: string;
   launchArgs: string[];
+  /**
+   * argv for the one-shot, non-interactive run the extraction pipeline makes.
+   * Empty means "fall back to the adapter's built-in guess", which is only
+   * right for CLIs whose interactive form also accepts a bare prompt.
+   */
+  headlessArgs: string[];
   symbol: string;
 }
 
@@ -18,6 +24,7 @@ export interface CustomAgentInput {
   name?: string;
   binary?: string;
   launchArgs?: string[];
+  headlessArgs?: string[];
   symbol?: string;
 }
 
@@ -41,6 +48,17 @@ function normalizeSymbol(value: unknown): string {
   return value;
 }
 
+function normalizeArgs(value: unknown, field: string): string[] {
+  const args = value ?? [];
+  if (!Array.isArray(args) || args.some((a) => typeof a !== "string")) {
+    throw new Error(`${field} must be a string array`);
+  }
+  if (args.some((a: string) => a.length > 500)) {
+    throw new Error(`${field} entries are too long`);
+  }
+  return args as string[];
+}
+
 export function validateCustomAgentDef(input: CustomAgentInput): CustomAgentDef {
   const id = normalizeAgentId(input.id ?? input.name ?? "");
   if (!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(id)) {
@@ -56,17 +74,14 @@ export function validateCustomAgentDef(input: CustomAgentInput): CustomAgentDef 
   if (!/^[^\s\/][^\s]*$/.test(binary)) {
     throw new Error("binary must be a single executable name or absolute path");
   }
-  const launchArgs = input.launchArgs ?? [];
-  if (
-    !Array.isArray(launchArgs) ||
-    launchArgs.some((a) => typeof a !== "string")
-  ) {
-    throw new Error("launchArgs must be a string array");
-  }
-  if (launchArgs.some((a) => a.length > 500)) {
-    throw new Error("launch arguments are too long");
-  }
-  return { id, name, binary, launchArgs, symbol: normalizeSymbol(input.symbol) };
+  return {
+    id,
+    name,
+    binary,
+    launchArgs: normalizeArgs(input.launchArgs, "launchArgs"),
+    headlessArgs: normalizeArgs(input.headlessArgs, "headlessArgs"),
+    symbol: normalizeSymbol(input.symbol),
+  };
 }
 
 function parseFile(path: string): CustomAgentDef[] {
@@ -125,7 +140,13 @@ export function updateCustomAgent(
   const current = listCustomAgents(home);
   const found = current.find((d) => d.id === normalizeAgentId(id));
   if (!found) throw new Error(`unknown agent '${id}'`);
-  const updated = validateCustomAgentDef({ ...found, ...input, id: found.id });
+  // Spreading `input` wholesale would let an explicit `undefined` - which is
+  // what a client that predates a field sends - reset that field to its
+  // default. Only the keys that carry a value take part in the merge.
+  const patch = Object.fromEntries(
+    Object.entries(input).filter(([, value]) => value !== undefined),
+  );
+  const updated = validateCustomAgentDef({ ...found, ...patch, id: found.id });
   writeAll(
     current.map((d) => (d.id === found.id ? updated : d)),
     home,

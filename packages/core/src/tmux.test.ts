@@ -1,4 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { exec } from "./exec.ts";
 import * as tmux from "./tmux.ts";
 
@@ -30,6 +33,42 @@ describe("tmux.newSession", () => {
     ]);
     expect(shown.code).toBe(0);
     expect(shown.stdout.trim()).toBe("OMA_TEST_SESSION_ENV=isolated-value");
+  });
+});
+
+describe("tmux.pipePane against a real tmux server", () => {
+  test("captures what the pane prints, into a directory it creates itself", async () => {
+    const name = `oma-pipe-${Date.now()}`;
+    names.push(name);
+    const dir = mkdtempSync(join(tmpdir(), "oma-pane-"));
+    // A path with a space proves the command is quoted, not concatenated.
+    const log = join(dir, "with space", "run-1.pane.log");
+    try {
+      await tmux.newSession({
+        name,
+        cwd: process.cwd(),
+        command: "sh -c 'sleep 0.3; echo oma-capture-marker; sleep 30'",
+      });
+      await tmux.pipePane(name, log);
+
+      let captured = "";
+      for (let i = 0; i < 40 && !captured.includes("oma-capture-marker"); i++) {
+        await Bun.sleep(100);
+        captured = existsSync(log) ? readFileSync(log, "utf8") : "";
+      }
+      expect(captured).toContain("oma-capture-marker");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("piping a session that is gone fails quietly, since cleanup races it", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "oma-pane-"));
+    try {
+      await tmux.pipePane(`oma-absent-${Date.now()}`, join(dir, "x.pane.log"));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 
