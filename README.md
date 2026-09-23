@@ -10,6 +10,23 @@ worktrees, Claude Code, Codex and Gemini adapters, agent switching/resume,
 transcript ingestion, full-text memory search, an MCP memory server, and
 reviewed living-document promotion.
 
+## Install
+
+On Apple Silicon with macOS 15 or newer, Xcode 26 and Homebrew, this builds the
+app and copies it to `/Applications`:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/jlambrichtsopt/OpenMultiAgent/master/scripts/install-macos.sh | bash
+```
+
+The script installs Bun, XcodeGen and tmux when they are missing, clones this
+repository into `~/.oma/src/OpenMultiAgent`, and builds a Release app. The
+first build downloads Swift packages and can take several minutes. The script
+is [scripts/install-macos.sh](scripts/install-macos.sh).
+
+Git and a signed-in agent CLI (`claude`, `codex`, or `gemini`) are still
+required to run sessions.
+
 ## Requirements
 
 Everyone needs:
