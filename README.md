@@ -5,10 +5,10 @@ AI coding agents with memory that outlives any one agent or session. It keeps
 the durable state in SQLite, reads the agents' own structured transcripts and
 offers relevant knowledge back through MCP.
 
-OMA currently ships a macOS desktop app and a matching CLI: persistent tmux
-sessions, optional Git worktrees, Claude Code, Codex and Gemini adapters,
-agent switching/resume, transcript ingestion, full-text memory search, an MCP
-memory server, and reviewed living-document promotion.
+OMA ships a macOS desktop app: persistent tmux sessions, optional Git
+worktrees, Claude Code, Codex and Gemini adapters, agent switching/resume,
+transcript ingestion, full-text memory search, an MCP memory server, and
+reviewed living-document promotion.
 
 ## Requirements
 
@@ -34,39 +34,12 @@ git clone https://github.com/jlambrichtsopt/OpenMultiAgent.git
 cd OpenMultiAgent
 bun install
 bun run check
-```
-
-Most people only need the Mac app. That UI talks to the same engine as the
-CLI; you do not have to run `oma` yourself.
-
-```sh
 bun run macos:build
 open apps/macos/Build/DerivedData/Build/Products/Debug/OpenMultiAgent.app
 ```
 
 On first launch macOS may ask for access to the folder that contains this
 checkout. Grant it, or the sidecar cannot start.
-
-The optional CLI is `bun run oma -- ...` from a checkout, or link the package
-so `oma` is on your `PATH`.
-
-```sh
-bun run oma -- new /path/to/repo --agent claude --worktree
-bun run oma -- ls
-bun run oma -- watch                         # live TUI overview
-bun run oma -- attach <session-id>
-bun run oma -- status <session-id>
-bun run oma -- sync <session-id>
-bun run oma -- search "why do we use Redis Streams?" --repo /path/to/repo
-bun run oma -- switch <session-id> --agent codex
-bun run oma -- end <session-id>             # local sync + stop
-bun run oma -- end <session-id> --extract   # optionally extract candidates
-bun run oma -- resume <session-id>
-bun run oma -- fork <session-id>
-bun run oma -- extract <session-id>
-bun run oma -- promote <session-id>        # preview only
-bun run oma -- promote <session-id> --apply
-```
 
 The database defaults to `~/.oma/oma.db`. Set `OMA_HOME` to redirect all OMA
 state, which is useful for tests and disposable environments.
@@ -82,18 +55,17 @@ OMA session.
 
 ## Living documentation workflow
 
-`oma extract` sends normalized events—not raw terminal ANSI—to a supported
-headless agent with a strict candidate schema. The resulting decisions,
-invariants, risks, ownership notes and how-tos remain pending in SQLite.
-`oma promote` prints the proposed Markdown diff without writing. Only the
-explicit `--apply` form records the memory and renders `.oma/docs/*.md` in the
-repository. A correction links to and supersedes the old record rather than
-erasing its history.
+**Extract Knowledge** sends normalized events—not raw terminal ANSI—to a
+supported headless agent with a strict candidate schema. The resulting
+decisions, invariants, risks, ownership notes and how-tos remain pending in
+SQLite. **Promote Knowledge** shows the proposed Markdown diff without
+writing. Only applying that preview records the memory and renders
+`.oma/docs/*.md` in the repository. A correction links to and supersedes the
+old record rather than erasing its history.
 
-`oma end` only stops and records the session locally. Knowledge extraction is
-an explicit model call: run `oma extract <id>`, or opt in while ending with
-`oma end <id> --extract`. If the model is unavailable, the session still ends
-and extraction can safely be retried.
+Ending a session stops and records it locally, and tries to extract knowledge.
+If the model is unavailable, the session still ends. **Extract Knowledge** in
+the session workspace is the retry.
 
 ## macOS desktop app (M4)
 
@@ -145,14 +117,14 @@ editor** jumps to that path.
 ## Architecture and roadmap
 
 The architecture is described in [docs/architecture.md](docs/architecture.md).
-The implementation is deliberately staged: the CLI vertical slice proves the
-memory loop before a desktop UI or organization-scale catalog is added. M5's
-catalog/workspace layer remains optional until daily use demonstrates a need.
+The implementation is deliberately staged: the memory loop is proven before an
+organization-scale catalog is added. M5's catalog/workspace layer remains
+optional until daily use demonstrates a need.
 
 ## Privacy
 
-Transcripts and memory stay local. Explicit extraction (`oma extract` or
-`oma end --extract`) sends normalized session text to the selected agent CLI,
+Transcripts and memory stay local. Explicit extraction (**Extract Knowledge**)
+sends normalized session text to the selected agent CLI,
 which may use a remote model. OMA does not edit an agent's global MCP
 configuration; it injects a session-scoped configuration into the launched
 process.

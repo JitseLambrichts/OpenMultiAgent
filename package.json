@@ -8,16 +8,12 @@
   "workspaces": [
     "packages/*"
   ],
-  "bin": {
-    "oma": "./packages/cli/src/index.ts"
-  },
   "scripts": {
     "test": "bun test",
     "lint": "biome lint . --diagnostic-level=error",
     "format": "biome format --write .",
     "typecheck": "tsc --noEmit",
     "check": "bun run lint && bun run typecheck && bun test",
-    "oma": "bun run packages/cli/src/index.ts",
     "macos:generate": "scripts/generate-macos-project.sh",
     "macos:test": "scripts/generate-macos-project.sh >/dev/null && cd apps/macos && xcodebuild test -project OpenMultiAgent.xcodeproj -scheme OpenMultiAgent -destination 'platform=macOS' -quiet",
     "macos:build": "scripts/build-macos-app.sh",

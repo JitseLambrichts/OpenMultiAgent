@@ -4,7 +4,7 @@
     "": {
       "name": "oma",
       "devDependencies": {
-        "@biomejs/biome": "^2.2.0",
+        "@biomejs/biome": "2.5.8",
         "@types/bun": "latest",
         "typescript": "^5.7.0",
       },
@@ -17,23 +17,22 @@
         "@oma/ingest": "workspace:*",
       },
     },
-    "packages/cli": {
-      "name": "@oma/cli",
+    "packages/core": {
+      "name": "@oma/core",
+      "version": "0.1.0",
+    },
+    "packages/desktop-api": {
+      "name": "@oma/desktop-api",
       "version": "0.1.0",
       "bin": {
-        "oma": "./src/index.ts",
+        "oma-desktop-api": "./src/index.ts",
       },
       "dependencies": {
         "@oma/adapters": "workspace:*",
         "@oma/core": "workspace:*",
         "@oma/docs": "workspace:*",
         "@oma/ingest": "workspace:*",
-        "@oma/mcp": "workspace:*",
       },
-    },
-    "packages/core": {
-      "name": "@oma/core",
-      "version": "0.1.0",
     },
     "packages/docs": {
       "name": "@oma/docs",
@@ -83,9 +82,9 @@
 
     "@oma/adapters": ["@oma/adapters@workspace:packages/adapters"],
 
-    "@oma/cli": ["@oma/cli@workspace:packages/cli"],
-
     "@oma/core": ["@oma/core@workspace:packages/core"],
+
+    "@oma/desktop-api": ["@oma/desktop-api@workspace:packages/desktop-api"],
 
     "@oma/docs": ["@oma/docs@workspace:packages/docs"],
 

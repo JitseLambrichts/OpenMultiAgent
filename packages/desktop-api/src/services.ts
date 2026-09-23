@@ -584,8 +584,8 @@ export function createDesktopServices(
       try {
         await runExtractionOnce(session.id);
       } catch {
-        // Best-effort, mirroring the CLI's `oma end`: a session must always
-        // be able to end even if no agent is on PATH or extraction fails.
+        // Best-effort: a session must always be able to end even if no agent
+        // is on PATH or extraction fails.
         // The manual Extract Knowledge button remains the retry path.
       }
       return { ended_session_id: session.id, merged: merge === true };

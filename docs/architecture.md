@@ -8,7 +8,7 @@ owned by one local daemon/store boundary. User interfaces and agents are
 clients of that boundary.
 
 ```text
-CLI / future desktop UI / agents through MCP
+macOS desktop app / agents through MCP
                     |
             local OMA API boundary
                     |
@@ -50,7 +50,7 @@ ingestion of growing files safe.
 SQLite is the source of truth. FTS5 indexes promoted memory and transcript
 text; curated memory ranks before raw events and may be repository-scoped or
 global. `@oma/mcp` exposes read-only search without dumping the entire store
-into an initial prompt. Persistent writes stay behind the trusted CLI review
+into an initial prompt. Persistent writes stay behind the desktop app's review
 boundary so transcript prompt injection cannot mutate durable memory.
 
 ### Living documentation
@@ -60,10 +60,10 @@ a headless adapter. Promotion remains a user-reviewed operation: accepted
 records are stored with provenance and rendered as versioned Markdown under
 `.oma/docs/`. Contradictions supersede old memory rather than erasing history.
 
-The executable workflow is `oma extract <session>` followed by `oma promote
-<session>` for a preview and `oma promote <session> --apply` for the explicit
-write. Keeping extraction separate also makes retries safe when an agent is
-temporarily unavailable.
+In the desktop app, **Extract Knowledge** produces pending candidates and
+**Promote Knowledge** shows a Markdown preview. Only applying that preview
+writes memory and renders `.oma/docs/`. Keeping extraction separate also makes
+retries safe when an agent is temporarily unavailable.
 
 ## Operational invariants
 

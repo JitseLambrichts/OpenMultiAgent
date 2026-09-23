@@ -107,7 +107,7 @@ export function ingestRun(
   };
 }
 
-/** Sweeps every run that has a known transcript. This is what `oma sync` runs. */
+/** Sweeps every run that has a known transcript. */
 export function ingestAll(db: Database): IngestReport[] {
   const reports: IngestReport[] = [];
   for (const run of listRunsWithTranscripts(db)) {
