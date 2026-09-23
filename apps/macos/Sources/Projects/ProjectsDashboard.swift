@@ -17,7 +17,7 @@ struct ProjectsDashboard: View {
             Group {
                 switch model.state {
                 case .idle, .loading:
-                    ProgressView("Projecten laden…")
+                    ProgressView("Loading projects…")
                         .controlSize(.large)
                 case .empty:
                     emptyState
@@ -58,7 +58,7 @@ struct ProjectsDashboard: View {
                         }
                     }
                     .accessibilityElement(children: .contain)
-                    .accessibilityLabel("Projecten")
+                    .accessibilityLabel("Projects")
                 }
             }
             .padding(.horizontal, 28)
@@ -70,32 +70,32 @@ struct ProjectsDashboard: View {
     private var dashboardHeader: some View {
         VStack(alignment: .leading, spacing: 22) {
             HStack(spacing: 12) {
-                OMASearchField(prompt: "Zoek projecten", text: $model.searchQuery, accessibilityLabel: "Zoek projecten")
+                OMASearchField(prompt: "Search projects", text: $model.searchQuery, accessibilityLabel: "Search projects")
                     .frame(maxWidth: 520)
 
-                Button("Vernieuw", systemImage: "arrow.clockwise") {
+                Button("Refresh", systemImage: "arrow.clockwise") {
                     Task { await model.load() }
                 }
                 .buttonStyle(.omaIcon)
-                .help("Vernieuw projecten")
-                .accessibilityLabel("Vernieuw projecten")
+                .help("Refresh projects")
+                .accessibilityLabel("Refresh projects")
 
                 Spacer(minLength: 0)
 
-                Button("Voeg project toe", systemImage: "folder.badge.plus") {
+                Button("Add Project", systemImage: "folder.badge.plus") {
                     chooseProject()
                 }
                 .buttonStyle(.omaPrimary)
-                .help("Voeg een Git-repository toe (⌘O)")
+                .help("Add a Git repository (⌘O)")
             }
 
             HStack(alignment: .firstTextBaseline) {
                 PageTitle(
-                    title: "Welkom terug 👋",
-                    subtitle: "Je projecten en actieve agentwerkruimtes op één rustige plek."
+                    title: "Welcome back 👋",
+                    subtitle: "Your projects and active agent workspaces in one quiet place."
                 )
                 Spacer()
-                Text("\(model.projects.count) projecten")
+                Text("\(model.projects.count) projects")
                     .font(.subheadline.weight(.medium).monospacedDigit())
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 12)
@@ -107,11 +107,11 @@ struct ProjectsDashboard: View {
 
     private var emptyState: some View {
         ContentUnavailableView {
-            Label("Nog geen projecten", systemImage: "shippingbox")
+            Label("No projects yet", systemImage: "shippingbox")
         } description: {
-            Text("Voeg een Git-repository toe om sessies, wijzigingen en kennis te beheren.")
+            Text("Add a Git repository to manage sessions, changes, and knowledge.")
         } actions: {
-            Button("Voeg project toe", systemImage: "folder.badge.plus") {
+            Button("Add Project", systemImage: "folder.badge.plus") {
                 chooseProject()
             }
             .buttonStyle(.omaPrimary)
@@ -120,11 +120,11 @@ struct ProjectsDashboard: View {
 
     private var failureState: some View {
         ContentUnavailableView {
-            Label("Service niet bereikbaar", systemImage: "bolt.horizontal.circle")
+            Label("Service unavailable", systemImage: "bolt.horizontal.circle")
         } description: {
-            Text(model.notice?.message ?? "OpenMultiAgent kon de projecten niet laden.")
+            Text(model.notice?.message ?? "OpenMultiAgent could not load projects.")
         } actions: {
-            Button("Probeer opnieuw") {
+            Button("Try Again") {
                 Task { await model.load() }
             }
             .buttonStyle(.omaPrimary)
@@ -132,7 +132,7 @@ struct ProjectsDashboard: View {
     }
 
     private func noticeBanner(_ notice: ProjectsNotice) -> some View {
-        InlineNotice(notice.message, actionTitle: notice.action == .retry ? "Opnieuw" : "Kies map") {
+        InlineNotice(notice.message, actionTitle: notice.action == .retry ? "Retry" : "Choose Folder") {
             if notice.action == .retry {
                 Task { await model.load() }
             } else {

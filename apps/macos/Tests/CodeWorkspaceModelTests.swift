@@ -35,7 +35,7 @@ struct CodeHighlighterTests {
         #expect(distinctColors(CodeHighlighter.highlight(source, language: "swift", font: Self.font)) >= 4)
     }
 
-    /// HTML en CSS vielen terug op "text" en bleven daardoor volledig wit.
+    /// HTML and CSS used to fall back to "text" and stay fully white.
     @Test func webLanguagesGetHighlighted() {
         let html = "<!DOCTYPE html>\n<html lang=\"nl\">\n<head><title>Hoi</title></head>\n</html>\n"
         let css = "body { color: #1a1a1a; margin: 0; }\n"
@@ -46,8 +46,8 @@ struct CodeHighlighterTests {
         #expect(distinctColors(CodeHighlighter.highlight(css, language: "css", font: Self.font)) > 1)
     }
 
-    /// Highlightr legt het font van zijn thema op (Courier); onze monospace
-    /// moet daar overheen, anders verspringt de tekst t.o.v. de regelnummers.
+    /// Highlightr applies its theme font (Courier); our monospace
+    /// must override that, or the text shifts relative to the line numbers.
     @Test func theMonospacedFontSurvivesHighlighting() {
         let highlighted = CodeHighlighter.highlight("let x = 1\n", language: "swift", font: Self.font)
         var fonts = Set<String>()
@@ -57,8 +57,8 @@ struct CodeHighlighterTests {
         #expect(fonts == [Self.font.fontName])
     }
 
-    /// Highlighten kost ~1,3 ms per KB: een erg groot bestand zou de UI
-    /// seconden blokkeren, dus daarboven blijft het platte tekst.
+    /// Highlighting costs ~1.3 ms per KB: a very large file would block the UI
+    /// for seconds, so above this it stays plain text.
     @Test func veryLargeFilesSkipHighlighting() {
         let huge = String(repeating: "let x = 1\n", count: CodeHighlighter.maximumHighlightedBytes / 5)
         #expect(huge.utf8.count > CodeHighlighter.maximumHighlightedBytes)
@@ -70,9 +70,9 @@ struct CodeHighlighterTests {
 
 @MainActor
 struct SourceEditorHighlightingTests {
-    /// Regressie: `applyHighlight` zette na het plaatsen van de gekleurde
-    /// tekst `textView.textColor`, en die setter kleurt de héle text storage
-    /// in één kleur. Alle highlighting werd daarmee meteen weggegooid.
+    /// Regression: `applyHighlight` set `textView.textColor` after placing the
+    /// colored text, and that setter paints the entire text storage
+    /// one color. All highlighting was thrown away immediately.
     @Test func applyHighlightKeepsTheTokenColors() {
         let host = EditorHostView(frame: .zero)
         let coordinator = SourceEditorView.Coordinator(text: .constant(""), path: "Demo.swift", onSave: {})
@@ -80,7 +80,7 @@ struct SourceEditorHighlightingTests {
         coordinator.applyHighlight(to: host.textView, string: "import Foundation\nlet name = \"hoi\"\n")
 
         guard let storage = host.textView.textStorage else {
-            Issue.record("geen text storage")
+            Issue.record("no text storage")
             return
         }
         #expect(distinctColors(storage) > 1)
@@ -106,11 +106,11 @@ struct EditorLayoutTests {
 
 @MainActor
 struct EditorHostViewTests {
-    /// Regressie: `makeNSView` draait met zero-bounds, daarna krijgt de host
-    /// zijn echte breedte. `relayoutTextContainer` moet de textView dan op de
-    /// volle breedte (min ruler) leggen en de layout verversen, anders blijft
-    /// de ruler wel regelnummers tonen terwijl de tekst nooit wordt geschilderd
-    /// (zie needsDisplay-fix in relayoutTextContainer).
+    /// Regression: `makeNSView` runs with zero bounds, then the host gets
+    /// its real width. `relayoutTextContainer` must then lay out the textView at
+    /// full width (minus ruler) and refresh layout, otherwise the
+    /// ruler still shows line numbers while the text is never painted.
+    /// (see the needsDisplay fix in relayoutTextContainer).
     @Test func relayoutExpandsTextViewToHostWidth() {
         let host = EditorHostView(frame: .zero)
         host.textView.textStorage?.setAttributedString(
@@ -131,10 +131,10 @@ struct EditorHostViewTests {
         #expect(host.textView.layoutManager?.numberOfGlyphs == 17)
     }
 
-    /// Regressie: `NSRulerView` krijgt een dirty rect ter breedte van de hele
-    /// scrollview, niet van zijn eigen 36pt-strook, en tekent ná de clipview.
-    /// Vult de ruler die rect, dan schildert hij de zojuist getekende glyphs
-    /// weer weg: regelnummers zichtbaar, code niet.
+    /// Regression: `NSRulerView` gets a dirty rect as wide as the whole
+    /// scroll view, not its own 36pt strip, and draws after the clip view.
+    /// If the ruler fills that rect, it paints over the glyphs just drawn:
+    /// line numbers visible, code not.
     @Test func rulerDoesNotPaintOverTheCode() {
         let host = EditorHostView(frame: .zero)
         let font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
@@ -153,9 +153,9 @@ struct EditorHostViewTests {
         #expect(litPixelsRightOfRuler(in: host) > 1000)
     }
 
-    /// Telt lichte pixels in het tekstgebied (rechts van de liniaal) van een
-    /// gerenderde host. Nul betekent: er staan glyphs in de layout, maar er
-    /// komt niets op het scherm.
+    /// Counts light pixels in the text area (right of the ruler) of a
+    /// rendered host. Zero means glyphs are in the layout, but nothing
+    /// reaches the screen.
     private func litPixelsRightOfRuler(in host: EditorHostView) -> Int {
         guard let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { return 0 }
         host.cacheDisplay(in: host.bounds, to: rep)
@@ -178,7 +178,7 @@ struct LineNumberLayoutTests {
     @Test func aWrappedLineKeepsASingleNumber() {
         let host = laidOutHost("first\n\(String(repeating: "x", count: 400))\nthird\n")
 
-        // Bewijst dat de lange regel echt omslaat: meer fragmenten dan regels.
+        // Proves the long line actually wraps: more fragments than lines.
         #expect(fragmentCount(host) > 4)
         #expect(numbers(host) == [1, 2, 3, 4])
     }

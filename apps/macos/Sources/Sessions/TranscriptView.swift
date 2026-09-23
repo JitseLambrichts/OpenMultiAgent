@@ -7,15 +7,15 @@ struct TranscriptView: View {
     var body: some View {
         Group {
             if model.events.isEmpty && model.isLoadingTranscript {
-                ProgressView("Transcript laden…")
+                ProgressView("Loading transcript…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if model.events.isEmpty {
                 ContentUnavailableView {
-                    Label("Nog geen transcript", systemImage: "text.bubble")
+                    Label("No transcript yet", systemImage: "text.bubble")
                 } description: {
-                    Text("Events verschijnen zodra het transcript van deze sessie is ingelezen.")
+                    Text("Events appear once this session's transcript has been ingested.")
                 } actions: {
-                    Button("Vernieuw") { Task { await model.loadNewestTranscript() } }
+                    Button("Refresh") { Task { await model.loadNewestTranscript() } }
                         .buttonStyle(.omaSecondary)
                 }
             } else {
@@ -30,7 +30,7 @@ struct TranscriptView: View {
                                     if model.isLoadingTranscript {
                                         ProgressView().controlSize(.small)
                                     } else {
-                                        Label("Laad oudere events", systemImage: "arrow.up")
+                                        Label("Load older events", systemImage: "arrow.up")
                                     }
                                 }
                                 .buttonStyle(.omaSecondary)
@@ -72,9 +72,9 @@ struct TranscriptEventRow: View {
 
     private var role: (text: String, symbol: String, color: Color) {
         switch event.role {
-        case "user": ("Gebruiker", "person", OMAColor.accent)
+        case "user": ("User", "person", OMAColor.accent)
         case "assistant": ("Agent", "sparkles", OMAColor.attention)
-        default: ("Systeem", "gearshape", Color.secondary)
+        default: ("System", "gearshape", Color.secondary)
         }
     }
 
@@ -91,7 +91,7 @@ struct TranscriptEventRow: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else if event.kind == "thinking" {
-                    Label("Redenering", systemImage: "brain")
+                    Label("Reasoning", systemImage: "brain")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -107,7 +107,7 @@ struct TranscriptEventRow: View {
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                Text("(geen tekst)")
+                Text("(no text)")
                     .font(.callout)
                     .foregroundStyle(.tertiary)
             }

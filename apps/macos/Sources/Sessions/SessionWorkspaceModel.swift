@@ -12,8 +12,8 @@ enum WorkspaceTab: String, CaseIterable, Identifiable, Sendable {
     var title: String {
         switch self {
         case .terminal: "Terminal"
-        case .changes: "Wijzigingen"
-        case .memory: "Geheugen"
+        case .changes: "Changes"
+        case .memory: "Memory"
         case .transcript: "Transcript"
         }
     }
@@ -65,10 +65,10 @@ final class SessionWorkspaceModel {
     private(set) var candidateCount = 0
     private(set) var route: WorkspaceRoute?
     private(set) var notice: String?
-    /// Merge/beëindig-fouten blijven staan tot de volgende end-poging of tot de
-    /// gebruiker ze wegstuurt. Anders wist een background `loadStatus()` (via
-    /// `reconciliationTick`) de uitleg meteen weer, terwijl de sessie bewust
-    /// actief blijft bij dirty worktree of conflicten.
+    /// Merge/end errors stay until the next end attempt or until the
+    /// user dismisses them. Otherwise a background `loadStatus()` (via
+    /// `reconciliationTick`) would wipe the explanation immediately, while
+    /// the session stays active on purpose for a dirty worktree or conflicts.
     private(set) var endNotice: String?
     private(set) var isEnding = false
 
@@ -92,10 +92,10 @@ final class SessionWorkspaceModel {
         !session.session.isActive && promotion != .extracting && promotion != .applying
     }
 
-    /// Een tmux-attach naar een beëindigde sessie kan nooit slagen: `end`
-    /// killt de tmux-sessie (zie session-manager), dus `tmux attach` eindigt
-    /// altijd met "no such session" (exit 1, door SwiftTerm gerapporteerd als
-    /// 256). Probeer het dan niet eens; toon direct de beëindigd-status.
+    /// A tmux attach to an ended session can never succeed: `end`
+    /// kills the tmux session (see session-manager), so `tmux attach` always
+    /// ends with "no such session" (exit 1, reported by SwiftTerm as
+    /// 256). Do not even try; show the ended status immediately.
     var canAttachTerminal: Bool {
         session.session.isActive
     }
@@ -120,8 +120,8 @@ final class SessionWorkspaceModel {
             let loaded = try await client.sessionStatus(id: session.id)
             status = loaded
             session = loaded.view
-            // Alleen transient status-fouten wissen; een endNotice (merge/conflict)
-            // blijft staan tot de gebruiker het wegstuurt of een nieuwe end lukt.
+            // Only clear transient status errors; an endNotice (merge/conflict)
+            // stays until the user dismisses it or a new end succeeds.
             notice = nil
             if !session.session.isActive {
                 await refreshCandidateCount()
@@ -187,7 +187,7 @@ final class SessionWorkspaceModel {
             candidateCount = result.candidateCount
             if result.candidateCount == 0 {
                 promotion = .idle
-                notice = "Geen nieuwe kennis gevonden in dit transcript. Custom agents (zoals opencode) schrijven geen transcript weg, dus er valt niets te extraheren."
+                notice = "No new knowledge found in this transcript. Custom agents (such as OpenCode) do not write a transcript, so there is nothing to extract."
                 return
             }
             await openPreview()
@@ -281,9 +281,9 @@ final class SessionWorkspaceModel {
             await loadStatus()
             return true
         } catch {
-            // Bewust apart van `notice`: de sessie blijft actief bij dirty
-            // worktree/conflicten en de uitleg mag niet verdwijnen bij de
-            // eerstvolgende background-verversing.
+            // Kept separate from `notice` on purpose: the session stays active
+            // on a dirty worktree/conflicts and the explanation must not
+            // disappear on the next background refresh.
             endNotice = endMessage(for: error)
             return false
         }
@@ -293,9 +293,9 @@ final class SessionWorkspaceModel {
         if let rpc = error as? RPCErrorDTO {
             switch rpc.recoveryAction {
             case .commitFirst:
-                return "De worktree heeft niet-gecommitte wijzigingen. Commit eerst in de worktree en probeer het mergen opnieuw."
+                return "The worktree has uncommitted changes. Commit in the worktree first, then try merging again."
             case .resolveConflicts:
-                return "De merge heeft conflicten. Los ze op in de worktree (merge is afgebroken) en probeer het opnieuw."
+                return "The merge has conflicts. Resolve them in the worktree (the merge was aborted) and try again."
             default:
                 return message(for: error)
             }

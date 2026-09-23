@@ -96,6 +96,6 @@ final class ProjectsModel {
 
     private func userMessage(for error: any Error) -> String {
         (error as? LocalizedError)?.errorDescription ??
-        "OpenMultiAgent kon de projecten niet bijwerken."
+        "OpenMultiAgent could not update projects."
     }
 }

@@ -62,11 +62,11 @@ struct SessionWorkspaceModelTests {
     }
 
     @Test func terminalAttachIsOnlyAttemptedForActiveSessions() async {
-        // Een tmux-attach naar een beëindigde sessie kan nooit slagen: `end`
-        // ruimt de tmux-sessie op, dus `tmux attach` eindigt altijd met
-        // "no such session" (exit 1, door SwiftTerm gerapporteerd als 256).
-        // De view gebruikt dit om de attach-poging over te slaan en direct de
-        // begrensde beëindigd-kaart te tonen.
+        // A tmux attach to an ended session can never succeed: `end`
+        // tears down the tmux session, so `tmux attach` always ends with
+        // "no such session" (exit 1, reported by SwiftTerm as 256).
+        // The view uses this to skip the attach attempt and show the
+        // bounded ended card immediately.
         let active = SessionWorkspaceModel(session: .sample(id: "a", status: "active"), client: WorkspaceClientStub())
         #expect(active.canAttachTerminal)
 
@@ -159,7 +159,7 @@ struct SessionWorkspaceModelTests {
         let ended = await model.endSession(merge: true)
 
         #expect(!ended)
-        #expect(model.endNotice?.contains("conflicten") == true)
+        #expect(model.endNotice?.contains("conflicts") == true)
         #expect(model.session.session.isActive)
     }
 
@@ -173,12 +173,12 @@ struct SessionWorkspaceModelTests {
 
         let ended = await model.endSession(merge: true)
         #expect(!ended)
-        #expect(model.endNotice?.contains("niet-gecommitte") == true)
+        #expect(model.endNotice?.contains("uncommitted") == true)
 
-        // Een background-verversing (reconciliationTick) mag de uitleg niet wissen,
-        // anders lijkt het alsof "de sessie niet is aangepast" zonder reden.
+        // A background refresh (reconciliationTick) must not clear the explanation,
+        // or it looks as if "the session was not updated" with no reason.
         await model.loadStatus()
-        #expect(model.endNotice?.contains("niet-gecommitte") == true)
+        #expect(model.endNotice?.contains("uncommitted") == true)
 
         model.clearEndNotice()
         #expect(model.endNotice == nil)

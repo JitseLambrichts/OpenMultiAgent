@@ -19,16 +19,16 @@ struct PromotionReviewView: View {
             HStack {
                 statusLine
                 Spacer()
-                Button("Sluit", action: onClose)
+                Button("Close", action: onClose)
                     .buttonStyle(.omaSecondary)
                     .keyboardShortcut(.cancelAction)
                 switch state {
                 case .preview:
-                    Button("Pas toe", systemImage: "checkmark.seal", action: onApply)
+                    Button("Apply", systemImage: "checkmark.seal", action: onApply)
                         .keyboardShortcut(.defaultAction)
                         .buttonStyle(.omaPrimary)
                 case .failed:
-                    Button("Probeer opnieuw", systemImage: "arrow.clockwise", action: onRetry)
+                    Button("Try Again", systemImage: "arrow.clockwise", action: onRetry)
                         .buttonStyle(.omaPrimary)
                 default:
                     EmptyView()
@@ -42,12 +42,12 @@ struct PromotionReviewView: View {
 
     private var subtitle: String {
         switch state {
-        case .preview(_, let count): "\(count) kandidaat-record(s) uit “\(sessionTitle)”. Niets wordt weggeschreven tot je toepast."
-        case .applying: "Kennis wordt weggeschreven…"
-        case .applied(let files): "\(files.count) bestand(en) bijgewerkt onder .oma/docs."
+        case .preview(_, let count): "\(count) candidate record(s) from “\(sessionTitle)”. Nothing is written until you apply."
+        case .applying: "Writing knowledge…"
+        case .applied(let files): "\(files.count) file(s) updated under .oma/docs."
         case .failed(let message, _): message
-        case .extracting: "Kennis wordt geëxtraheerd uit het transcript…"
-        case .idle: "Nog geen preview."
+        case .extracting: "Extracting knowledge from the transcript…"
+        case .idle: "No preview yet."
         }
     }
 
@@ -68,12 +68,12 @@ struct PromotionReviewView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .failed(let message, _):
             ContentUnavailableView {
-                Label("Promotie mislukt", systemImage: "exclamationmark.triangle")
+                Label("Promotion failed", systemImage: "exclamationmark.triangle")
             } description: {
                 Text(message)
             }
         case .idle:
-            ContentUnavailableView("Geen preview", systemImage: "doc.text.magnifyingglass")
+            ContentUnavailableView("No preview", systemImage: "doc.text.magnifyingglass")
         }
     }
 
@@ -81,11 +81,11 @@ struct PromotionReviewView: View {
     private var statusLine: some View {
         switch state {
         case .applied:
-            StatusBadge(text: "Toegepast", symbol: "checkmark.circle.fill", color: OMAColor.positive)
+            StatusBadge(text: "Applied", symbol: "checkmark.circle.fill", color: OMAColor.positive)
         case .applying, .extracting:
-            StatusBadge(text: "Bezig", symbol: "progress.indicator", color: OMAColor.accent)
+            StatusBadge(text: "Working", symbol: "progress.indicator", color: OMAColor.accent)
         case .failed:
-            StatusBadge(text: "Mislukt", symbol: "xmark.octagon", color: OMAColor.negative)
+            StatusBadge(text: "Failed", symbol: "xmark.octagon", color: OMAColor.negative)
         case .preview:
             StatusBadge(text: "Preview", symbol: "eye", color: OMAColor.attention)
         case .idle:

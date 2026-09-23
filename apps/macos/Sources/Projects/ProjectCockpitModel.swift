@@ -24,10 +24,10 @@ struct CockpitAlert: Equatable, Identifiable, Sendable {
         return CockpitAlert(
             id: "remove-\(view.id)",
             sessionID: view.id,
-            title: "Sessie “\(view.session.displayTitle)” verwijderen?",
+            title: "Delete session “\(view.session.displayTitle)”?",
             message: retains
-                ? "Het sessierecord verdwijnt uit OpenMultiAgent. De repository zelf wordt niet aangeraakt."
-                : "Het sessierecord en de worktree \(view.session.worktreePath ?? "") worden verwijderd. Een worktree met niet-gecommitte wijzigingen blijft beschermd.",
+                ? "The session record is removed from OpenMultiAgent. The repository itself is left untouched."
+                : "The session record and worktree \(view.session.worktreePath ?? "") will be deleted. A worktree with uncommitted changes stays protected.",
             primaryAction: .removeSession,
             secondaryAction: nil,
             isDestructive: true
@@ -38,8 +38,8 @@ struct CockpitAlert: Equatable, Identifiable, Sendable {
         CockpitAlert(
             id: "dirty-\(sessionID)",
             sessionID: sessionID,
-            title: "De worktree bevat niet-gecommitte wijzigingen",
-            message: "OpenMultiAgent verwijdert geen worktree met openstaand werk. Behoud de worktree en verwijder alleen de sessie, of forceer verwijdering en verlies de wijzigingen.",
+            title: "The worktree has uncommitted changes",
+            message: "OpenMultiAgent will not delete a worktree with uncommitted work. Keep the worktree and remove only the session, or force deletion and lose the changes.",
             primaryAction: .keepWorktreeAndRetry,
             secondaryAction: .forceRemove,
             isDestructive: true
@@ -51,8 +51,8 @@ struct CockpitAlert: Equatable, Identifiable, Sendable {
         CockpitAlert(
             id: "merge-end-\(view.id)",
             sessionID: view.id,
-            title: "Sessie “\(view.session.displayTitle)” beëindigen?",
-            message: "Deze sessie werkt in een eigen worktree (\(view.session.branch ?? "onbekende branch")). “Merge + beëindig” voegt de branch eerst samen en ruimt daarna de worktree op. Bij niet-gecommitte wijzigingen of conflicten blijft de sessie actief.",
+            title: "End session “\(view.session.displayTitle)”?",
+            message: "This session uses its own worktree (\(view.session.branch ?? "unknown branch")). Merge & End merges the branch first, then removes the worktree. Uncommitted changes or conflicts keep the session active.",
             primaryAction: .mergeAndEnd,
             secondaryAction: .endSession,
             isDestructive: true
@@ -63,11 +63,11 @@ struct CockpitAlert: Equatable, Identifiable, Sendable {
 extension CockpitAlertAction {
     var title: String {
         switch self {
-        case .endSession: "Beëindig"
-        case .mergeAndEnd: "Merge + beëindig"
-        case .removeSession: "Verwijder"
-        case .keepWorktreeAndRetry: "Behoud worktree"
-        case .forceRemove: "Forceer verwijdering"
+        case .endSession: "End"
+        case .mergeAndEnd: "Merge & End"
+        case .removeSession: "Delete"
+        case .keepWorktreeAndRetry: "Keep Worktree"
+        case .forceRemove: "Force Delete"
         }
     }
 }
@@ -101,10 +101,10 @@ final class ProjectCockpitModel {
     private(set) var isCreating = false
     private(set) var busySessionIDs: Set<String> = []
     private(set) var notice: ProjectsNotice?
-    /// Merge/beëindig-fouten (dirty worktree, conflicten) blijven staan tot een
-    /// nieuwe end-poging lukt of de gebruiker ze wegstuurt. Een background
-    /// `load()` mag ze niet wissen, anders lijkt het alsof "de sessie niet is
-    /// aangepast" zonder uitleg.
+    /// Merge/end errors (dirty worktree, conflicts) stay until a new end
+    /// attempt succeeds or the user dismisses them. A background `load()`
+    /// must not clear them, or it looks as if "the session was not updated"
+    /// with no explanation.
     private(set) var endNotice: String?
     private(set) var alert: CockpitAlert?
     var selectedSessionID: String?
@@ -234,8 +234,8 @@ final class ProjectCockpitModel {
         alert = CockpitAlert(
             id: "end-\(sessionID)",
             sessionID: sessionID,
-            title: "Sessie “\(view.session.displayTitle)” beëindigen?",
-            message: "De tmux-sessie stopt en de agent wordt afgesloten. Het transcript, de worktree en het geheugen blijven bewaard.",
+            title: "End session “\(view.session.displayTitle)”?",
+            message: "The tmux session stops and the agent is shut down. The transcript, worktree, and memory are kept.",
             primaryAction: .endSession,
             secondaryAction: nil,
             isDestructive: true
@@ -250,9 +250,9 @@ final class ProjectCockpitModel {
         } catch let error as RPCErrorDTO {
             switch error.recoveryAction {
             case .commitFirst:
-                endNotice = "De worktree heeft niet-gecommitte wijzigingen. Commit eerst en probeer het mergen opnieuw. De sessie blijft actief."
+                endNotice = "The worktree has uncommitted changes. Commit first, then try merging again. The session stays active."
             case .resolveConflicts:
-                endNotice = "De merge heeft conflicten. Los ze op in de worktree (merge is afgebroken) en probeer het opnieuw. De sessie blijft actief."
+                endNotice = "The merge has conflicts. Resolve them in the worktree (the merge was aborted) and try again. The session stays active."
             default:
                 notice = ProjectsNotice(message: message(for: error), action: .retry)
             }
@@ -332,6 +332,6 @@ final class ProjectCockpitModel {
 
     private func message(for error: any Error) -> String {
         (error as? LocalizedError)?.errorDescription ??
-        "De projectcockpit kon niet worden bijgewerkt."
+        "The project cockpit could not be updated."
     }
 }

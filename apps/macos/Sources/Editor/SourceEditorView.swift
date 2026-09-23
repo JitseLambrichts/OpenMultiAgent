@@ -56,10 +56,10 @@ struct SourceEditorView: NSViewRepresentable {
         private var isApplying = false
         private var pendingHighlight: Task<Void, Never>?
 
-        /// Highlighten kost ~1,3 ms per KB en liep voorheen bij élke
-        /// toetsaanslag over het hele bestand — op een bestand van 13 KB is dat
-        /// al een gemist frame. Even wachten tot het typen stilvalt houdt de
-        /// editor vloeiend; openen highlight nog steeds meteen.
+        /// Highlighting costs ~1.3 ms per KB and used to run on every
+        /// keystroke across the whole file — on a 13 KB file that is already a
+        /// missed frame. Waiting until typing settles keeps the
+        /// editor smooth; opening still highlights immediately.
         private static let highlightDebounce = Duration.milliseconds(150)
 
         init(text: Binding<String>, path: String, onSave: @escaping () -> Void) {
@@ -98,8 +98,8 @@ struct SourceEditorView: NSViewRepresentable {
             } else {
                 textView.string = string
             }
-            // Geen `textView.textColor = ...` hier: die setter kleurt de héle
-            // text storage in één kleur en gooit daarmee alle highlighting weg.
+            // No `textView.textColor = ...` here: that setter paints the
+            // entire text storage one color and throws away all highlighting.
             textView.typingAttributes = [
                 .font: font,
                 .foregroundColor: CodeHighlighter.plainTextColor,
@@ -156,8 +156,8 @@ final class EditorHostView: NSView {
         editor.backgroundColor = CodeHighlighter.backgroundColor
         editor.textColor = CodeHighlighter.textColor
         editor.insertionPointColor = CodeHighlighter.keywordColor
-        // Alleen een achtergrond: zou hier een `.foregroundColor` staan, dan
-        // verliest geselecteerde tekst zijn tokenkleuren.
+        // Background only: a `.foregroundColor` here would make
+        // selected text lose its token colors.
         editor.selectedTextAttributes = [
             .backgroundColor: NSColor(calibratedRed: 201 / 255, green: 246 / 255, blue: 111 / 255, alpha: 0.28),
         ]
@@ -208,11 +208,11 @@ final class EditorHostView: NSView {
 
     func relayoutTextContainer() {
         let width = EditorLayout.containerWidth(scrollWidth: bounds.width)
-        // `makeNSView` draait met zero bounds: de container volgt dan een
-        // 0-brede textView en legt de regels op de verkeerde breedte. Zodra de
-        // host zijn echte breedte krijgt herberekent ensureLayout die, maar de
-        // textView herschildert niet vanzelf — vandaar de expliciete
-        // invalidatie bij een breedtewissel.
+        // `makeNSView` runs with zero bounds: the container then follows a
+        // 0-wide textView and lays out lines at the wrong width. Once the
+        // host gets its real width, ensureLayout recomputes that, but the
+        // textView does not redraw on its own — hence the explicit
+        // invalidation on a width change.
         let widthChanged = abs(textView.frame.size.width - width) > 0.5
         textContainer.containerSize = NSSize(width: width, height: CGFloat.greatestFiniteMagnitude)
         textView.minSize = NSSize(width: width, height: bounds.height)
@@ -243,9 +243,9 @@ enum LineNumberLayout {
         let y: CGFloat
     }
 
-    /// Eén label per bronregel — niet per regelfragment. Een regel die over
-    /// meerdere visuele regels doorloopt houdt dus één nummer, anders lopen de
-    /// nummers na elke omgeslagen regel uit de pas met het bestand.
+    /// One label per source line — not per line fragment. A line that wraps
+    /// across several visual lines therefore keeps one number, otherwise the
+    /// numbers fall out of step with the file after every wrapped line.
     static func labels(
         text: NSString,
         layoutManager: NSLayoutManager,
@@ -256,9 +256,9 @@ enum LineNumberLayout {
         let glyphRange = layoutManager.glyphRange(forBoundingRect: visible, in: container)
         let charRange = layoutManager.characterRange(forGlyphRange: glyphRange, actualGlyphRange: nil)
 
-        // Tel de bronregels die volledig boven het zichtbare gebied liggen, en
-        // zak terug naar het begin van de regel waarin het eerste zichtbare
-        // teken valt: dát is de regel waar het eerste nummer bij hoort.
+        // Count source lines that sit fully above the visible area, then
+        // walk back to the start of the line that contains the first visible
+        // character: that is the line the first number belongs to.
         var number = 1
         var index = 0
         while index < charRange.location {
@@ -280,8 +280,8 @@ enum LineNumberLayout {
             number += 1
         }
 
-        // Een bestand dat op een newline eindigt (of leeg is) heeft een lege
-        // slotregel zonder glyphs; die krijgt zijn eigen extra line fragment.
+        // A file that ends on a newline (or is empty) has an empty
+        // trailing line with no glyphs; that gets its own extra line fragment.
         if index >= text.length, layoutManager.extraLineFragmentTextContainer != nil {
             let fragment = layoutManager.extraLineFragmentRect
             if fragment.maxY >= visible.minY, fragment.minY <= visible.maxY {
@@ -300,9 +300,9 @@ private final class LineNumberRulerView: NSRulerView {
         super.init(scrollView: textView.enclosingScrollView, orientation: .verticalRuler)
         clientView = textView
         ruleThickness = EditorLayout.rulerThickness
-        // AppKit clipt een NSView sinds macOS 14 niet meer standaard op zijn
-        // eigen bounds, en de ruler tekent ná de clipview. Zonder dit clipt
-        // niets ons weg van het tekstgebied ernaast.
+        // Since macOS 14 AppKit no longer clips an NSView to its
+        // own bounds by default, and the ruler draws after the clip view. Without
+        // this, nothing clips us away from the text area beside it.
         clipsToBounds = true
     }
 
@@ -311,10 +311,10 @@ private final class LineNumberRulerView: NSRulerView {
     }
 
     override func drawHashMarksAndLabels(in rect: NSRect) {
-        // `rect` is zo breed als de hele scrollview, niet als de 36pt-strook
-        // van de ruler. `rect.fill()` schildert dan de net getekende glyphs
-        // weer weg: regelnummers zichtbaar, code onzichtbaar. Vul daarom enkel
-        // het deel dat binnen onze eigen bounds valt.
+        // `rect` is as wide as the whole scroll view, not the 36pt strip
+        // of the ruler. `rect.fill()` then paints over the glyphs just drawn:
+        // line numbers visible, code invisible. Fill only
+        // the part that falls inside our own bounds.
         NSColor(OMAColor.elevated).setFill()
         bounds.intersection(rect).fill()
         guard let textView, let layoutManager = textView.layoutManager, let container = textView.textContainer else { return }

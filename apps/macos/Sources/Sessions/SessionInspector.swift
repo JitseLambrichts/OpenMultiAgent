@@ -8,30 +8,30 @@ struct SessionInspectorSections: View {
     var onSelectFile: ((ChangedFileDTO) -> Void)? = nil
 
     var body: some View {
-        Section("Sessie") {
-            LabeledContent("Titel", value: session.session.displayTitle)
-            LabeledContent("Status", value: session.session.isActive ? "Actief" : "Afgerond")
-            LabeledContent("tmux", value: session.tmuxAlive ? "Draait" : "Niet actief")
+        Section("Session") {
+            LabeledContent("Title", value: session.session.displayTitle)
+            LabeledContent("Status", value: session.session.isActive ? "Active" : "Completed")
+            LabeledContent("tmux", value: session.tmuxAlive ? "Running" : "Not running")
             if let branch = session.session.branch {
                 LabeledContent("Branch") { Text(branch).font(.caption.monospaced()) }
             }
-            LabeledContent("Gestart", value: session.session.startedAt.formatted(date: .abbreviated, time: .shortened))
+            LabeledContent("Started", value: session.session.startedAt.formatted(date: .abbreviated, time: .shortened))
             if let endedAt = session.session.endedAt {
-                LabeledContent("Beëindigd", value: endedAt.formatted(date: .abbreviated, time: .shortened))
+                LabeledContent("Ended", value: endedAt.formatted(date: .abbreviated, time: .shortened))
             }
         }
         Section("Worktree") {
-            LabeledContent("Geïsoleerd", value: session.session.usesWorktree ? "Ja" : "Nee, hoofdcheckout")
-            LabeledContent("Pad") {
+            LabeledContent("Isolated", value: session.session.usesWorktree ? "Yes" : "No, main checkout")
+            LabeledContent("Path") {
                 Text(session.session.worktreePath ?? session.session.repoPath)
                     .font(.caption.monospaced())
                     .textSelection(.enabled)
             }
         }
         if let status {
-            Section("Wijzigingen (\(status.changedFiles.count))") {
+            Section("Changes (\(status.changedFiles.count))") {
                 if status.changedFiles.isEmpty {
-                    Text("Geen openstaande wijzigingen.").foregroundStyle(.secondary)
+                    Text("No outstanding changes.").foregroundStyle(.secondary)
                 } else {
                     ForEach(status.changedFiles) { file in
                         ChangedFileRow(file: file) {
@@ -47,16 +47,16 @@ struct SessionInspectorSections: View {
                 }
             }
         }
-        Section("Agent-runs (\(session.runs.count))") {
+        Section("Agent runs (\(session.runs.count))") {
             if session.runs.isEmpty {
-                Text("Nog geen runs.").foregroundStyle(.secondary)
+                Text("No runs yet.").foregroundStyle(.secondary)
             }
             ForEach(session.runs) { run in
                 VStack(alignment: .leading, spacing: 3) {
                     Label(run.agent.capitalized, systemImage: symbolForAgent(run.agent))
                         .font(.body.weight(.medium))
                     Text(run.startedAt.formatted(date: .abbreviated, time: .shortened)
-                         + (run.endedAt.map { " – \($0.formatted(date: .omitted, time: .shortened))" } ?? " – nu"))
+                         + (run.endedAt.map { " – \($0.formatted(date: .omitted, time: .shortened))" } ?? " – now"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     if let native = run.nativeSessionID {

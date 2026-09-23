@@ -35,14 +35,14 @@ struct FileDiffSheet: View {
                 Spacer()
             }
             if let notice {
-                InlineNotice(notice, actionTitle: "Opnieuw") { Task { await load() } }
+                InlineNotice(notice, actionTitle: "Retry") { Task { await load() } }
             }
             ScrollView {
                 if isLoading && diff == nil {
-                    ProgressView("Diff laden…")
+                    ProgressView("Loading diff…")
                         .frame(maxWidth: .infinity, minHeight: 160)
                 } else {
-                    Text((diff?.isEmpty == false) ? diff! : "Geen diff voor dit bestand.")
+                    Text((diff?.isEmpty == false) ? diff! : "No diff for this file.")
                         .font(.system(.callout, design: .monospaced))
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -52,10 +52,10 @@ struct FileDiffSheet: View {
             .padding(14)
             .omaInnerCard()
             HStack {
-                Button("Sluiten") { dismiss() }
+                Button("Close") { dismiss() }
                     .buttonStyle(.omaSecondary)
                 Spacer()
-                Button("Open in editor", systemImage: "chevron.right") {
+                Button("Open in Editor", systemImage: "chevron.right") {
                     onOpenEditor(target)
                     dismiss()
                 }

@@ -35,11 +35,11 @@ struct SessionRow: View {
 
     private var status: (text: String, symbol: String, color: Color) {
         if view.session.isActive && view.tmuxAlive {
-            ("Actief", "circle.fill", OMAColor.positive)
+            ("Active", "circle.fill", OMAColor.positive)
         } else if view.session.isActive {
-            ("Geen tmux", "exclamationmark.circle", OMAColor.attention)
+            ("No tmux", "exclamationmark.circle", OMAColor.attention)
         } else {
-            ("Afgerond", "checkmark.circle", OMAColor.quiet)
+            ("Completed", "checkmark.circle", OMAColor.quiet)
         }
     }
 
@@ -59,7 +59,7 @@ struct SessionRow: View {
                             .font(.headline)
                             .lineLimit(1)
                         HStack(spacing: 8) {
-                            Text(agent?.title ?? "Geen agent")
+                            Text(agent?.title ?? "No agent")
                             if let branch = view.session.branch {
                                 Text(branch).font(.caption.monospaced())
                             }
@@ -87,16 +87,16 @@ struct SessionRow: View {
             }
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .help("Open sessie")
-            .accessibilityLabel("Open sessie \(view.session.displayTitle), \(status.text)")
+            .help("Open session")
+            .accessibilityLabel("Open session \(view.session.displayTitle), \(status.text)")
 
             if let remove = actions.remove {
-                Button("Verwijder sessie", systemImage: "trash", role: .destructive, action: remove)
+                Button("Delete Session", systemImage: "trash", role: .destructive, action: remove)
                     .labelStyle(.iconOnly)
                     .buttonStyle(.borderless)
                     .foregroundStyle(isHovering ? OMAColor.negative : OMAColor.quiet)
-                    .help("Verwijder sessie")
-                    .accessibilityLabel("Verwijder sessie \(view.session.displayTitle)")
+                    .help("Delete Session")
+                    .accessibilityLabel("Delete session \(view.session.displayTitle)")
                     .padding(.trailing, 12)
             }
         }
@@ -105,17 +105,17 @@ struct SessionRow: View {
         .contextMenu {
             Button("Open", action: actions.open)
             if let resume = actions.resume, !view.session.isActive {
-                Button("Hervat", systemImage: "play", action: resume)
+                Button("Resume", systemImage: "play", action: resume)
             }
             if let switchAgent = actions.switchAgent {
-                Button("Wissel agent…", systemImage: "arrow.left.arrow.right", action: switchAgent)
+                Button("Switch Agent…", systemImage: "arrow.left.arrow.right", action: switchAgent)
             }
             Divider()
             if let end = actions.end, view.session.isActive {
-                Button("Beëindig sessie…", systemImage: "stop.circle", action: end)
+                Button("End Session…", systemImage: "stop.circle", action: end)
             }
             if let remove = actions.remove {
-                Button("Verwijder sessie…", systemImage: "trash", role: .destructive, action: remove)
+                Button("Delete Session…", systemImage: "trash", role: .destructive, action: remove)
             }
         }
     }

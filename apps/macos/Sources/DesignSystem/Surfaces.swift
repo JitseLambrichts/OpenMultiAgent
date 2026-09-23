@@ -151,7 +151,7 @@ struct OMASearchField: View {
                 Image(systemName: "progress.indicator")
                     .symbolEffect(.variableColor.iterative, isActive: true)
                     .foregroundStyle(.secondary)
-                    .accessibilityLabel("Zoeken")
+                    .accessibilityLabel("Searching")
             }
         }
         .padding(.horizontal, 16)

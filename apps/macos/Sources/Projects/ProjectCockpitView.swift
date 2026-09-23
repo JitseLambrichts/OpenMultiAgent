@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// Projectniveau-weergave: overzicht van sessies/kennis, of de gelijkwaardige
-/// terminal-grid zonder hoofdsessie. Beëindigen gebeurt per sessie (rij,
-/// detail of cel-menu), nooit via een globale knop die een impliciete
-/// hoofdsessie zou beëindigen.
+/// Project-level view: overview of sessions/knowledge, or the equivalent
+/// terminal grid without a primary session. Ending happens per session (row,
+/// detail, or cell menu), never via a global button that would end an
+/// implicit primary session.
 enum CockpitTab: String, CaseIterable, Identifiable {
     case overzicht
     case terminals
@@ -13,7 +13,7 @@ enum CockpitTab: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .overzicht: "Overzicht"
+        case .overzicht: "Overview"
         case .terminals: "Terminals"
         case .code: "Code"
         }
@@ -61,12 +61,12 @@ struct ProjectCockpitView: View {
                     .padding(.horizontal, 28)
                     .padding(.bottom, 16)
                 if let endNotice = model.endNotice {
-                    InlineNotice(endNotice, actionTitle: "Sluiten") { model.clearEndNotice() }
+                    InlineNotice(endNotice, actionTitle: "Dismiss") { model.clearEndNotice() }
                         .padding(.horizontal, 28)
                         .padding(.bottom, 12)
                 }
                 if let notice = model.notice {
-                    InlineNotice(notice.message, actionTitle: "Opnieuw") { Task { await model.load() } }
+                    InlineNotice(notice.message, actionTitle: "Retry") { Task { await model.load() } }
                         .padding(.horizontal, 28)
                         .padding(.bottom, 12)
                 }
@@ -102,19 +102,19 @@ struct ProjectCockpitView: View {
             }
         }
         .confirmationDialog(
-            "Deze indeling heeft minder cellen dan er terminals open zijn",
+            "This layout has fewer cells than open terminals",
             isPresented: Binding(get: { terminals.pendingLayoutConfirmation != nil }, set: { if !$0 { terminals.cancelPendingLayout() } }),
             titleVisibility: .visible
         ) {
             if let requested = terminals.pendingLayoutConfirmation {
                 let surplus = Array(terminals.occupiedSessionIDs.dropFirst(requested.capacity))
-                Button("Sluit \(surplus.count) terminalkoppeling(en)", role: .destructive) {
+                Button("Close \(surplus.count) terminal attachment(s)", role: .destructive) {
                     terminals.confirmPendingLayout(closing: surplus)
                 }
             }
-            Button("Annuleer", role: .cancel) { terminals.cancelPendingLayout() }
+            Button("Cancel", role: .cancel) { terminals.cancelPendingLayout() }
         } message: {
-            Text("De sessies blijven draaien; alleen de lokale terminalkoppelingen worden gesloten.")
+            Text("The sessions keep running; only the local terminal attachments are closed.")
         }
         .alert(item: Binding(get: { model.alert }, set: { if $0 == nil { model.dismissAlert() } })) { alert in
             cockpitAlert(alert)
@@ -122,8 +122,8 @@ struct ProjectCockpitView: View {
         .task {
             await model.load()
             terminals.requestLayout(storedLayout)
-            // Shortcuts (⌃1–⌃4) die binnenkwamen terwijl de cockpit niet
-            // zichtbaar was (bijv. vanuit het sessie-detail) alsnog oppakken.
+            // Pick up shortcuts (⌃1–⌃4) that arrived while the cockpit was
+            // not visible (for example from session detail).
             if let layout = app.consumeTerminalLayout() {
                 cockpitTab = .terminals
                 terminals.requestLayout(layout)
@@ -151,7 +151,7 @@ struct ProjectCockpitView: View {
         }
         .overlay {
             if model.isLoading && model.sessions.isEmpty {
-                ProgressView("Project laden…")
+                ProgressView("Loading project…")
                     .padding(20)
                     .omaCard()
             }
@@ -164,27 +164,27 @@ struct ProjectCockpitView: View {
             OMAPillPicker(
                 options: CockpitTab.allCases,
                 selection: $cockpitTab,
-                accessibilityLabel: "Projectweergave",
+                accessibilityLabel: "Project view",
                 title: { $0.title },
                 symbol: { $0.symbol }
             )
-            .help("Wissel tussen overzicht, terminals en code")
+            .help("Switch between overview, terminals, and code")
             Spacer()
             if cockpitTab == .terminals {
                 OMAPillPicker(
                     options: TerminalLayout.allCases,
                     selection: Binding(get: { terminals.layout }, set: { terminals.requestLayout($0) }),
                     iconOnly: true,
-                    accessibilityLabel: "Terminalindeling",
+                    accessibilityLabel: "Terminal layout",
                     title: { $0.title },
                     symbol: { $0.symbol }
                 )
-                .help("Terminalindeling (⌃1 – ⌃4)")
-                Button("Open in raster", systemImage: "plus.rectangle.on.rectangle") {
+                .help("Terminal layout (⌃1 – ⌃4)")
+                Button("Open in Grid", systemImage: "plus.rectangle.on.rectangle") {
                     pickerCellID = terminals.cells.first(where: { !$0.isOccupied })?.id ?? UUID()
                 }
                 .buttonStyle(.omaIcon)
-                .help("Open een sessie van dit project in het raster")
+                .help("Open a session from this project in the grid")
                 .disabled(!terminals.canOpenMore)
             }
         }
@@ -196,15 +196,15 @@ struct ProjectCockpitView: View {
         case .overzicht:
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    sessionSection("Actief werk", symbol: "bolt.fill", sessions: model.activeSessions,
-                                   empty: "Geen actieve sessies. Start er een met Nieuwe sessie (⌘N).")
+                    sessionSection("Active work", symbol: "bolt.fill", sessions: model.activeSessions,
+                                   empty: "No active sessions. Start one with New Session (⌘N).")
                     LazyVGrid(columns: panelColumns, alignment: .leading, spacing: 16) {
                         decisionsPanel
                         changesPanel
                         docsPanel
                     }
-                    sessionSection("Recente sessies", symbol: "clock", sessions: model.recentSessions,
-                                   empty: "Afgeronde sessies verschijnen hier met hun geëxtraheerde kennis.")
+                    sessionSection("Recent sessions", symbol: "clock", sessions: model.recentSessions,
+                                   empty: "Completed sessions appear here with their extracted knowledge.")
                 }
                 .padding(.horizontal, 28)
                 .padding(.bottom, 28)
@@ -226,7 +226,7 @@ struct ProjectCockpitView: View {
         Group {
             if let error = terminals.errorMessage {
                 ContentUnavailableView {
-                    Label("Terminal niet beschikbaar", systemImage: "terminal")
+                    Label("Terminal unavailable", systemImage: "terminal")
                 } description: {
                     Text(error)
                 }
@@ -259,16 +259,16 @@ struct ProjectCockpitView: View {
 
     private var actions: some View {
         HStack(spacing: 10) {
-            Button("Vernieuw", systemImage: "arrow.clockwise") { Task { await model.load() } }
+            Button("Refresh", systemImage: "arrow.clockwise") { Task { await model.load() } }
                 .buttonStyle(.omaIcon)
-                .help("Vernieuw sessies, wijzigingen en kennis")
+                .help("Refresh sessions, changes, and knowledge")
                 .symbolEffect(.rotate, isActive: model.isLoading)
             Button("Inspector", systemImage: "sidebar.trailing") { app.isInspectorVisible.toggle() }
                 .buttonStyle(.omaIcon)
-                .help("Toon of verberg de inspector (⌥⌘I)")
-            Button("Nieuwe sessie", systemImage: "plus") { app.request(.newSession) }
+                .help("Show or hide the inspector (⌥⌘I)")
+            Button("New Session", systemImage: "plus") { app.request(.newSession) }
                 .buttonStyle(.omaPrimary)
-                .help("Start een nieuwe agentsessie (⌘N)")
+                .help("Start a new agent session (⌘N)")
         }
     }
 
@@ -276,17 +276,17 @@ struct ProjectCockpitView: View {
 
     private var header: some View {
         HStack(alignment: .top, spacing: 16) {
-            Button("Terug naar projecten", systemImage: "chevron.left") { app.closeProject() }
+            Button("Back to Projects", systemImage: "chevron.left") { app.closeProject() }
                 .buttonStyle(.omaIcon)
-                .help("Terug naar projecten")
+                .help("Back to Projects")
             AccentDisc(symbol: "shippingbox.fill", size: 40)
             VStack(alignment: .leading, spacing: 6) {
                 Text(model.project.displayName)
                     .font(.system(size: 26, weight: .bold))
                     .accessibilityAddTraits(.isHeader)
                 HStack(spacing: 12) {
-                    Label("\(model.activeSessions.count) actief", systemImage: "bolt")
-                    Label("\(model.changedFileCount) gewijzigd", systemImage: "doc.badge.ellipsis")
+                    Label("\(model.activeSessions.count) active", systemImage: "bolt")
+                    Label("\(model.changedFileCount) changed", systemImage: "doc.badge.ellipsis")
                     if !model.branches.isEmpty {
                         Label(model.branches.joined(separator: ", "), systemImage: "arrow.triangle.branch")
                             .font(.subheadline.monospaced())
@@ -346,15 +346,15 @@ struct ProjectCockpitView: View {
 
     private var decisionsPanel: some View {
         VStack(alignment: .leading, spacing: 12) {
-            PanelHeader("Recente beslissingen", symbol: "checkmark.seal") {
-                Button("Alles", systemImage: "arrow.up.forward") { app.selection = .memory }
+            PanelHeader("Recent decisions", symbol: "checkmark.seal") {
+                Button("All", systemImage: "arrow.up.forward") { app.selection = .memory }
                     .labelStyle(.titleOnly)
                     .buttonStyle(.borderless)
                     .foregroundStyle(OMAColor.accent)
-                    .help("Open het volledige geheugen")
+                    .help("Open all memory")
             }
             if model.recentDecisions.isEmpty {
-                Text("Nog geen gepromoveerde kennis voor dit project.")
+                Text("No promoted knowledge for this project yet.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             } else {
@@ -380,13 +380,13 @@ struct ProjectCockpitView: View {
 
     private var changesPanel: some View {
         VStack(alignment: .leading, spacing: 12) {
-            PanelHeader("Gewijzigde bestanden", symbol: "doc.badge.ellipsis") {
+            PanelHeader("Changed files", symbol: "doc.badge.ellipsis") {
                 Text("\(model.changedFileCount)")
                     .font(.subheadline.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
             if model.changes.isEmpty {
-                Text("Geen openstaande wijzigingen in actieve sessies.")
+                Text("No outstanding changes in active sessions.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             } else {
@@ -405,7 +405,7 @@ struct ProjectCockpitView: View {
                             }
                         }
                         if change.files.count > 6 {
-                            Text("+ \(change.files.count - 6) meer")
+                            Text("+ \(change.files.count - 6) more")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -422,14 +422,14 @@ struct ProjectCockpitView: View {
     private var docsPanel: some View {
         VStack(alignment: .leading, spacing: 12) {
             PanelHeader("Living Docs", symbol: "doc.text") {
-                Button("Alles", systemImage: "arrow.up.forward") { app.selection = .docs }
+                Button("All", systemImage: "arrow.up.forward") { app.selection = .docs }
                     .labelStyle(.titleOnly)
                     .buttonStyle(.borderless)
                     .foregroundStyle(OMAColor.accent)
-                    .help("Open alle Living Docs")
+                    .help("Open all Living Docs")
             }
             if model.docs.isEmpty {
-                Text("Nog geen documentatie. Promoveer kennis vanuit een afgeronde sessie.")
+                Text("No documentation yet. Promote knowledge from a completed session.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             } else {
@@ -470,7 +470,7 @@ func sessionLifecycleAlert(_ alert: CockpitAlert, perform: @escaping (CockpitAle
         title: Text(alert.title),
         message: Text(alert.message),
         primaryButton: primary,
-        secondaryButton: .cancel(Text("Annuleer"))
+        secondaryButton: .cancel(Text("Cancel"))
     )
 }
 
@@ -480,11 +480,11 @@ struct ChangedFileRow: View {
 
     private var status: (text: String, symbol: String, color: Color) {
         switch file.status.trimmingCharacters(in: .whitespaces) {
-        case "M", "MM": ("Gewijzigd", "pencil", OMAColor.attention)
-        case "A", "AM": ("Toegevoegd", "plus", OMAColor.positive)
-        case "D": ("Verwijderd", "minus", OMAColor.negative)
-        case "R": ("Hernoemd", "arrow.right", OMAColor.accent)
-        case "??": ("Nieuw", "sparkle", OMAColor.positive)
+        case "M", "MM": ("Modified", "pencil", OMAColor.attention)
+        case "A", "AM": ("Added", "plus", OMAColor.positive)
+        case "D": ("Deleted", "minus", OMAColor.negative)
+        case "R": ("Renamed", "arrow.right", OMAColor.accent)
+        case "??": ("New", "sparkle", OMAColor.positive)
         default: (file.status, "questionmark", Color.secondary)
         }
     }
@@ -511,7 +511,7 @@ struct ChangedFileRow: View {
         if let action {
             Button(action: action) { row }
                 .buttonStyle(.plain)
-                .accessibilityHint("Toon de diff en open in de editor")
+                .accessibilityHint("Show the diff and open in the editor")
         } else {
             row
         }
@@ -528,17 +528,17 @@ struct ProjectInspector: View {
     var body: some View {
         List {
             Section("Repository") {
-                LabeledContent("Naam", value: project.displayName)
-                LabeledContent("Pad") {
+                LabeledContent("Name", value: project.displayName)
+                LabeledContent("Path") {
                     Text(project.repoPath).font(.caption.monospaced()).textSelection(.enabled)
                 }
-                LabeledContent("Geopend", value: project.lastOpenedAt.formatted(date: .abbreviated, time: .shortened))
+                LabeledContent("Opened", value: project.lastOpenedAt.formatted(date: .abbreviated, time: .shortened))
             }
             if let session {
                 SessionInspectorSections(session: session, status: status, symbolForAgent: symbolForAgent)
             } else {
-                Section("Sessie") {
-                    Text("Selecteer een sessie voor worktree- en rundetails.")
+                Section("Session") {
+                    Text("Select a session for worktree and run details.")
                         .foregroundStyle(.secondary)
                 }
             }

@@ -13,12 +13,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// State restoration after an abnormal exit can finish without a visible
-    /// window. Fall back to the "Nieuw venster" command so the app never
+    /// window. Fall back to the "New Window" command so the app never
     /// launches into an empty menu bar.
     func applicationDidFinishLaunching(_ notification: Notification) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             let hasVisibleWindow = NSApp.windows.contains { $0.isVisible && $0.canBecomeMain }
-            guard !hasVisibleWindow, let item = Self.menuItem(titled: "Nieuw venster", in: NSApp.mainMenu) else { return }
+            guard !hasVisibleWindow, let item = Self.menuItem(titled: "New Window", in: NSApp.mainMenu) else { return }
             _ = NSApp.sendAction(item.action ?? #selector(NSApplication.arrangeInFront(_:)), to: item.target, from: item)
         }
     }

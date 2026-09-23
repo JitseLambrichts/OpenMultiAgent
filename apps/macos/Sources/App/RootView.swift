@@ -58,7 +58,7 @@ struct RootView: View {
                 }
             }
         }
-        .alert("Sessie kon niet starten", isPresented: Binding(
+        .alert("Session could not start", isPresented: Binding(
             get: { rootNotice != nil },
             set: { if !$0 { rootNotice = nil } }
         )) {
@@ -72,8 +72,8 @@ struct RootView: View {
         Binding(
             get: { model.selection },
             set: { destination in
-                // "Projecten" is het overzicht. Een open project of sessie
-                // blijft anders in beeld, omdat de detailkolom die eerst toont.
+                // "Projects" is the overview. An open project or session would
+                // otherwise stay on screen, because the detail column shows that first.
                 if destination == .projects {
                     model.closeProject()
                 }
@@ -160,12 +160,11 @@ struct RootView: View {
         }
     }
 
-    /// Projectcontext voor de sessie-sheet: zit de gebruiker binnen een
-    /// project (cockpit of sessie-workspace), dan is dat het enige project
-    /// dat de sheet aanbiedt, zodat er geen projectkiezer verschijnt en de
-    /// sessie altijd in het huidige project wordt aangemaakt. Daarbuiten
-    /// (dashboard, Sessies, Geheugen, Docs, Instellingen) blijven alle
-    /// projecten kiesbaar.
+    /// Project context for the session sheet: when the user is inside a
+    /// project (cockpit or session workspace), that is the only project
+    /// the sheet offers, so no project picker appears and the session is
+    /// always created in the current project. Outside that (dashboard,
+    /// Sessions, Memory, Docs, Settings) every project stays selectable.
     private var currentProjectContext: ProjectDTO? {
         if let selected = model.selectedProject {
             if let fresh = model.projects.projects.first(where: { $0.id == selected.id }) {
@@ -217,7 +216,7 @@ struct RootView: View {
     }
 }
 
-/// Custom navigation column: wordmark, a small "Navigatie" caption and one
+/// Custom navigation column: wordmark, a small "Navigation" caption and one
 /// row per destination. The selected row is a lime disc plus a soft pill.
 /// Collapsible: when `isCollapsed` is true only the icons remain visible.
 struct SidebarView: View {
@@ -235,7 +234,7 @@ struct SidebarView: View {
                 .padding(.bottom, 32)
 
             if !isCollapsed {
-                Text("Navigatie")
+                Text("Navigation")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .padding(.leading, 12)
@@ -263,7 +262,7 @@ struct SidebarView: View {
         .background(OMAColor.canvas)
         .animation(.easeInOut(duration: 0.18), value: isCollapsed)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Navigatie")
+        .accessibilityLabel("Navigation")
     }
 
     private var wordmark: some View {
@@ -298,7 +297,7 @@ struct SidebarView: View {
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.secondary)
                         .frame(width: 40, height: 40)
-                    Text("Inklappen")
+                    Text("Collapse")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Color.secondary)
                     Spacer(minLength: 0)
@@ -308,15 +307,15 @@ struct SidebarView: View {
             }
         }
         .buttonStyle(.plain)
-        .help(isCollapsed ? "Navigatie uitklappen" : "Navigatie inklappen")
-        .accessibilityLabel(isCollapsed ? "Navigatie uitklappen" : "Navigatie inklappen")
+        .help(isCollapsed ? "Expand sidebar" : "Collapse sidebar")
+        .accessibilityLabel(isCollapsed ? "Expand sidebar" : "Collapse sidebar")
         .keyboardShortcut("s", modifiers: [.command, .option])
     }
 
     private var projectSection: some View {
         VStack(alignment: isCollapsed ? .center : .leading, spacing: 4) {
             if !isCollapsed {
-                Text("Projecten")
+                Text("Projects")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .padding(.leading, 12)
@@ -326,7 +325,7 @@ struct SidebarView: View {
             ScrollView {
                 VStack(spacing: 4) {
                     if projects.isEmpty && !isCollapsed {
-                        Text("Nog geen projecten")
+                        Text("No projects yet")
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.tertiary)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -381,7 +380,7 @@ struct SidebarView: View {
 
     private func isDestinationSelected(_ destination: SidebarDestination) -> Bool {
         guard destination == selection else { return false }
-        // Het overzicht is alleen geselecteerd als er geen project openstaat.
+        // The overview is selected only when no project is open.
         if destination == .projects { return openProjectID == nil }
         return true
     }
@@ -403,7 +402,7 @@ struct SidebarView: View {
                                 .padding(.vertical, 2)
                                 .background(OMAColor.attention, in: Capsule())
                                 .offset(x: 6, y: -6)
-                                .accessibilityLabel("\(badge) te beoordelen")
+                                .accessibilityLabel("\(badge) to review")
                         }
                     }
             } else {
@@ -421,7 +420,7 @@ struct SidebarView: View {
                             .padding(.vertical, 3)
                             .background(OMAColor.attention, in: Capsule())
                             .padding(.trailing, 12)
-                            .accessibilityLabel("\(badge) te beoordelen")
+                            .accessibilityLabel("\(badge) to review")
                     }
                 }
                 .padding(.trailing, 4)
@@ -449,9 +448,9 @@ enum ProjectChooser {
     @MainActor
     static func choose(_ completion: @escaping (URL) -> Void) {
         let panel = NSOpenPanel()
-        panel.title = "Voeg een Git-project toe"
-        panel.message = "Kies de map die de Git-repository bevat."
-        panel.prompt = "Voeg toe"
+        panel.title = "Add a Git project"
+        panel.message = "Choose the folder that contains the Git repository."
+        panel.prompt = "Add"
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false

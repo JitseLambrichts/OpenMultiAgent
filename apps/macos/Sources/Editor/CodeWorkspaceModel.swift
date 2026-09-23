@@ -137,7 +137,7 @@ final class CodeWorkspaceModel {
     func selectRoot(_ next: CodeRoot) async {
         guard next != root else { return }
         if hasDirtyBuffers {
-            notice = "Sla wijzigingen eerst op voordat je van worktree wisselt."
+            notice = "Save changes before switching worktrees."
             return
         }
         root = next
@@ -165,7 +165,7 @@ final class CodeWorkspaceModel {
         let next: CodeRoot = sessionID.map { .session(id: $0) } ?? .project
         if next != root {
             if hasDirtyBuffers {
-                notice = "Sla wijzigingen eerst op voordat je van worktree wisselt."
+                notice = "Save changes before switching worktrees."
                 return
             }
             root = next

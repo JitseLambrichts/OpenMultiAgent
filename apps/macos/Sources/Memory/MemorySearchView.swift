@@ -27,7 +27,7 @@ struct MemorySearchView: View {
                     }
                     searchBar
                     if let notice = model.notice {
-                        InlineNotice(notice, actionTitle: "Opnieuw") {
+                        InlineNotice(notice, actionTitle: "Retry") {
                             Task { await model.loadRecent() }
                         }
                     }
@@ -47,7 +47,7 @@ struct MemorySearchView: View {
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
-            PageTitle(title: "Geheugen", subtitle: "Beslissingen, invarianten en how-tos uit al je projecten.")
+            PageTitle(title: "Memory", subtitle: "Decisions, invariants, and how-tos from all of your projects.")
             Spacer()
         }
     }
@@ -55,11 +55,11 @@ struct MemorySearchView: View {
     private var searchBar: some View {
         HStack(spacing: 12) {
             OMASearchField(
-                prompt: "Zoek beslissingen, invarianten, how-tos…",
+                prompt: "Search decisions, invariants, how-tos…",
                 text: $query,
                 isBusy: model.isSearching,
                 focus: $queryFocused,
-                accessibilityLabel: "Zoek in geheugen"
+                accessibilityLabel: "Search Memory"
             )
             .onChange(of: query) { _, value in model.updateQuery(value) }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -70,14 +70,14 @@ struct MemorySearchView: View {
                     get: { model.repoPath ?? "" },
                     set: { model.repoPath = $0.isEmpty ? nil : $0 }
                 )) {
-                    Text("Alle projecten").tag("")
+                    Text("All projects").tag("")
                     ForEach(projects) { project in
                         Text(project.displayName).tag(project.repoPath)
                     }
                 }
                 .labelsHidden()
                 .frame(width: 200)
-                .help("Beperk tot één project")
+                .help("Limit to one project")
                 .accessibilityLabel("Project")
             }
         }
@@ -105,9 +105,9 @@ struct MemorySearchView: View {
     private var recentList: some View {
         if model.recent.isEmpty {
             ContentUnavailableView {
-                Label("Nog geen kennis", systemImage: "brain.head.profile")
+                Label("No knowledge yet", systemImage: "brain.head.profile")
             } description: {
-                Text("Beslissingen, invarianten en how-tos verschijnen hier zodra je kennis uit een sessie promoveert.")
+                Text("Decisions, invariants, and how-tos appear here once you promote knowledge from a session.")
             }
             .frame(maxWidth: .infinity, minHeight: 320)
         } else {

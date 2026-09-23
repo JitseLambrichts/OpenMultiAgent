@@ -15,21 +15,21 @@ struct LivingDocsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     HStack(alignment: .top) {
-                        PageTitle(title: "Living Docs", subtitle: "Markdown onder .oma/docs, per project, gegenereerd uit gepromoveerde kennis.")
+                        PageTitle(title: "Living Docs", subtitle: "Markdown under .oma/docs, per project, generated from promoted knowledge.")
                         Spacer()
-                        Button("Vernieuw", systemImage: "arrow.clockwise") { Task { await load() } }
+                        Button("Refresh", systemImage: "arrow.clockwise") { Task { await load() } }
                             .buttonStyle(.omaIcon)
-                            .help("Vernieuw documentatie")
+                            .help("Refresh documentation")
                             .symbolEffect(.rotate, isActive: isLoading)
                     }
                     if let notice {
-                        InlineNotice(notice, actionTitle: "Opnieuw") { Task { await load() } }
+                        InlineNotice(notice, actionTitle: "Retry") { Task { await load() } }
                     }
                     if model.projects.projects.isEmpty {
                         ContentUnavailableView {
-                            Label("Nog geen projecten", systemImage: "doc.text")
+                            Label("No projects yet", systemImage: "doc.text")
                         } description: {
-                            Text("Voeg een project toe en promoveer kennis om hier documentatie te zien.")
+                            Text("Add a project and promote knowledge to see documentation here.")
                         }
                     } else {
                         ForEach(model.projects.projects) { project in
@@ -57,7 +57,7 @@ struct LivingDocsView: View {
             }
             let docs = docsByProject[project.id] ?? []
             if docs.isEmpty {
-                Text("Nog geen documentatie. Promoveer kennis vanuit een afgeronde sessie.")
+                Text("No documentation yet. Promote knowledge from a completed session.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 4)
@@ -111,7 +111,7 @@ struct LivingDocRow: View {
                 NSWorkspace.shared.open(URL(fileURLWithPath: repoPath).appending(path: doc.path))
             }
             .buttonStyle(OMAIconButtonStyle(size: 30))
-            .help("Open \(doc.path) in de standaardeditor")
+            .help("Open \(doc.path) in the default editor")
             .accessibilityLabel("Open \(doc.title)")
         }
         .padding(.vertical, 6)

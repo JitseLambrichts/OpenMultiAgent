@@ -8,22 +8,22 @@ import SwiftUI
 /// so SwiftUI controls layered on top of it would never receive them.
 struct TerminalGridView: View {
     let model: TerminalWorkspaceModel
-    /// Of de bijbehorende OMA-sessie nog actief is. Na beëindigen is de
-    /// tmux-koppeling weg én de sessie klaar; dan tonen we geen
-    /// "Verbind opnieuw" meer voor een dode tmux-sessie.
+    /// Whether the matching OMA session is still active. After ending, the
+    /// tmux attachment is gone and the session is complete; then we no longer
+    /// show "Reconnect" for a dead tmux session.
     ///
-    /// In de project-grid hebben cellen een gemengde status; gebruik dan
-    /// `sessionActiveFor` voor een lookup per sessie-ID. Als die nil is,
-    /// geldt `sessionActive` voor alle cellen (single-sessie detail).
+    /// In the project grid cells have mixed status; use
+    /// `sessionActiveFor` for a per-session-ID lookup. If that is nil,
+    /// `sessionActive` applies to every cell (single-session detail).
     var sessionActive: Bool = true
     var sessionActiveFor: ((String) -> Bool)? = nil
     var titleFor: (String) -> String = { $0 }
-    /// Wanneer gezet toont elke cel een "Open detail"-knop die naar de
-    /// single-sessie detailview navigeert. Alleen gebruikt in de project-grid;
-    /// het sessie-detail geeft nil door en verbergt de knop.
+    /// When set, each cell shows an "Open Detail" button that navigates to the
+    /// single-session detail view. Only used in the project grid;
+    /// session detail passes nil and hides the button.
     var onOpenDetail: ((String) -> Void)? = nil
-    /// In het single-sessie detail is sluiten van de enige koppeling
-    /// betekenisloos (zou een lege picker-cel tonen); verberg dan de knop.
+    /// In single-session detail, closing the only attachment is
+    /// meaningless (it would show an empty picker cell); hide the button then.
     var allowClose: Bool = true
     let onPickSession: (UUID) -> Void
 
@@ -90,28 +90,28 @@ struct TerminalGridView: View {
                 onPickSession(cell.id)
             } label: {
                 ContentUnavailableView {
-                    Label("Lege terminal", systemImage: "plus.rectangle.on.rectangle")
+                    Label("Empty terminal", systemImage: "plus.rectangle.on.rectangle")
                 } description: {
-                    Text("Kies een sessie van dit project om hier te openen.")
+                    Text("Choose a session from this project to open here.")
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .background(OMAColor.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .accessibilityLabel("Open een sessie in deze lege terminal")
+            .accessibilityLabel("Open a session in this empty terminal")
         }
     }
 }
 
-/// Single-sessie detailvariant zónder Grid. Het detail heeft per definitie
-/// één bezette cel; die direct (zonder Grid) in de VStack leggen is het enige
-/// meet-veilige patroon: de VStack geeft de header zijn ideale hoogte en de
-/// cel vult de resterende ruimte. Een Grid-cel met ongelimiteerde hoogte kan
-/// bij het meten ongelimiteerde hoogte naar boven rapporteren, waardoor de
-/// VStack uitpuilt en de header (Terug-knop, tabs) buiten beeld verdwijnt —
-/// precies de fullscreen-terminalval waarbij alleen de sidebar nog klikbaar
-/// is. Zie `TerminalCellView`.
+/// Single-session detail variant without a Grid. Detail has exactly
+/// one occupied cell; placing it directly (without a Grid) in the VStack is the
+/// only measurement-safe pattern: the VStack gives the header its ideal height
+/// and the cell fills the rest. A Grid cell with unbounded height can
+/// report unbounded height upward during measurement, so the
+/// VStack overflows and the header (Back button, tabs) disappears —
+/// exactly the fullscreen-terminal trap where only the sidebar remains clickable.
+/// See `TerminalCellView`.
 struct SingleTerminalView: View {
     let model: TerminalWorkspaceModel
     let sessionID: String
@@ -133,10 +133,10 @@ struct SingleTerminalView: View {
                     onOpenDetail: nil
                 )
             } else {
-                // Bewust géén maxHeight:.infinity (zie endedSessionView in
-                // SessionWorkspaceView): onder de AppKit-splitview van
-                // `.inspector` explodeert elke gulzige hoogteclaim.
-                ProgressView("Terminal verbinden…")
+                // Intentionally no maxHeight:.infinity (see endedSessionView in
+                // SessionWorkspaceView): under the AppKit split view of
+                // `.inspector` every greedy height claim explodes.
+                ProgressView("Connecting terminal…")
                     .frame(maxWidth: .infinity)
                     .padding(.top, 80)
                     .padding(.bottom, 20)
@@ -149,9 +149,9 @@ struct SingleTerminalView: View {
     }
 }
 
-/// Eén terminalcel: header met status plus de terminal of de exited-status.
-/// Gedeeld door de project-grid (in een Grid-cel) en het sessie-detail
-/// (direct in de VStack via `SingleTerminalView`, zónder Grid).
+/// One terminal cell: header with status plus the terminal or the exited status.
+/// Shared by the project grid (in a Grid cell) and session detail
+/// (directly in the VStack via `SingleTerminalView`, without a Grid).
 struct TerminalCellView: View {
     let model: TerminalWorkspaceModel
     let controller: TerminalController
@@ -159,11 +159,11 @@ struct TerminalCellView: View {
     let isFocused: Bool
     var title: String
     var sessionActive: Bool
-    /// Focus-toggle verbergen in het single-sessie detail: bij één cel is
-    /// focussen betekenisloos.
+    /// Hide the focus toggle in single-session detail: with one cell,
+    /// focusing is meaningless.
     var allowFocus: Bool = true
     var allowClose: Bool = true
-    /// Nil = geen "Open detail"-knop (sessie-detail); gezet in de project-grid.
+    /// Nil = no "Open Detail" button (session detail); set in the project grid.
     var onOpenDetail: (() -> Void)? = nil
 
     var body: some View {
@@ -181,7 +181,7 @@ struct TerminalCellView: View {
         .clipped()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Terminal voor sessie \(sessionID)")
+        .accessibilityLabel("Terminal for session \(sessionID)")
     }
 
     private var cellHeader: some View {
@@ -196,38 +196,38 @@ struct TerminalCellView: View {
                 .truncationMode(.middle)
             switch controller.state {
             case .attached:
-                StatusBadge(text: "Gekoppeld", symbol: "circle.fill", color: OMAColor.positive)
+                StatusBadge(text: "Attached", symbol: "circle.fill", color: OMAColor.positive)
             case .exited:
-                StatusBadge(text: "Gestopt", symbol: "bolt.slash", color: OMAColor.attention)
+                StatusBadge(text: "Stopped", symbol: "bolt.slash", color: OMAColor.attention)
             case .idle:
-                StatusBadge(text: "Niet gekoppeld", symbol: "circle", color: OMAColor.quiet)
+                StatusBadge(text: "Not attached", symbol: "circle", color: OMAColor.quiet)
             }
             Spacer(minLength: 4)
             if let onOpenDetail {
-                Button("Open detail", systemImage: "arrow.up.forward", action: onOpenDetail)
-                    .help("Open het sessie-detail (terminal, wijzigingen, geheugen, transcript)")
+                Button("Open Detail", systemImage: "arrow.up.forward", action: onOpenDetail)
+                    .help("Open the session detail (terminal, changes, memory, transcript)")
                     .modifier(CellControl())
             }
             if allowFocus {
                 if isFocused {
-                    Button("Verlaat focus", systemImage: "arrow.down.right.and.arrow.up.left") {
+                    Button("Exit Focus", systemImage: "arrow.down.right.and.arrow.up.left") {
                         model.unfocus()
                     }
-                    .help("Terug naar de rasterindeling")
+                    .help("Return to the grid layout")
                     .modifier(CellControl())
                 } else {
                     Button("Focus", systemImage: "arrow.up.left.and.arrow.down.right") {
                         model.focus(sessionID: sessionID)
                     }
-                    .help("Toon alleen deze terminal")
+                    .help("Show only this terminal")
                     .modifier(CellControl())
                 }
             }
             if allowClose {
-                Button("Sluit terminal", systemImage: "xmark") {
+                Button("Close Terminal", systemImage: "xmark") {
                     model.close(sessionID: sessionID)
                 }
-                .help("Sluit alleen deze koppeling; de sessie blijft draaien")
+                .help("Close only this attachment; the session keeps running")
                 .modifier(CellControl())
             }
         }
@@ -249,14 +249,14 @@ struct TerminalCellView: View {
 
     private func exitedView(code: Int32?) -> some View {
         VStack(spacing: 12) {
-            Label(sessionActive ? "Terminalkoppeling gestopt" : "Sessie beëindigd", systemImage: sessionActive ? "bolt.slash" : "checkmark.circle")
+            Label(sessionActive ? "Terminal attachment stopped" : "Session ended", systemImage: sessionActive ? "bolt.slash" : "checkmark.circle")
                 .font(.headline)
             Text(exitedMessage(code: code))
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             if sessionActive {
-                Button("Verbind opnieuw", systemImage: "arrow.clockwise") {
+                Button("Reconnect", systemImage: "arrow.clockwise") {
                     Task { await model.reconnect(sessionID: sessionID) }
                 }
                 .buttonStyle(.omaPrimary)
@@ -268,9 +268,9 @@ struct TerminalCellView: View {
 
     private func exitedMessage(code: Int32?) -> String {
         guard sessionActive else {
-            return "De tmux-sessie is gestopt en de sessie staat op Afgerond. Het transcript, de worktree (na merge in de hoofdcheckout) en het geheugen blijven bewaard."
+            return "The tmux session has stopped and this session is complete. The transcript, worktree (after merging into the main checkout), and memory are kept."
         }
-        return code.map { "De tmux-koppeling eindigde met code \($0). De sessie zelf is niet beëindigd." }
-            ?? "De tmux-koppeling is verbroken. De sessie zelf is niet beëindigd."
+        return code.map { "The tmux attachment ended with code \($0). The session itself was not ended." }
+            ?? "The tmux attachment was lost. The session itself was not ended."
     }
 }

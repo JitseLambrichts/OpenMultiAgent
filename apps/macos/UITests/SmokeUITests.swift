@@ -39,36 +39,36 @@ final class SmokeUITests: XCTestCase {
         XCTAssertTrue(openProject.waitForExistence(timeout: 15), app.debugDescription)
         openProject.click()
 
-        let openSession = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Open sessie Smoke 2'")).firstMatch
+        let openSession = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Open session Smoke 2'")).firstMatch
         XCTAssertTrue(openSession.waitForExistence(timeout: 10), app.debugDescription)
         openSession.click()
 
         let terminals = app.windows.firstMatch.descendants(matching: .any)
-            .matching(NSPredicate(format: "label BEGINSWITH 'Terminal voor sessie'"))
+            .matching(NSPredicate(format: "label BEGINSWITH 'Terminal for session'"))
         XCTAssertTrue(terminals.firstMatch.waitForExistence(timeout: 10), app.debugDescription)
 
         // Diagnostics: header controls must be reachable next to the hosted NSView.
         let focus = app.buttons["Focus"].firstMatch
         XCTAssertTrue(focus.waitForExistence(timeout: 5))
         focus.click()
-        let unfocus = app.buttons["Verlaat focus"].firstMatch
+        let unfocus = app.buttons["Exit Focus"].firstMatch
         let focusWorked = unfocus.waitForExistence(timeout: 3)
         if focusWorked { unfocus.click() }
         XCTAssertTrue(focusWorked, "Focus button should present the focused cell")
 
         // Fill the grid through Open in Grid → picker, up to six cells.
         for title in ["Smoke 3", "Smoke 4", "Smoke 5", "Smoke 6", "Smoke A"] {
-            let openInGrid = app.buttons["Open in raster"]
+            let openInGrid = app.buttons["Open in Grid"]
             XCTAssertTrue(openInGrid.waitForExistence(timeout: 5), app.debugDescription)
             openInGrid.click()
-            let row = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Open sessie \(title)'")).firstMatch
+            let row = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Open session \(title)'")).firstMatch
             XCTAssertTrue(row.waitForExistence(timeout: 5), "picker should list \(title)\n\(app.debugDescription)")
             row.click()
             sleep(1)
         }
         sleep(3)
         XCTAssertEqual(terminals.count, 6, "six terminal cells should be attached")
-        XCTAssertFalse(app.buttons["Open in raster"].isEnabled, "grid is full at six cells")
+        XCTAssertFalse(app.buttons["Open in Grid"].isEnabled, "grid is full at six cells")
 
         // Type into the first terminal while five others are live.
         terminals.firstMatch.click()
@@ -79,11 +79,11 @@ final class SmokeUITests: XCTestCase {
 
         // Closing one cell ends only that attachment. The last close button is
         // used so a system dialog parked over the first cell cannot block it.
-        let closeButtons = app.buttons.matching(identifier: "Sluit terminal").allElementsBoundByIndex
+        let closeButtons = app.buttons.matching(identifier: "Close Terminal").allElementsBoundByIndex
         let close = try XCTUnwrap(closeButtons.last(where: \.isHittable) ?? closeButtons.last)
         close.click()
         sleep(6)
-        XCTAssertTrue(app.buttons["Open een sessie in deze lege terminal"].exists, "closing a cell should leave an empty cell")
+        XCTAssertTrue(app.buttons["Open a session in this empty terminal"].exists, "closing a cell should leave an empty cell")
         XCTAssertEqual(terminals.count, 5, "closing a cell removes exactly one attachment")
 
         app.terminate()

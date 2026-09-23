@@ -45,8 +45,8 @@ struct NewSessionSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             PageTitle(
-                title: "Nieuwe sessie",
-                subtitle: projects.count == 1 ? selectedProject?.displayName : "Start een agent in een project, optioneel in een eigen worktree."
+                title: "New Session",
+                subtitle: projects.count == 1 ? selectedProject?.displayName : "Start an agent in a project, optionally in its own worktree."
             )
 
             Form {
@@ -58,7 +58,7 @@ struct NewSessionSheet: View {
                     }
                 }
 
-                TextField("Titel", text: $title, prompt: Text("Bijvoorbeeld: Bouw M4 dashboard"))
+                TextField("Title", text: $title, prompt: Text("For example: Build M4 dashboard"))
                     .focused($titleFocused)
 
                 Picker("Agent", selection: $agent) {
@@ -67,11 +67,11 @@ struct NewSessionSheet: View {
                     }
                 }
 
-                Toggle("Maak een geïsoleerde Git-worktree", isOn: $usesWorktree)
+                Toggle("Create an isolated Git worktree", isOn: $usesWorktree)
                     .disabled(agent == .terminal)
 
                 if agent != .terminal {
-                    TextField("Startprompt (optioneel)", text: $prompt, axis: .vertical)
+                    TextField("Start prompt (optional)", text: $prompt, axis: .vertical)
                         .lineLimit(3...6)
                 }
             }
@@ -79,25 +79,25 @@ struct NewSessionSheet: View {
 
             HStack {
                 if projects.isEmpty {
-                    Label("Voeg eerst een project toe.", systemImage: "info.circle")
+                    Label("Add a project first.", systemImage: "info.circle")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("Annuleer") { dismiss() }
+                Button("Cancel") { dismiss() }
                     .buttonStyle(.omaSecondary)
                     .keyboardShortcut(.cancelAction)
                 Button {
                     submit()
                 } label: {
                     if isSubmitting {
-                        Label("Sessie starten…", systemImage: "progress.indicator")
+                        Label("Starting session…", systemImage: "progress.indicator")
                             .symbolEffect(.variableColor.iterative, isActive: isSubmitting)
                 } else if agent == .terminal {
-                    Text("Start een kale shell in dit project, zonder agent of worktree.")
+                    Text("Start a bare shell in this project, without an agent or worktree.")
                         .foregroundStyle(.secondary)
                 } else {
-                        Text("Maak sessie")
+                        Text("Create Session")
                     }
                 }
                 .keyboardShortcut(.defaultAction)

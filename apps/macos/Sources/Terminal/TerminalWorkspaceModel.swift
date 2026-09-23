@@ -27,10 +27,10 @@ enum TerminalLayout: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var title: String {
         switch self {
-        case .single: "Eén"
+        case .single: "Single"
         case .horizontal: "Split"
         case .twoByTwo: "2 × 2"
-        case .adaptive: "Tot zes"
+        case .adaptive: "Up to six"
         }
     }
 
@@ -82,7 +82,7 @@ protocol TerminalControllerFactory {
 
 extension TerminalControllerFactory {
     func freshAttachment(sessionID: String) async throws -> TerminalAttachmentDTO {
-        throw SidecarClientError.unavailable("Geen nieuwe terminalkoppeling beschikbaar.")
+        throw SidecarClientError.unavailable("No new terminal attachment is available.")
     }
 }
 

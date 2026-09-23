@@ -18,23 +18,23 @@ struct RecoveryView: View {
                 AccentDisc(symbol: "bolt.horizontal", size: 64, tint: OMAColor.attention)
 
                 VStack(spacing: 6) {
-                    Text("De OpenMultiAgent-service is niet bereikbaar")
+                    Text("The OpenMultiAgent service is unavailable")
                         .font(.title2.weight(.semibold))
                         .multilineTextAlignment(.center)
-                    Text("Lopende tmux-sessies blijven gewoon draaien. Verbind opnieuw om projecten en sessies te laden.")
+                    Text("Running tmux sessions keep going. Reconnect to load projects and sessions.")
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
                 HStack(spacing: 10) {
-                    Button("Verbind opnieuw", systemImage: "arrow.clockwise", action: onReconnect)
+                    Button("Reconnect", systemImage: "arrow.clockwise", action: onReconnect)
                         .buttonStyle(.omaPrimary)
                         .keyboardShortcut(.defaultAction)
                     if configuration?.source == .development {
-                        Button("Kies OMA-checkout…", systemImage: "folder", action: chooseCheckout)
+                        Button("Choose OMA Checkout…", systemImage: "folder", action: chooseCheckout)
                             .buttonStyle(.omaSecondary)
-                            .help("Kies de map met de OpenMultiAgent-broncode")
+                            .help("Choose the folder that contains the OpenMultiAgent source")
                     }
                 }
 
@@ -63,9 +63,9 @@ struct RecoveryView: View {
 
     private func chooseCheckout() {
         let panel = NSOpenPanel()
-        panel.title = "Kies de OpenMultiAgent-checkout"
-        panel.message = "Kies de map met package.json en packages/desktop-api."
-        panel.prompt = "Gebruik"
+        panel.title = "Choose the OpenMultiAgent checkout"
+        panel.message = "Choose the folder that contains package.json and packages/desktop-api."
+        panel.prompt = "Use"
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false

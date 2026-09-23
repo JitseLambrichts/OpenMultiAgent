@@ -15,10 +15,10 @@ final class CriticalFlowUITests: XCTestCase {
         XCTAssertTrue(openProject.waitForExistence(timeout: 10), "dashboard card should appear\n\(app.debugDescription)")
         openProject.click()
 
-        XCTAssertTrue(element(app, labelPrefix: "Actief werk").waitForExistence(timeout: 5), app.debugDescription)
-        XCTAssertTrue(element(app, labelPrefix: "Recente beslissingen").exists, app.debugDescription)
+        XCTAssertTrue(element(app, labelPrefix: "Active work").waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(element(app, labelPrefix: "Recent decisions").exists, app.debugDescription)
 
-        let openSession = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Open sessie M4'")).firstMatch
+        let openSession = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Open session M4'")).firstMatch
         XCTAssertTrue(openSession.waitForExistence(timeout: 5), app.debugDescription)
         openSession.click()
 
@@ -29,15 +29,15 @@ final class CriticalFlowUITests: XCTestCase {
         extract.click()
 
         XCTAssertTrue(element(app, labelPrefix: "Review Knowledge").waitForExistence(timeout: 5), app.debugDescription)
-        XCTAssertTrue(app.buttons["Pas toe"].exists, app.debugDescription)
-        app.buttons["Sluit"].click()
+        XCTAssertTrue(app.buttons["Apply"].exists, app.debugDescription)
+        app.buttons["Close"].click()
     }
 
-    /// Regressietest: een actieve sessie met dode tmux toont de
-    /// "Terminalkoppeling gestopt"-kaart, maar de sessie-navigatie (Terug-knop
-    /// en tabs) moet zichtbaar én aanklikbaar blijven. Voorheen duwde de
-    /// Grid-cel met ongelimiteerde hoogte de header buiten beeld, waardoor de
-    /// gebruiker vastzat op een fullscreen exited-kaart.
+    /// Regression: an active session with dead tmux shows the
+    /// "Terminal attachment stopped" card, but session navigation (Back button
+    /// and tabs) must stay visible and hittable. Previously the
+    /// Grid cell with unbounded height pushed the header off-screen, so the
+    /// user was stuck on a fullscreen exited card.
     func testDeadTmuxKeepsSessionNavigationVisible() throws {
         let app = launchWithFixtureSidecar(extraEnvironment: ["FIXTURE_DEAD_TMUX": "1"])
 
@@ -45,24 +45,24 @@ final class CriticalFlowUITests: XCTestCase {
         XCTAssertTrue(openProject.waitForExistence(timeout: 10), "dashboard card should appear\n\(app.debugDescription)")
         openProject.click()
 
-        let openSession = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Open sessie M4'")).firstMatch
+        let openSession = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Open session M4'")).firstMatch
         XCTAssertTrue(openSession.waitForExistence(timeout: 5), app.debugDescription)
         openSession.click()
 
-        // De attach faalt direct (/bin/false): de exited-kaart verschijnt…
-        let reconnect = app.buttons["Verbind opnieuw"]
+        // The attach fails immediately (/bin/false): the exited card appears…
+        let reconnect = app.buttons["Reconnect"]
         XCTAssertTrue(
             reconnect.waitForExistence(timeout: 10),
-            "exited-kaart zou moeten verschijnen\n\(app.debugDescription)"
+            "exited card should appear\n\(app.debugDescription)"
         )
 
-        let back = app.buttons["Terug naar project"]
-        XCTAssertTrue(back.waitForExistence(timeout: 5), "Terug-knop ontbreekt; header buiten beeld?\n\(app.debugDescription)")
-        XCTAssertTrue(back.isHittable, "Terug-knop is niet aanklikbaar; header buiten beeld?\n\(app.debugDescription)")
+        let back = app.buttons["Back to Project"]
+        XCTAssertTrue(back.waitForExistence(timeout: 5), "Back button missing; header off-screen?\n\(app.debugDescription)")
+        XCTAssertTrue(back.isHittable, "Back button is not hittable; header off-screen?\n\(app.debugDescription)")
 
         let transcriptTab = app.buttons["Transcript"]
-        XCTAssertTrue(transcriptTab.waitForExistence(timeout: 5), "Tabbladen ontbreken; header buiten beeld?\n\(app.debugDescription)")
-        XCTAssertTrue(transcriptTab.isHittable, "Tabblad is niet aanklikbaar; header buiten beeld?\n\(app.debugDescription)")
+        XCTAssertTrue(transcriptTab.waitForExistence(timeout: 5), "Tabs missing; header off-screen?\n\(app.debugDescription)")
+        XCTAssertTrue(transcriptTab.isHittable, "Tab is not hittable; header off-screen?\n\(app.debugDescription)")
     }
 
     func testChangedFileOpensDiffAndEditor() throws {
@@ -73,11 +73,11 @@ final class CriticalFlowUITests: XCTestCase {
         openProject.click()
 
         let changed = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'README.md'")).firstMatch
-        XCTAssertTrue(changed.waitForExistence(timeout: 5), "Gewijzigd bestand zou klikbaar moeten zijn\n\(app.debugDescription)")
+        XCTAssertTrue(changed.waitForExistence(timeout: 5), "changed file should be clickable\n\(app.debugDescription)")
         changed.click()
 
-        let openEditor = app.buttons["Open in editor"]
-        XCTAssertTrue(openEditor.waitForExistence(timeout: 5), "Diff-sheet ontbreekt\n\(app.debugDescription)")
+        let openEditor = app.buttons["Open in Editor"]
+        XCTAssertTrue(openEditor.waitForExistence(timeout: 5), "diff sheet is missing\n\(app.debugDescription)")
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "value CONTAINS 'changed'")).firstMatch.waitForExistence(timeout: 5), app.debugDescription)
         openEditor.click()
 
@@ -85,9 +85,9 @@ final class CriticalFlowUITests: XCTestCase {
         XCTAssertTrue(codeTab.waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertTrue(codeTab.isHittable)
         let readme = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'README.md' OR value CONTAINS 'README.md'")).firstMatch
-        XCTAssertTrue(readme.waitForExistence(timeout: 5), "Editor zou README.md moeten tonen\n\(app.debugDescription)")
+        XCTAssertTrue(readme.waitForExistence(timeout: 5), "editor should show README.md\n\(app.debugDescription)")
         let content = app.textViews.matching(NSPredicate(format: "value CONTAINS '# OpenMultiAgent'")).firstMatch
-        XCTAssertTrue(content.waitForExistence(timeout: 5), "Editor zou de bestandsinhoud moeten tonen\n\(app.debugDescription)")
+        XCTAssertTrue(content.waitForExistence(timeout: 5), "editor should show the file contents\n\(app.debugDescription)")
     }
 
     /// Combined accessibility elements expose their text as a label on a group,
@@ -106,7 +106,7 @@ final class CriticalFlowUITests: XCTestCase {
         app.launchEnvironment["OMA_DESKTOP_SIDECAR"] = "/nonexistent/oma-desktop-api"
         app.launch()
 
-        XCTAssertTrue(app.buttons["Verbind opnieuw"].waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.buttons["Reconnect"].waitForExistence(timeout: 10), app.debugDescription)
     }
 
     /// The fixture ships inside the test bundle (under ~/Library/Developer):

@@ -8,18 +8,18 @@ struct AppCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
-            Button("Nieuwe sessie…") { model.request(.newSession) }
+            Button("New Session…") { model.request(.newSession) }
                 .keyboardShortcut("n", modifiers: .command)
-            Button("Voeg project toe…") { model.request(.addProject) }
+            Button("Add Project…") { model.request(.addProject) }
                 .keyboardShortcut("o", modifiers: .command)
             Divider()
-            Button("Nieuw venster") { openWindow(id: "main") }
+            Button("New Window") { openWindow(id: "main") }
                 .keyboardShortcut("n", modifiers: [.command, .option])
         }
 
         CommandMenu("Project") {
             if model.projects.projects.isEmpty {
-                Button("Geen projecten") {}
+                Button("No Projects") {}
                     .disabled(true)
             } else {
                 ForEach(model.projects.projects) { project in
@@ -30,22 +30,22 @@ struct AppCommands: Commands {
             }
         }
 
-        CommandMenu("Sessie") {
-            Button("Zoek in geheugen") { model.request(.search) }
+        CommandMenu("Session") {
+            Button("Search Memory") { model.request(.search) }
                 .keyboardShortcut("f", modifiers: .command)
             Divider()
             ForEach(TerminalLayout.allCases) { layout in
-                Button("Indeling: \(layout.title)") { model.request(.terminalLayout(layout)) }
+                Button("Layout: \(layout.title)") { model.request(.terminalLayout(layout)) }
                     .keyboardShortcut(layout.shortcutKey, modifiers: .control)
             }
         }
 
         CommandGroup(after: .saveItem) {
-            Button("Bewaar") { model.request(.saveEditor) }
+            Button("Save") { model.request(.saveEditor) }
                 .keyboardShortcut("s", modifiers: .command)
         }
         CommandGroup(after: .sidebar) {
-            Button(model.isInspectorVisible ? "Verberg inspector" : "Toon inspector") {
+            Button(model.isInspectorVisible ? "Hide Inspector" : "Show Inspector") {
                 model.isInspectorVisible.toggle()
             }
             .keyboardShortcut("i", modifiers: [.command, .option])
@@ -54,7 +54,7 @@ struct AppCommands: Commands {
 }
 
 extension AppCommands {
-    /// Twee projecten met dezelfde weergavenaam blijven in het menu uit elkaar te houden.
+    /// Two projects that share a display name stay distinguishable in the menu.
     private func projectMenuTitle(_ project: ProjectDTO) -> String {
         let projects = model.projects.projects
         let sharesName = projects.contains {

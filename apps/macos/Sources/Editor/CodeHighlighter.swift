@@ -2,20 +2,20 @@ import AppKit
 import Highlightr
 
 enum CodeHighlighter {
-    /// Vaste licht-op-donker kleuren voor de editorchroom. De dynamische
-    /// `labelColor` volgt de AppKit-appearance, die binnen een
-    /// NSViewRepresentable licht blijft ook als de SwiftUI-app donker is.
+    /// Fixed light-on-dark colors for the editor chrome. Dynamic
+    /// `labelColor` follows the AppKit appearance, which stays light inside an
+    /// NSViewRepresentable even when the SwiftUI app is dark.
     static let textColor = NSColor(calibratedWhite: 0.88, alpha: 1)
     static let backgroundColor = NSColor(calibratedRed: 27 / 255, green: 27 / 255, blue: 27 / 255, alpha: 1)
     static let keywordColor = NSColor(calibratedRed: 201 / 255, green: 246 / 255, blue: 111 / 255, alpha: 1)
 
-    /// Highlighten kost ongeveer 1,3 ms per KB. Daarboven blokkeert het de UI
-    /// langer dan het oplevert, dus dan tonen we platte tekst.
+    /// Highlighting costs about 1.3 ms per KB. Above this it blocks the UI
+    /// longer than it is worth, so we show plain text.
     static let maximumHighlightedBytes = 200_000
 
-    /// Het thema bepaalt de tokenkleuren; zijn achtergrond negeren we, want de
-    /// editor houdt zijn eigen `backgroundColor`. Highlightr zet geen
-    /// achtergrondattributen op tokens, dus dat botst niet.
+    /// The theme owns token colors; we ignore its background because the
+    /// editor keeps its own `backgroundColor`. Highlightr does not put
+    /// background attributes on tokens, so that does not clash.
     private static let themeName = "atom-one-dark"
 
     @MainActor private static let engine: Highlightr? = {
@@ -24,9 +24,9 @@ enum CodeHighlighter {
         return highlightr
     }()
 
-    /// De kleur die het thema geeft aan tekst die geen token is. Nieuw getypte
-    /// tekens krijgen die meteen, zodat ze niet afwijken in de 150 ms voordat
-    /// de rehighlight langskomt.
+    /// The color the theme gives to text that is not a token. Newly typed
+    /// characters get it immediately so they do not look off in the 150 ms
+    /// before rehighlighting runs.
     @MainActor static let plainTextColor: NSColor = {
         guard let engine,
               let probe = engine.highlight("placeholder", as: "plaintext"),
@@ -36,7 +36,7 @@ enum CodeHighlighter {
         return color
     }()
 
-    /// Highlight.js-taalnamen, niet de bestandsextensie: HTML valt onder `xml`.
+    /// Highlight.js language names, not the file extension: HTML maps to `xml`.
     static func language(for path: String) -> String {
         switch URL(fileURLWithPath: path).pathExtension.lowercased() {
         case "swift": "swift"
@@ -91,8 +91,8 @@ enum CodeHighlighter {
         }
 
         let result = NSMutableAttributedString(attributedString: highlighted)
-        // Het thema levert zijn eigen font (Courier) mee. Zonder deze regel
-        // verspringt de tekst ten opzichte van de regelnummers.
+        // The theme ships its own font (Courier). Without this line
+        // the text shifts relative to the line numbers.
         result.addAttribute(.font, value: font, range: NSRange(location: 0, length: result.length))
         return result
     }

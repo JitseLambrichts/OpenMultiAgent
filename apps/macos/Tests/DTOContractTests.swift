@@ -26,7 +26,7 @@ struct DTOContractTests {
         #expect(sessions.map(\.id) == ["session-1", "session-2"])
         #expect(sessions[0].currentAgent == .claude)
         #expect(sessions[1].currentAgent == nil)
-        #expect(sessions[1].session.displayTitle == "Naamloze sessie")
+        #expect(sessions[1].session.displayTitle == "Untitled Session")
         #expect(sessions[1].session.isActive == false)
     }
 

@@ -18,11 +18,11 @@ enum SidebarDestination: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var title: String {
         switch self {
-        case .projects: "Projecten"
-        case .sessions: "Sessies"
-        case .memory: "Geheugen"
+        case .projects: "Projects"
+        case .sessions: "Sessions"
+        case .memory: "Memory"
         case .docs: "Living Docs"
-        case .settings: "Instellingen"
+        case .settings: "Settings"
         }
     }
 

@@ -12,8 +12,8 @@ enum AppSettingsSection: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .agents: "Agents"
-        case .connection: "Verbinding"
-        case .about: "Over"
+        case .connection: "Connection"
+        case .about: "About"
         }
     }
 
@@ -33,8 +33,8 @@ struct AppSettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 PageTitle(
-                    title: "Instellingen",
-                    subtitle: "Agents, verbinding en info op één plek."
+                    title: "Settings",
+                    subtitle: "Agents, connection, and info in one place."
                 )
                 .padding(.top, 28)
 
@@ -49,7 +49,7 @@ struct AppSettingsView: View {
         }
         .background(OMAColor.canvas)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Instellingen")
+        .accessibilityLabel("Settings")
     }
 
     @ViewBuilder
@@ -71,7 +71,7 @@ private struct SettingsConnectionSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            PanelHeader("Verbinding", symbol: "bolt.horizontal") {
+            PanelHeader("Connection", symbol: "bolt.horizontal") {
                 connectionBadge
             }
             VStack(alignment: .leading, spacing: 8) {
@@ -90,7 +90,7 @@ private struct SettingsConnectionSection: View {
                         color: OMAColor.quiet
                     )
                     row(
-                        title: "Werkmap",
+                        title: "Working directory",
                         value: configuration.workspaceRoot.path,
                         symbol: "folder",
                         color: OMAColor.quiet
@@ -105,18 +105,18 @@ private struct SettingsConnectionSection: View {
     private var connectionBadge: some View {
         switch app.connection {
         case .connecting:
-            StatusBadge(text: "Verbinden", symbol: "progress.indicator", color: OMAColor.quiet)
+            StatusBadge(text: "Connecting", symbol: "progress.indicator", color: OMAColor.quiet)
         case .ready:
-            StatusBadge(text: "Verbonden", symbol: "checkmark.circle", color: OMAColor.positive)
+            StatusBadge(text: "Connected", symbol: "checkmark.circle", color: OMAColor.positive)
         case .failed:
-            StatusBadge(text: "Niet bereikbaar", symbol: "exclamationmark.triangle", color: OMAColor.attention)
+            StatusBadge(text: "Unavailable", symbol: "exclamationmark.triangle", color: OMAColor.attention)
         }
     }
 
     private var statusText: String {
         switch app.connection {
-        case .connecting: "Verbinden met de service…"
-        case .ready(let agents, _): "\(agents.count) agents beschikbaar"
+        case .connecting: "Connecting to the service…"
+        case .ready(let agents, _): "\(agents.count) agents available"
         case .failed(let detail): detail
         }
     }
@@ -143,7 +143,7 @@ private struct SettingsConnectionSection: View {
     }
 
     private var tmuxText: String {
-        tmuxAvailable ? "Beschikbaar" : "Niet gevonden — sessies blijven wel leesbaar"
+        tmuxAvailable ? "Available" : "Not found — sessions remain readable"
     }
 
     private func row(title: String, value: String, symbol: String, color: Color) -> some View {
@@ -171,13 +171,13 @@ private struct SettingsConnectionSection: View {
 private struct SettingsAboutSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            PanelHeader("Over", symbol: "info.circle")
+            PanelHeader("About", symbol: "info.circle")
             HStack(spacing: 12) {
                 AccentDisc(symbol: "sparkle", size: 40)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("OpenMultiAgent")
                         .font(.body.weight(.semibold))
-                    Text("Lokale multi-agent desktop. Donker thema, tmux-sessies, geheugen per project.")
+                    Text("Local multi-agent desktop. Dark theme, tmux sessions, memory per project.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)

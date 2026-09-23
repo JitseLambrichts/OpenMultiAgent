@@ -106,10 +106,10 @@ struct TerminalWorkspaceModelTests {
     }
 
     @Test func closingAnExitedAttachmentClearsTheCell() async throws {
-        // Pad dat de view bewandelt als een sessie wegvalt terwijl de
-        // terminaltab open staat: de tmux-koppeling is al dood (exit 256),
-        // close() moet de controller alsnog uit de grid halen zodat de
-        // beëindigd-status verschijnt in plaats van een dode exited-cel.
+        // Path the view takes when a session disappears while the
+        // terminal tab is open: the tmux attachment is already dead (exit 256),
+        // close() must still pull the controller out of the grid so the
+        // ended status appears instead of a dead exited cell.
         let factory = RecordingTerminalFactory()
         let model = TerminalWorkspaceModel(factory: factory)
         try await model.open(sessionID: "session-a")

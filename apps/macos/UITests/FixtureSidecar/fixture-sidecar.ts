@@ -37,10 +37,10 @@ const session = {
   tmux_alive: false,
 };
 
-// Reproductie van "actieve sessie met dode tmux" (FIXTURE_DEAD_TMUX=1): de
-// sessie staat op active maar er is geen tmux-sessie meer, dus elke attach
-// faalt direct. De UI moet dan de exited-kaart tonen mét behoud van
-// navigatie (Terug-knop, tabs).
+// Reproduction of "active session with dead tmux" (FIXTURE_DEAD_TMUX=1): the
+// session is active but there is no tmux session left, so every attach
+// fails immediately. The UI must then show the exited card while keeping
+// navigation (Back button, tabs).
 const deadTmux = process.env.FIXTURE_DEAD_TMUX === "1";
 const activeSession = {
   ...session,
@@ -162,7 +162,7 @@ function result(method: string, params: Record<string, unknown>): unknown {
         files: [`${project.repo_path}/.oma/docs/decisions.md`],
       };
     case "terminal.attachment":
-      // Dode tmux simuleren: direct falen zoals `tmux attach` zonder sessie.
+      // Simulate dead tmux: fail immediately like `tmux attach` with no session.
       return deadTmux
         ? { executable: "/bin/false", arguments: [], cwd: "/" }
         : { executable: "/usr/bin/true", arguments: [], cwd: "/" };

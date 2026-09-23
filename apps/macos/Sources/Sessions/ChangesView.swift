@@ -14,17 +14,17 @@ struct ChangesView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if let notice {
-                    InlineNotice(notice, actionTitle: "Opnieuw", action: onRefresh)
+                    InlineNotice(notice, actionTitle: "Retry", action: onRefresh)
                 }
                 if let status {
                     VStack(alignment: .leading, spacing: 12) {
-                        PanelHeader("Gewijzigde bestanden", symbol: "doc.badge.ellipsis") {
+                        PanelHeader("Changed files", symbol: "doc.badge.ellipsis") {
                             Text("\(status.changedFiles.count)")
                                 .font(.subheadline.monospacedDigit())
                                 .foregroundStyle(.secondary)
                         }
                         if status.changedFiles.isEmpty {
-                            Text("Geen openstaande wijzigingen in de worktree.")
+                            Text("No outstanding changes in the worktree.")
                                 .font(.callout)
                                 .foregroundStyle(.secondary)
                         } else {
@@ -48,7 +48,7 @@ struct ChangesView: View {
 
                     VStack(alignment: .leading, spacing: 12) {
                         PanelHeader("Diffstat", symbol: "chart.bar.doc.horizontal")
-                        Text(status.diffStat.isEmpty ? "Geen diff." : status.diffStat)
+                        Text(status.diffStat.isEmpty ? "No diff." : status.diffStat)
                             .font(.callout.monospaced())
                             .foregroundStyle(status.diffStat.isEmpty ? .secondary : .primary)
                             .textSelection(.enabled)
@@ -57,11 +57,11 @@ struct ChangesView: View {
                     .padding(20)
                     .omaCard()
                 } else if isLoading {
-                    ProgressView("Wijzigingen laden…")
+                    ProgressView("Loading changes…")
                         .frame(maxWidth: .infinity, minHeight: 200)
                 } else {
-                    ContentUnavailableView("Nog geen status", systemImage: "doc.badge.ellipsis",
-                                           description: Text("Vernieuw om de worktree-status op te halen."))
+                    ContentUnavailableView("No status yet", systemImage: "doc.badge.ellipsis",
+                                           description: Text("Refresh to fetch the worktree status."))
                 }
             }
             .padding(.horizontal, 28)

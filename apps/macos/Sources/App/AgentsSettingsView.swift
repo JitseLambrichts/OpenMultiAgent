@@ -33,13 +33,13 @@ struct CustomAgentFormValues: Equatable, Sendable {
 
     var error: String? {
         if name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return "Geef de agent een naam."
+            return "Give the agent a name."
         }
         if binary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return "Geef het commando op, bijvoorbeeld opencode."
+            return "Enter the command, for example opencode."
         }
         if binary.contains(" ") {
-            return "Het commando is één programma, zonder spaties. Zet opties bij Argumenten."
+            return "The command is a single program, with no spaces. Put options in Arguments."
         }
         return nil
     }
@@ -68,8 +68,8 @@ final class AgentsSettingsModel {
                 )
                 notice = nil
             } catch {
-                // Oudere sidecars kennen de prompt-route nog niet; toon dan
-                // tenminste de agents in plaats van alles te verbergen.
+                // Older sidecars do not know the prompt route yet; still show
+                // the agents instead of hiding everything.
                 systemPrompts = [:]
                 notice = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             }
@@ -145,8 +145,8 @@ final class AgentsSettingsModel {
     func remove(client: any DesktopAPI, agent: CustomAgentDTO) async {
         do {
             try await client.removeCustomAgent(id: agent.id)
-            // Prompt opruimen is best-effort: een missende route mag het
-            // verwijderen nooit blokkeren.
+            // Clearing the prompt is best-effort: a missing route must never
+            // block deletion.
             try? await client.setAgentSystemPrompt(agent: agent.id, systemPrompt: "")
             await load(client: client)
         } catch {
@@ -167,10 +167,10 @@ struct AgentsSettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            PanelHeader("Standaardagents", symbol: "sparkles") {
-                StatusBadge(text: "Ingebouwd", symbol: "lock.fill", color: OMAColor.quiet)
+            PanelHeader("Built-in agents", symbol: "sparkles") {
+                StatusBadge(text: "Built-in", symbol: "lock.fill", color: OMAColor.quiet)
             }
-            Text("Geef elke agent een eigen system prompt. Die gaat bij elke nieuwe sessie mee; bij wisselen komt hij vóór de Handoff Brief.")
+            Text("Give each agent its own system prompt. It is included in every new session; on a switch it comes before the Handoff Brief.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             VStack(spacing: 8) {
@@ -189,11 +189,11 @@ struct AgentsSettingsView: View {
                             }
                             Spacer()
                             if !model.prompt(for: agent.rawValue).isEmpty {
-                                StatusBadge(text: "Eigen prompt", symbol: "text.quote", color: OMAColor.accent)
+                                StatusBadge(text: "Custom prompt", symbol: "text.quote", color: OMAColor.accent)
                             } else {
-                                StatusBadge(text: "Klaar", symbol: "checkmark.circle", color: OMAColor.positive)
+                                StatusBadge(text: "Ready", symbol: "checkmark.circle", color: OMAColor.positive)
                             }
-                            Button(expandedPrompts.contains(agent.rawValue) ? "Verberg" : "Prompt") {
+                            Button(expandedPrompts.contains(agent.rawValue) ? "Hide" : "Prompt") {
                                 toggle(agent.rawValue)
                             }
                             .controlSize(.small)
@@ -202,7 +202,7 @@ struct AgentsSettingsView: View {
                         if expandedPrompts.contains(agent.rawValue) {
                             AgentSystemPromptEditor(
                                 prompt: model.prompt(for: agent.rawValue),
-                                hint: "Voor \(agent.title). Leeg laten voor het standaardgedrag.",
+                                hint: "For \(agent.title). Leave empty for the default behavior.",
                                 onSave: { prompt in
                                     await model.saveSystemPrompt(client: client, agentID: agent.rawValue, prompt: prompt)
                                 }
@@ -215,15 +215,15 @@ struct AgentsSettingsView: View {
                 }
             }
 
-            PanelHeader("Eigen agents", symbol: "terminal") {
-                Button("Voeg toe", systemImage: "plus") {
+            PanelHeader("Custom agents", symbol: "terminal") {
+                Button("Add", systemImage: "plus") {
                     draft = CustomAgentFormValues()
                     isAdding = true
                 }
                 .buttonStyle(.omaPrimary)
                 .controlSize(.small)
             }
-            Text("Start elk terminalprogramma als agent, zoals opencode of cursor. Laat argumenten leeg voor de interactieve TUI; een one-shot zoals run sluit de terminal meteen.")
+            Text("Launch any terminal program as an agent, such as OpenCode or Cursor. Leave arguments empty for the interactive TUI; a one-shot such as run closes the terminal immediately.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -233,12 +233,12 @@ struct AgentsSettingsView: View {
             if model.isLoading && model.agents.isEmpty {
                 HStack {
                     Spacer()
-                    ProgressView("Agents laden…")
+                    ProgressView("Loading agents…")
                     Spacer()
                 }
                 .padding(.vertical, 8)
             } else if model.agents.isEmpty {
-                Text("Nog geen eigen agents. Voeg er een toe om hem in Nieuwe sessie te kiezen.")
+                Text("No custom agents yet. Add one to choose it in New Session.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .padding(12)
@@ -264,18 +264,18 @@ struct AgentsSettingsView: View {
                                 }
                                 Spacer()
                                 if !model.prompt(for: agent.id).isEmpty {
-                                    StatusBadge(text: "Eigen prompt", symbol: "text.quote", color: OMAColor.accent)
+                                    StatusBadge(text: "Custom prompt", symbol: "text.quote", color: OMAColor.accent)
                                 }
-                                Button(expandedPrompts.contains(agent.id) ? "Verberg" : "Prompt") {
+                                Button(expandedPrompts.contains(agent.id) ? "Hide" : "Prompt") {
                                     toggle(agent.id)
                                 }
                                 .controlSize(.small)
-                                Button("Wijzig") {
+                                Button("Edit") {
                                     draft = CustomAgentFormValues(agent: agent, systemPrompt: model.prompt(for: agent.id))
                                     editing = agent
                                 }
                                 .controlSize(.small)
-                                Button("Verwijder", role: .destructive) {
+                                Button("Delete", role: .destructive) {
                                     Task {
                                         await model.remove(client: client, agent: agent)
                                         await app.refreshCustomAgents()
@@ -287,7 +287,7 @@ struct AgentsSettingsView: View {
                             if expandedPrompts.contains(agent.id) {
                                 AgentSystemPromptEditor(
                                     prompt: model.prompt(for: agent.id),
-                                    hint: "Gebruik {{system}} in Argumenten om de plek te kiezen; zonder placeholder wordt de prompt vooraan toegevoegd.",
+                                    hint: "Use {{system}} in Arguments to choose the placement; without a placeholder the prompt is prepended.",
                                     onSave: { prompt in
                                         await model.saveSystemPrompt(client: client, agentID: agent.id, prompt: prompt)
                                     }
@@ -305,7 +305,7 @@ struct AgentsSettingsView: View {
             await model.load(client: client)
         }
         .sheet(isPresented: $isAdding) {
-            CustomAgentEditorSheet(title: "Nieuwe agent", values: $draft, presets: true) {
+            CustomAgentEditorSheet(title: "New agent", values: $draft, presets: true) {
                 isAdding = false
             } onSave: { values in
                 if let message = await model.add(client: client, values: values) {
@@ -383,24 +383,24 @@ struct AgentSystemPromptEditor: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             HStack(spacing: 8) {
-                Text("\(draft.trimmingCharacters(in: .whitespacesAndNewlines).count) tekens")
+                Text("\(draft.trimmingCharacters(in: .whitespacesAndNewlines).count) characters")
                     .font(.caption.monospaced())
                     .foregroundStyle(.secondary)
                 if savedFlash {
-                    Text("Bewaard")
+                    Text("Saved")
                         .font(.caption)
                         .foregroundStyle(OMAColor.positive)
                 }
                 Spacer()
                 if !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Button("Wis") {
+                    Button("Clear") {
                         draft = ""
                         save()
                     }
                     .controlSize(.small)
                     .disabled(isSaving)
                 }
-                Button(isSaving ? "Bewaren…" : "Bewaar") {
+                Button(isSaving ? "Saving…" : "Save") {
                     save()
                 }
                 .controlSize(.small)
@@ -454,7 +454,7 @@ struct CustomAgentEditorSheet: View {
                 Text(title).font(.title2.weight(.semibold))
                 if presets {
                     HStack(spacing: 8) {
-                        Text("Snel:").font(.callout).foregroundStyle(.secondary)
+                        Text("Quick:").font(.callout).foregroundStyle(.secondary)
                         Button("Opencode") {
                             values = preset(
                                 name: "Opencode",
@@ -488,25 +488,25 @@ struct CustomAgentEditorSheet: View {
                     }
                 }
                 Form {
-                    TextField("Naam", text: $values.name, prompt: Text("Bijvoorbeeld: Opencode"))
-                    TextField("Commando", text: $values.binary, prompt: Text("Bijvoorbeeld: opencode"))
+                    TextField("Name", text: $values.name, prompt: Text("For example: OpenCode"))
+                    TextField("Command", text: $values.binary, prompt: Text("For example: opencode"))
                         .font(.body.monospaced())
-                    TextField("Argumenten (optioneel)", text: $values.arguments, prompt: Text("Leeg laten voor de TUI"))
+                    TextField("Arguments (optional)", text: $values.arguments, prompt: Text("Leave empty for the TUI"))
                         .font(.body.monospaced())
                     TextField(
-                        "Headless argumenten (optioneel)",
+                        "Headless arguments (optional)",
                         text: $values.headlessArguments,
-                        prompt: Text("Bijvoorbeeld: -p --output-format json {{prompt}}")
+                        prompt: Text("For example: -p --output-format json {{prompt}}")
                     )
                     .font(.body.monospaced())
                 }
                 .formStyle(.grouped)
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Icoon").font(.callout).foregroundStyle(.secondary)
+                    Text("Icon").font(.callout).foregroundStyle(.secondary)
                     AgentSymbolPicker(symbol: $values.symbol)
                 }
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("System prompt (optioneel)").font(.callout).foregroundStyle(.secondary)
+                    Text("System prompt (optional)").font(.callout).foregroundStyle(.secondary)
                     TextEditor(text: $values.systemPrompt)
                         .font(.body)
                         .frame(minHeight: 90, maxHeight: 160)
@@ -519,14 +519,14 @@ struct CustomAgentEditorSheet: View {
                                 .strokeBorder(.secondary.opacity(0.25))
                         }
                         .accessibilityLabel("System prompt")
-                    Text("Gebruik {{system}} in Argumenten om de plek te kiezen; zonder placeholder wordt de prompt vooraan toegevoegd.")
+                    Text("Use {{system}} in Arguments to choose the placement; without a placeholder the prompt is prepended.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                Text("Naam en commando zijn verplicht. Laat argumenten leeg om de interactieve TUI te starten. Extra argumenten komen vóór een optionele startprompt.")
+                Text("Name and command are required. Leave arguments empty to start the interactive TUI. Extra arguments come before an optional start prompt.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("Headless argumenten worden gebruikt voor kennisextractie: de eenmalige, niet-interactieve run die JSON moet teruggeven. Gebruik {{prompt}} om de plek van de prompt te kiezen; zonder placeholder komt die achteraan.")
+                Text("Headless arguments are used for knowledge extraction: the one-shot, non-interactive run that must return JSON. Use {{prompt}} to place the prompt; without a placeholder it is appended.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 if let saveError {
@@ -534,9 +534,9 @@ struct CustomAgentEditorSheet: View {
                 }
                 HStack {
                     Spacer()
-                    Button("Annuleer") { onCancel(); dismiss() }
+                    Button("Cancel") { onCancel(); dismiss() }
                         .keyboardShortcut(.cancelAction)
-                    Button("Bewaar") {
+                    Button("Save") {
                         guard values.error == nil else { saveError = values.error; return }
                         isSaving = true
                         Task {
@@ -623,6 +623,6 @@ private struct AgentSymbolPicker: View {
             }
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Icoon")
+        .accessibilityLabel("Icon")
     }
 }

@@ -49,22 +49,22 @@ struct CodeWorkspaceView: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                 if selected.isDirty {
-                    Text("Niet opgeslagen")
+                    Text("Unsaved")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(OMAColor.attention)
                 }
             }
-            Button("Opslaan", systemImage: "square.and.arrow.down") {
+            Button("Save", systemImage: "square.and.arrow.down") {
                 Task { await model.saveSelected() }
             }
             .buttonStyle(.omaIcon)
             .disabled(!model.selectedIsDirty || model.isSaving)
-            .help("Sla het huidige bestand op (⌘S)")
-            Button(isTerminalVisible ? "Verberg terminal" : "Toon terminal", systemImage: "terminal") {
+            .help("Save the current file (⌘S)")
+            Button(isTerminalVisible ? "Hide Terminal" : "Show Terminal", systemImage: "terminal") {
                 isTerminalVisible.toggle()
             }
             .buttonStyle(.omaIcon)
-            .help("Toon of verberg de terminalstrook")
+            .help("Show or hide the terminal strip")
         }
     }
 
@@ -81,8 +81,8 @@ struct CodeWorkspaceView: View {
                 .font(.subheadline.weight(.medium))
         }
         .menuStyle(.borderlessButton)
-        .help("Kies de projectcheckout of een sessie-worktree")
-        .accessibilityLabel("Editorbron")
+        .help("Choose the project checkout or a session worktree")
+        .accessibilityLabel("Editor source")
     }
 
     private var rootTitle: String {
@@ -90,7 +90,7 @@ struct CodeWorkspaceView: View {
         case .project:
             return model.project.displayName
         case .session(let id):
-            return sessions.first { $0.id == id }?.session.displayTitle ?? "Sessie"
+            return sessions.first { $0.id == id }?.session.displayTitle ?? "Session"
         }
     }
 
@@ -112,13 +112,13 @@ struct CodeWorkspaceView: View {
                 .id(path)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if model.isLoading {
-                ProgressView("Bestanden laden…")
+                ProgressView("Loading files…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ContentUnavailableView(
-                    "Geen bestand geopend",
+                    "No file open",
                     systemImage: "doc.text",
-                    description: Text("Kies een bestand in de boom links.")
+                    description: Text("Choose a file in the tree on the left.")
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -170,15 +170,15 @@ struct CodeWorkspaceView: View {
                     }
             } else {
                 terminalPlaceholder(
-                    "Deze sessie heeft geen actieve terminal.",
-                    actionTitle: "Open terminals",
+                    "This session has no active terminal.",
+                    actionTitle: "Open Terminals",
                     action: onOpenTerminals
                 )
             }
         case .project:
             terminalPlaceholder(
-                "Run gaat via een kale shell of een agentsessie. Start er een, of wissel naar de Terminals-tab.",
-                actionTitle: "Start shell",
+                "Commands run in a bare shell or an agent session. Start one, or switch to the Terminals tab.",
+                actionTitle: "Start Shell",
                 action: onStartShell
             )
         }
@@ -223,7 +223,7 @@ private struct CompactTerminalStrip: View {
                     .foregroundStyle(.secondary)
                     .padding(16)
             } else {
-                ProgressView("Terminal verbinden…")
+                ProgressView("Connecting terminal…")
                     .frame(maxWidth: .infinity, minHeight: 88)
             }
         }

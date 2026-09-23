@@ -28,21 +28,21 @@ struct SwitchAgentSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             PageTitle(
-                title: "Wissel van agent",
+                title: "Switch Agent",
                 subtitle: agent == .terminal
-                    ? "De terminal start een kale shell in dezelfde map, zonder Handoff Brief."
-                    : "De nieuwe agent start in dezelfde worktree met een Handoff Brief en toegang tot het gedeelde geheugen."
+                    ? "The terminal starts a bare shell in the same folder, without a Handoff Brief."
+                    : "The new agent starts in the same worktree with a Handoff Brief and access to shared memory."
             )
 
             Form {
-                LabeledContent("Huidige agent", value: session.currentAgent?.title ?? "Onbekend")
-                Picker("Nieuwe agent", selection: $agent) {
+                LabeledContent("Current agent", value: session.currentAgent?.title ?? "Unknown")
+                Picker("New agent", selection: $agent) {
                     ForEach(agents) { candidate in
                         Label(displayName(candidate), systemImage: symbol(candidate)).tag(candidate)
                     }
                 }
                 if agent != .terminal {
-                    TextField("Prompt (optioneel)", text: $prompt, axis: .vertical)
+                    TextField("Prompt (optional)", text: $prompt, axis: .vertical)
                         .lineLimit(2...5)
                 }
             }
@@ -50,10 +50,10 @@ struct SwitchAgentSheet: View {
 
             HStack {
                 Spacer()
-                Button("Annuleer") { dismiss() }
+                Button("Cancel") { dismiss() }
                     .buttonStyle(.omaSecondary)
                     .keyboardShortcut(.cancelAction)
-                Button("Wissel agent") {
+                Button("Switch Agent") {
                     isSubmitting = true
                     Task {
                         await onSwitch(agent, agent == .terminal ? nil : prompt.nilIfBlank)

@@ -129,11 +129,11 @@ enum SidecarClientError: LocalizedError, Equatable, Sendable {
     var errorDescription: String? {
         switch self {
         case .unavailable(let detail):
-            "De OpenMultiAgent-service kon niet starten. \(detail)"
+            "The OpenMultiAgent service could not start. \(detail)"
         case .disconnected(let detail):
-            "De OpenMultiAgent-service is gestopt. \(detail)"
+            "The OpenMultiAgent service stopped. \(detail)"
         case .invalidResponse:
-            "De OpenMultiAgent-service stuurde een ongeldig antwoord."
+            "The OpenMultiAgent service sent an invalid response."
         }
     }
 }
@@ -205,7 +205,7 @@ protocol DesktopAPI: Sendable {
 /// Defaults keep focused test stubs small: a stub only implements the calls the
 /// model under test exercises, everything else reports itself unavailable.
 extension DesktopAPI {
-    private var notWired: SidecarClientError { .unavailable("Deze functie is niet beschikbaar.") }
+    private var notWired: SidecarClientError { .unavailable("This function is not available.") }
 
     func projectDetail(id: String) async throws -> ProjectDetailDTO { throw notWired }
     func listSessions(repoPath: String?, status: String?) async throws -> [SessionViewDTO] { throw notWired }
@@ -734,7 +734,7 @@ actor SidecarClient: DesktopAPI {
         trace("✕", Data("exit \(status)".utf8))
         let detail = String(decoding: errorOutput, as: UTF8.self)
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        let message = detail.isEmpty ? "Exitcode \(status)." : detail
+        let message = detail.isEmpty ? "Exit code \(status)." : detail
         failPending(with: .disconnected(message))
         outputPipe?.fileHandleForReading.readabilityHandler = nil
         errorPipe?.fileHandleForReading.readabilityHandler = nil

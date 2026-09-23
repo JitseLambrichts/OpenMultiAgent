@@ -53,7 +53,7 @@ struct ProjectCockpitModelTests {
         let client = CockpitClientStub(detail: ProjectDetailDTO(project: .cockpitSample, sessions: [active]))
         let model = ProjectCockpitModel(project: .cockpitSample, client: client)
         await model.load()
-        await client.fail(with: SidecarClientError.disconnected("Exitcode 1."))
+        await client.fail(with: SidecarClientError.disconnected("Exit code 1."))
 
         await model.load()
 
@@ -109,12 +109,12 @@ struct ProjectCockpitModelTests {
 
         await model.perform(.mergeAndEnd, for: "active")
 
-        #expect(model.endNotice?.contains("niet-gecommitte") == true)
+        #expect(model.endNotice?.contains("uncommitted") == true)
         #expect(model.activeSessions.map(\.id) == ["active"])
 
-        // Een background reload mag de uitleg niet wissen.
+        // A background reload must not clear the explanation.
         await model.load()
-        #expect(model.endNotice?.contains("niet-gecommitte") == true)
+        #expect(model.endNotice?.contains("uncommitted") == true)
 
         model.clearEndNotice()
         #expect(model.endNotice == nil)

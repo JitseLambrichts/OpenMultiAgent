@@ -89,12 +89,12 @@ struct SessionsOverviewView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     header
                     if let notice = model.notice {
-                        InlineNotice(notice, actionTitle: "Opnieuw") { Task { await model.load() } }
+                        InlineNotice(notice, actionTitle: "Retry") { Task { await model.load() } }
                     }
-                    section("Actief", symbol: "bolt.fill", sessions: model.active,
-                            empty: "Geen actieve sessies. Start er een met ⌘N.")
+                    section("Active", symbol: "bolt.fill", sessions: model.active,
+                            empty: "No active sessions. Start one with ⌘N.")
                     section("Recent", symbol: "clock", sessions: model.recent,
-                            empty: "Afgeronde sessies verschijnen hier.")
+                            empty: "Completed sessions appear here.")
                 }
                 .padding(.horizontal, 28)
                 .padding(.top, 36)
@@ -112,16 +112,16 @@ struct SessionsOverviewView: View {
 
     private var header: some View {
         HStack(alignment: .top) {
-            PageTitle(title: "Sessies", subtitle: "Alle agentsessies over je projecten heen.")
+            PageTitle(title: "Sessions", subtitle: "All agent sessions across your projects.")
             Spacer()
             HStack(spacing: 10) {
-                Button("Vernieuw", systemImage: "arrow.clockwise") { Task { await model.load() } }
+                Button("Refresh", systemImage: "arrow.clockwise") { Task { await model.load() } }
                     .buttonStyle(.omaIcon)
-                    .help("Vernieuw sessies")
+                    .help("Refresh sessions")
                     .symbolEffect(.rotate, isActive: model.isLoading)
-                Button("Nieuwe sessie", systemImage: "plus") { app.request(.newSession) }
+                Button("New Session", systemImage: "plus") { app.request(.newSession) }
                     .buttonStyle(.omaPrimary)
-                    .help("Start een nieuwe agentsessie (⌘N)")
+                    .help("Start a new agent session (⌘N)")
             }
         }
     }

@@ -284,7 +284,7 @@ struct TranscriptPageDTO: Decodable, Equatable, Sendable {
 
 extension SessionDTO {
     var isActive: Bool { status == "active" }
-    var displayTitle: String { title ?? "Naamloze sessie" }
+    var displayTitle: String { title ?? "Untitled Session" }
     var usesWorktree: Bool { worktreePath != nil && worktreePath != repoPath }
 }
 
@@ -329,10 +329,10 @@ enum MemoryKind: String, Codable, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .decision: "Beslissing"
+        case .decision: "Decision"
         case .invariant: "Invariant"
-        case .risk: "Risico"
-        case .ownership: "Eigenaarschap"
+        case .risk: "Risk"
+        case .ownership: "Ownership"
         case .howto: "How-to"
         }
     }

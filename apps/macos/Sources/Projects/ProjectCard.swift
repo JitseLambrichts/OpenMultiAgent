@@ -31,7 +31,7 @@ struct ProjectCard: View {
             }
 
             HStack(spacing: 12) {
-                StatusBadge(text: "Geregistreerd", symbol: "checkmark.circle.fill", color: OMAColor.positive)
+                StatusBadge(text: "Registered", symbol: "checkmark.circle.fill", color: OMAColor.positive)
                 Label(project.lastOpenedAt.formatted(.relative(presentation: .named)), systemImage: "clock")
                     .foregroundStyle(OMAColor.quiet)
                     .lineLimit(1)
@@ -42,16 +42,16 @@ struct ProjectCard: View {
                 Button("Open", action: onOpen)
                     .buttonStyle(.omaPrimary)
                     .accessibilityLabel("Open \(project.displayName)")
-                Button("Nieuwe sessie", systemImage: "plus", action: onNewSession)
+                Button("New Session", systemImage: "plus", action: onNewSession)
                     .buttonStyle(.omaSecondary)
-                    .accessibilityLabel("Nieuwe sessie in \(project.displayName)")
+                    .accessibilityLabel("New Session in \(project.displayName)")
                 Spacer()
-                Button("Verwijder", systemImage: "trash", action: onRemove)
+                Button("Delete", systemImage: "trash", action: onRemove)
                     .labelStyle(.iconOnly)
                     .buttonStyle(.plain)
                     .foregroundStyle(OMAColor.quiet)
-                    .help("Verwijder project uit het dashboard")
-                    .accessibilityLabel("Verwijder \(project.displayName)")
+                    .help("Remove project from the dashboard")
+                    .accessibilityLabel("Delete \(project.displayName)")
             }
             .opacity(isHovering ? 1 : 0.85)
         }
@@ -62,9 +62,9 @@ struct ProjectCard: View {
         .onHover { isHovering = $0 }
         .contextMenu {
             Button("Open", action: onOpen)
-            Button("Nieuwe sessie", action: onNewSession)
+            Button("New Session", action: onNewSession)
             Divider()
-            Button("Verwijder uit dashboard", role: .destructive, action: onRemove)
+            Button("Remove from Dashboard", role: .destructive, action: onRemove)
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Project \(project.displayName)")

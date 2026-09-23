@@ -489,9 +489,9 @@ describe("SessionManager.end and remove", () => {
       worktree: true,
     });
     const worktree = view.session.worktree_path;
-    // De map verdwijnt buiten OMA om; `git worktree remove` faalt dan met
-    // "not a working tree" (128), ook ná `git worktree prune`. Verwijderen
-    // moet alsnog slagen: de gewenste eindsituatie is al bereikt.
+    // The directory disappears outside OMA; `git worktree remove` then fails with
+    // "not a working tree" (128), even after `git worktree prune`. Removal
+    // must still succeed: the desired end state is already reached.
     rmSync(worktree, { recursive: true, force: true });
 
     await mgr.remove(view.session.id);
