@@ -771,7 +771,24 @@ export function createDesktopServices(
   };
 }
 
+/** `oma-desktop-api mcp` serves the MCP memory server on stdio instead of the RPC API. */
+export const MCP_SUBCOMMAND = "mcp";
+
 const MCP_ENTRY = join(import.meta.dir, "..", "..", "mcp", "src", "stdio.ts");
+
+/**
+ * From a checkout, `process.execPath` is Bun and the MCP entry is a file on
+ * disk. In the compiled sidecar `process.execPath` is the sidecar itself and
+ * the sources only exist inside its embedded filesystem, so the memory server
+ * is reached through the sidecar's own `mcp` subcommand instead.
+ */
+export function mcpServerCommand(
+  entryExists = existsSync(MCP_ENTRY),
+): { command: string; args: string[] } {
+  return entryExists
+    ? { command: process.execPath, args: ["run", MCP_ENTRY] }
+    : { command: process.execPath, args: [MCP_SUBCOMMAND] };
+}
 
 export function createProductionServices(
   db: Database,
@@ -783,8 +800,7 @@ export function createProductionServices(
     mcpServers: (scope) => [
       {
         name: "oma",
-        command: process.execPath,
-        args: ["run", MCP_ENTRY],
+        ...mcpServerCommand(),
         env: {
           OMA_REPO_PATH: scope.repoPath,
           OMA_SESSION_ID: scope.sessionId,

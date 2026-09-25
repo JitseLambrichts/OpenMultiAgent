@@ -13,6 +13,8 @@ import {
 import {
   createDesktopServices,
   DesktopError,
+  MCP_SUBCOMMAND,
+  mcpServerCommand,
   type SessionOperations,
 } from "./services.ts";
 import { AUTO_EXTRACT_MIN_EVENTS, saveCandidates } from "@oma/docs";
@@ -632,5 +634,22 @@ describe("custom agents", () => {
       if (previous === undefined) delete process.env.OMA_HOME;
       else process.env.OMA_HOME = previous;
     }
+  });
+});
+
+describe("mcpServerCommand", () => {
+  test("runs the MCP entry with Bun from a checkout", () => {
+    const { command, args } = mcpServerCommand(true);
+    expect(command).toBe(process.execPath);
+    expect(args[0]).toBe("run");
+    expect(args[1]).toEndWith(join("mcp", "src", "stdio.ts"));
+  });
+
+  test("uses the sidecar's own subcommand when compiled", () => {
+    // The compiled sidecar has no MCP sources on disk to hand to `run`.
+    expect(mcpServerCommand(false)).toEqual({
+      command: process.execPath,
+      args: [MCP_SUBCOMMAND],
+    });
   });
 });

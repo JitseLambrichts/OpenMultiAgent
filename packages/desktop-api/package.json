@@ -10,6 +10,7 @@
     "@oma/adapters": "workspace:*",
     "@oma/core": "workspace:*",
     "@oma/docs": "workspace:*",
-    "@oma/ingest": "workspace:*"
+    "@oma/ingest": "workspace:*",
+    "@oma/mcp": "workspace:*"
   }
 }
