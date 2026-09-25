@@ -84,8 +84,10 @@ export function getAgentSystemPrompt(
 function writeAll(data: Record<string, string>, home = omaHome()): void {
   const path = agentSystemPromptsPath(home);
   mkdirSync(dirname(path), { recursive: true });
-  const sorted: Record<string, string> = {};
-  for (const key of Object.keys(data).sort()) sorted[key] = data[key];
+  // Keys are unique, so the comparator never has to return 0.
+  const sorted = Object.fromEntries(
+    Object.entries(data).sort(([a], [b]) => (a < b ? -1 : 1)),
+  );
   writeFileSync(path, `${JSON.stringify(sorted, null, 2)}\n`);
 }
 

@@ -13,6 +13,7 @@
 <p align="center">
   <img alt="macOS 15+" src="https://img.shields.io/badge/macOS-15%2B-111111?style=flat-square">
   <img alt="Apple Silicon" src="https://img.shields.io/badge/Apple%20Silicon-arm64-111111?style=flat-square">
+  <a href="https://github.com/JitseLambrichts/OpenMultiAgent/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/JitseLambrichts/OpenMultiAgent/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="MIT License" src="https://img.shields.io/badge/license-MIT-A8E063?style=flat-square">
 </p>
 

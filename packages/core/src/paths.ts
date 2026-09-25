@@ -4,7 +4,8 @@ import { join } from "node:path";
 
 /**
  * Claude Code stores transcripts under a directory whose name is the cwd with
- * every `/`, `_` and `.` replaced by `-`.
+ * every character outside `[A-Za-z0-9]` (slashes, dots, underscores, spaces,
+ * non-ASCII letters) replaced by `-`.
  *
  * This mapping is undocumented and is the most fragile assumption in M1, hence
  * the fixture-backed test in `paths.test.ts` built from real directories on
@@ -12,7 +13,7 @@ import { join } from "node:path";
  * silently reading nothing.
  */
 export function claudeProjectSlug(cwd: string): string {
-  return cwd.replace(/[/_.]/g, "-");
+  return cwd.replace(/[^A-Za-z0-9]/g, "-");
 }
 
 /**

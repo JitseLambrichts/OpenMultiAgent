@@ -170,7 +170,15 @@ export class SessionManager {
         await tmux.renameSession(target, backup);
         oldRenamed = true;
       }
-      await tmux.renameSession(staging, target);
+      try {
+        await tmux.renameSession(staging, target);
+      } catch (error) {
+        // The replacement can die between the startup check and the rename.
+        if (!(await tmux.hasSession(staging))) {
+          throw new Error("replacement agent exited during activation");
+        }
+        throw error;
+      }
       stagingRenamed = true;
       await Bun.sleep(200);
       if (!(await tmux.hasSession(target))) {
