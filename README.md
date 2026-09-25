@@ -36,29 +36,42 @@ OMA stores no API keys of its own. Transcripts and memory stay on disk unless yo
 
 ## Install
 
-On Apple Silicon with macOS 15+, Xcode 26, and Homebrew:
+On Apple Silicon with macOS 15+:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/JitseLambrichts/OpenMultiAgent/main/scripts/install-macos.sh | bash
 ```
 
-The script installs Bun, XcodeGen, and tmux when they are missing, clones this repository into `~/.oma/src/OpenMultiAgent`, and builds a Release app into `/Applications`. The first build downloads Swift packages and can take several minutes.
+The script downloads the latest prebuilt app from [GitHub Releases](https://github.com/JitseLambrichts/OpenMultiAgent/releases), checks its SHA-256, and installs it into `/Applications`. It installs Git and tmux with Homebrew when they are missing. No Xcode is needed.
 
-You still need Git and a signed-in agent CLI (`claude`, `codex`, or `gemini`) to run sessions.
+The app is ad-hoc signed, not notarized. Installing through the script avoids a Gatekeeper prompt. If you download the zip in a browser instead, macOS blocks the first launch; allow it under **System Settings → Privacy & Security → Open Anyway**.
 
-See [`scripts/install-macos.sh`](scripts/install-macos.sh) for the full install path.
+To build from source instead, which needs Xcode 26, Bun, and XcodeGen:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/JitseLambrichts/OpenMultiAgent/main/scripts/install-macos.sh | OMA_BUILD_FROM_SOURCE=1 bash
+```
+
+Set `OMA_VERSION=v0.1.0` to install a specific release. See [`scripts/install-macos.sh`](scripts/install-macos.sh) for the full install path.
 
 ## Requirements
 
 | Needed to run | Needed to build the Mac app |
 | --- | --- |
-| macOS 15+ on Apple Silicon (`arm64` sidecar) | **Xcode 26** |
-| [Bun](https://bun.sh) 1.2+ | [XcodeGen](https://github.com/yonaskolb/XcodeGen) |
-| Git and tmux | |
-| At least one signed-in agent CLI | |
+| macOS 15+ on Apple Silicon | **Xcode 26** |
+| Git and tmux | [Bun](https://bun.sh) 1.2+ |
+| At least one signed-in agent CLI (`claude`, `codex`, or `gemini`) | [XcodeGen](https://github.com/yonaskolb/XcodeGen) |
 
 ```sh
 brew install bun git tmux xcodegen
+```
+
+## Releases
+
+Pushing a tag such as `v0.1.0` runs [`release.yml`](.github/workflows/release.yml), which builds the Release app on a macOS runner, checks that the embedded sidecar answers as both the app API and the MCP memory server, and publishes `OpenMultiAgent-macos-arm64.zip` with its checksum.
+
+```sh
+git tag v0.1.0 && git push origin v0.1.0
 ```
 
 ## Development

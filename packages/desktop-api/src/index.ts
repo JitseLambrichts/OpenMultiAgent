@@ -9,7 +9,7 @@ import {
   serializeMessage,
 } from "./protocol.ts";
 import { createRouter } from "./router.ts";
-import { createProductionServices } from "./services.ts";
+import { createProductionServices, MCP_SUBCOMMAND } from "./services.ts";
 
 export function parentAlive(pid: number): boolean {
   if (pid <= 1) return false;
@@ -140,7 +140,12 @@ export async function main(): Promise<void> {
 
 if (import.meta.main) {
   try {
-    await main();
+    if (process.argv[2] === MCP_SUBCOMMAND) {
+      // Agents launched from the compiled app reach shared memory through here.
+      await import("@oma/mcp/stdio");
+    } else {
+      await main();
+    }
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

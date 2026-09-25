@@ -1,17 +1,27 @@
 #!/usr/bin/env bash
-# Clones OpenMultiAgent, builds the Release app, and copies it to /Applications.
+# Installs OpenMultiAgent into /Applications.
 #
 #   curl -fsSL https://raw.githubusercontent.com/JitseLambrichts/OpenMultiAgent/main/scripts/install-macos.sh | bash
 #
-# Requires macOS 15 or newer on Apple Silicon, Xcode 26, and Homebrew.
-# Bun, XcodeGen, Git and tmux are installed with Homebrew when missing.
-# Override the checkout or destination with OMA_SRC and OMA_DEST.
+# By default this downloads the latest prebuilt app from GitHub Releases, which
+# needs only macOS 15 or newer on Apple Silicon. Git and tmux are installed with
+# Homebrew when missing.
+#
+# Set OMA_BUILD_FROM_SOURCE=1 to clone the repository and build the Release app
+# instead; that path also needs Xcode 26, Bun, and XcodeGen. It is used
+# automatically when no release has been published yet.
+#
+# Override the checkout or destination with OMA_SRC and OMA_DEST, and pin a
+# release with OMA_VERSION (for example v0.1.0).
 set -euo pipefail
 
-REPO_URL="${OMA_REPO:-https://github.com/JitseLambrichts/OpenMultiAgent.git}"
+REPO_SLUG="${OMA_REPO_SLUG:-JitseLambrichts/OpenMultiAgent}"
+REPO_URL="${OMA_REPO:-https://github.com/${REPO_SLUG}.git}"
 SRC_DIR="${OMA_SRC:-$HOME/.oma/src/OpenMultiAgent}"
 DEST_DIR="${OMA_DEST:-/Applications}"
 APP_NAME="OpenMultiAgent.app"
+ASSET="OpenMultiAgent-macos-arm64.zip"
+VERSION="${OMA_VERSION:-latest}"
 CONFIGURATION="${CONFIGURATION:-Release}"
 
 export PATH="/opt/homebrew/bin:/usr/local/bin:${HOME}/.bun/bin:${PATH}"
@@ -128,16 +138,37 @@ install_app() {
   log "Open OpenMultiAgent from Applications. Git, tmux, and a signed-in agent CLI (claude, codex, or gemini) are required to run sessions."
 }
 
-main() {
-  require_macos
+release_url() {
+  if [[ "$VERSION" == "latest" ]]; then
+    printf 'https://github.com/%s/releases/latest/download/%s' "$REPO_SLUG" "$1"
+  else
+    printf 'https://github.com/%s/releases/download/%s/%s' "$REPO_SLUG" "$VERSION" "$1"
+  fi
+}
+
+# Downloads and unpacks the release into $1, or returns 1 when none exists.
+# curl does not set the quarantine attribute, so Gatekeeper does not block the
+# ad-hoc signed app the way it would after a browser download.
+download_release() {
+  local work="$1"
+  local zip="$work/$ASSET"
+  local expected actual
+
+  curl -fsL -o "$zip" "$(release_url "$ASSET")" || return 1
+  curl -fsSL -o "$zip.sha256" "$(release_url "$ASSET.sha256")" \
+    || die "Downloaded $ASSET, but its checksum file is missing."
+  expected="$(awk '{ print $1 }' "$zip.sha256")"
+  actual="$(shasum -a 256 "$zip" | awk '{ print $1 }')"
+  [[ -n "$expected" && "$expected" == "$actual" ]] \
+    || die "Checksum mismatch for $ASSET. Run this command again, or set OMA_BUILD_FROM_SOURCE=1."
+  ditto -x -k "$zip" "$work"
+}
+
+build_from_source() {
   require_xcode
-  ensure_formula git git
   ensure_formula bun bun
   ensure_formula xcodegen xcodegen
-  ensure_formula tmux tmux
   require_bun_version
-  [[ -x /usr/bin/codesign ]] || die "/usr/bin/codesign is required."
-  [[ -x /usr/bin/xattr ]] || die "/usr/bin/xattr is required."
 
   sync_source
   log "Installing dependencies"
@@ -145,6 +176,30 @@ main() {
   log "Building $APP_NAME ($CONFIGURATION). The first build can take several minutes."
   (cd "$SRC_DIR" && CONFIGURATION="$CONFIGURATION" bun run macos:build)
   install_app "$SRC_DIR/apps/macos/Build/DerivedData/Build/Products/$CONFIGURATION/$APP_NAME"
+}
+
+main() {
+  require_macos
+  ensure_formula git git
+  ensure_formula tmux tmux
+  [[ -x /usr/bin/codesign ]] || die "/usr/bin/codesign is required."
+  [[ -x /usr/bin/xattr ]] || die "/usr/bin/xattr is required."
+
+  if [[ "${OMA_BUILD_FROM_SOURCE:-0}" == "1" ]]; then
+    build_from_source
+    return
+  fi
+
+  log "Downloading $ASSET ($VERSION)"
+  WORK_DIR="$(mktemp -d)"
+  trap 'rm -rf "$WORK_DIR"' EXIT
+  if download_release "$WORK_DIR"; then
+    install_app "$WORK_DIR/$APP_NAME"
+  else
+    [[ "$VERSION" == "latest" ]] || die "Release $VERSION has no $ASSET."
+    log "No prebuilt release found; building from source instead"
+    build_from_source
+  fi
 }
 
 main "$@"

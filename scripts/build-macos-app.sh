@@ -41,14 +41,18 @@ echo "==> Generating Xcode project"
 "$ROOT/scripts/generate-macos-project.sh" >/dev/null
 
 echo "==> Building OpenMultiAgent ($CONFIGURATION)"
+# The filter only trims the log; xcodebuild's own status decides the outcome.
+set +o pipefail
 (cd "$APP_DIR" && xcodebuild build \
   -project OpenMultiAgent.xcodeproj \
   -scheme OpenMultiAgent \
   -configuration "$CONFIGURATION" \
-  -destination 'platform=macOS' \
+  -destination 'platform=macOS,arch=arm64' \
   -derivedDataPath "$DERIVED" \
   ARCHS=arm64 ONLY_ACTIVE_ARCH=YES \
-  | grep -E 'error:|warning: .*Sources|\*\* ' || true)
+  | { grep -E 'error:|warning: .*Sources|\*\* ' || true; }
+  exit "${PIPESTATUS[0]}") || { echo "error: xcodebuild failed" >&2; exit 1; }
+set -o pipefail
 
 APP_BUNDLE="$DERIVED/Build/Products/$CONFIGURATION/OpenMultiAgent.app"
 [[ -d "$APP_BUNDLE" ]] || { echo "error: app bundle not found: $APP_BUNDLE" >&2; exit 1; }
