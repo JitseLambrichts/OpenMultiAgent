@@ -17,7 +17,7 @@ function paneLog(content: string): string {
   return path;
 }
 
-const ESC = "";
+const ESC = "\x1B";
 
 describe("parsePaneLog", () => {
   test("strips the colour and cursor codes a terminal never shows as text", () => {
