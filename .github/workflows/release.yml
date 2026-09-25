@@ -1,0 +1,102 @@
+name: Release
+
+# Pushing a tag such as v0.1.0 builds the Release app and publishes it as a
+# GitHub Release. Pull requests that touch the app or its packaging, and manual
+# runs, build the same zip as a downloadable artifact without publishing.
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - ".github/workflows/release.yml"
+      - "apps/macos/**"
+      - "packages/desktop-api/**"
+      - "packages/mcp/**"
+      - "scripts/build-macos-app.sh"
+      - "scripts/generate-macos-project.sh"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  ASSET: OpenMultiAgent-macos-arm64.zip
+
+jobs:
+  build:
+    name: Build macOS app
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.x
+
+      - name: Select Xcode 26 or newer
+        run: |
+          xcode="$(ls -d /Applications/Xcode_2[6-9]*.app 2>/dev/null | sort -V | tail -1)"
+          if [[ -z "$xcode" ]]; then
+            echo "::error::No Xcode 26+ on this runner. Installed: $(ls -d /Applications/Xcode*.app | xargs)"
+            exit 1
+          fi
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
+
+      # SwiftTerm ships a Metal shader, and Xcode 26+ downloads the Metal
+      # compiler separately.
+      - name: Install Metal Toolchain
+        run: xcodebuild -downloadComponent MetalToolchain
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - run: bun install --frozen-lockfile
+
+      - name: Build Release app
+        run: CONFIGURATION=Release bun run macos:build
+
+      - name: Stamp version and package
+        run: |
+          app="apps/macos/Build/DerivedData/Build/Products/Release/OpenMultiAgent.app"
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="0.0.0-dev+${GITHUB_SHA::7}"
+          fi
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $version" "$app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" "$app/Contents/Info.plist"
+          # The plist edit invalidates the build's signature, so sign again.
+          codesign --force --deep --sign - "$app"
+          codesign --verify --deep --strict "$app"
+          [[ -x "$app/Contents/Resources/oma-desktop-api" ]]
+
+          # The embedded sidecar must answer both as the app's RPC API and as
+          # the MCP memory server agents launch.
+          export OMA_HOME="$(mktemp -d)"
+          sidecar="$app/Contents/Resources/oma-desktop-api"
+          (echo '{"jsonrpc":"2.0","id":1,"method":"project.list"}'; sleep 2) \
+            | perl -e 'alarm 10; exec @ARGV' "$sidecar" | grep '"result"' >/dev/null
+          (echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"release-check","version":"1"}}}'; sleep 2) \
+            | perl -e 'alarm 10; exec @ARGV' "$sidecar" mcp | grep '"oma-memory"' >/dev/null
+
+          ditto -c -k --sequesterRsrc --keepParent "$app" "$ASSET"
+          shasum -a 256 "$ASSET" | tee "$ASSET.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OpenMultiAgent-macos-arm64
+          path: |
+            ${{ env.ASSET }}
+            ${{ env.ASSET }}.sha256
+
+      - name: Publish GitHub Release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "$ASSET" "$ASSET.sha256" \
+            --title "OpenMultiAgent $GITHUB_REF_NAME" \
+            --generate-notes \
+            --verify-tag
