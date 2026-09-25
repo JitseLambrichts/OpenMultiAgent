@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint, typecheck, test
+    # The core tests drive real tmux sessions and resolve macOS symlinks such as /var.
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.x
+
+      - name: Install tmux
+        run: brew install tmux
+
+      - name: Configure git identity for test repositories
+        run: |
+          git config --global user.name "OMA CI"
+          git config --global user.email "ci@example.invalid"
+          git config --global init.defaultBranch main
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun run check

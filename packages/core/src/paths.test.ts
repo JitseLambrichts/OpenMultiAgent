@@ -15,30 +15,28 @@ import {
 } from "./paths.ts";
 
 /**
- * Every pair below was read off this machine: the directory name under
- * ~/.claude/projects and the `cwd` recorded inside the transcripts it holds.
+ * Each pair mirrors a real directory under ~/.claude/projects next to the `cwd`
+ * recorded inside the transcripts it holds (user and project names changed).
  */
 const REAL_PAIRS: Array<[cwd: string, dir: string]> = [
+  ["/Users/alice/Code/TestApp", "-Users-alice-Code-TestApp"],
   [
-    "/Users/jitselambrichts/Desktop/Desktop/Opteco/TestFable",
-    "-Users-jitselambrichts-Desktop-Desktop-Opteco-TestFable",
+    "/Users/alice/Side_Projects/MultiAgent",
+    "-Users-alice-Side-Projects-MultiAgent",
   ],
   [
-    "/Users/jitselambrichts/Desktop/Desktop/Vrije_Tijd/MultiAgent",
-    "-Users-jitselambrichts-Desktop-Desktop-Vrije-Tijd-MultiAgent",
-  ],
-  [
-    "/Users/jitselambrichts/Desktop/Desktop/Vrije_Tijd/OpenSource/HealthyCharacterV2",
-    "-Users-jitselambrichts-Desktop-Desktop-Vrije-Tijd-OpenSource-HealthyCharacterV2",
-  ],
-  [
-    "/Users/jitselambrichts/Desktop/Desktop/Opteco/marketforecasting-worktree-session-jittery-heron-h52c",
-    "-Users-jitselambrichts-Desktop-Desktop-Opteco-marketforecasting-worktree-session-jittery-heron-h52c",
+    "/Users/alice/Code/forecasting-worktree-session-jittery-heron-h52c",
+    "-Users-alice-Code-forecasting-worktree-session-jittery-heron-h52c",
   ],
   // The dotted worktree dir is the interesting one: `/.worktrees` becomes `--worktrees`.
   [
-    "/Users/jitselambrichts/Desktop/Desktop/Vrije_Tijd/TestDashboard/.worktrees/realtime-imbalance",
-    "-Users-jitselambrichts-Desktop-Desktop-Vrije-Tijd-TestDashboard--worktrees-realtime-imbalance",
+    "/Users/alice/Side_Projects/Dashboard/.worktrees/realtime-imbalance",
+    "-Users-alice-Side-Projects-Dashboard--worktrees-realtime-imbalance",
+  ],
+  // Spaces are common in macOS paths and are slugged like any other separator.
+  [
+    "/Users/alice/School/Engineering Interactive Software/Week1",
+    "-Users-alice-School-Engineering-Interactive-Software-Week1",
   ],
 ];
 
@@ -47,8 +45,8 @@ describe("claudeProjectSlug", () => {
     expect(claudeProjectSlug(cwd)).toBe(dir);
   });
 
-  test("replaces every slash, underscore and dot", () => {
-    expect(claudeProjectSlug("/a_b/c.d/e")).toBe("-a-b-c-d-e");
+  test("replaces every character that is not an ASCII letter or digit", () => {
+    expect(claudeProjectSlug("/a_b/c.d/e f+g@h/é")).toBe("-a-b-c-d-e-f-g-h--");
   });
 
   test("leaves an already-slugged string untouched", () => {
@@ -60,8 +58,8 @@ describe("claudeProjectSlug", () => {
 describe("claudeTranscriptPath", () => {
   test("is deterministic given cwd and a caller-supplied session id", () => {
     expect(
-      claudeTranscriptPath("/Users/j/Vrije_Tijd/X", "abc-123", "/home"),
-    ).toBe("/home/.claude/projects/-Users-j-Vrije-Tijd-X/abc-123.jsonl");
+      claudeTranscriptPath("/Users/j/Side_Projects/X", "abc-123", "/home"),
+    ).toBe("/home/.claude/projects/-Users-j-Side-Projects-X/abc-123.jsonl");
   });
 
   test("slugs the resolved path, since Claude does", () => {
