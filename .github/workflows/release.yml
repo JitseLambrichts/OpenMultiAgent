@@ -25,7 +25,9 @@ env:
 jobs:
   build:
     name: Build macOS app
-    runs-on: macos-15
+    # Compiling the Icon Composer app icon (AppIcon.icon) needs a macOS 26 host;
+    # on macos-15 the asset catalog agent crashes.
+    runs-on: macos-26
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
